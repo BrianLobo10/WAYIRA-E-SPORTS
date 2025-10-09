@@ -1,0 +1,29 @@
+<header class="header">
+  <div class="container">
+    <div class="header-content">
+      <!-- Logo -->
+      <div class="logo">
+        <a routerLink="/">
+          <span class="logo-text">WAYIRA</span>
+          <span class="logo-accent">E-SPORTS</span>
+        </a>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="nav" [class.active]="menuOpen">
+        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Inicio</a>
+        <a routerLink="/search" routerLinkActive="active">Buscar Jugador</a>
+        <a href="#about">Nosotros</a>
+        <a href="#services">Servicios</a>
+      </nav>
+
+      <!-- Mobile menu button -->
+      <button class="menu-toggle" (click)="toggleMenu()" [class.active]="menuOpen">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </div>
+</header>
+

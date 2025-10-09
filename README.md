@@ -1,59 +1,256 @@
-# WAYIRAESPORTS
+# WAYIRA E-SPORTS 🎮
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.1.4.
+Plataforma web para WAYIRA E-SPORTS S.A.S., empresa colombiana dedicada a la promoción y profesionalización de los deportes electrónicos.
 
-## Development server
+## 🚀 Características
 
-To start a local development server, run:
+- **Página de inicio** con información de la empresa (Misión, Visión, Valores, Servicios)
+- **Buscador de jugadores** de League of Legends integrado con Riot Games API
+  - 📊 Estadísticas de ranking (Solo/Duo y Flex)
+  - 🎮 Top 5 campeones más jugados con maestría
+  - 📜 Historial de últimas 10 partidas
+  - 🏆 Diferenciación de tipos de cola (ARAM, Ranked, Normal, etc.)
+  - 📈 KDA, CS, duración de partidas
+- **Diseño moderno** con estilo gaming profesional
+- **Responsive** - funciona perfectamente en móviles, tablets y desktop
+- **Backend seguro** - API key protegida en el servidor
+- **Carga de campeones dinámica** desde Data Dragon API
 
-```bash
-ng serve
-```
+## 📋 Prerequisitos
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+- **Node.js** (v18 o superior)
+- **npm** o **yarn**
+- **Riot Games API Key** (obtenla gratis en [developer.riotgames.com](https://developer.riotgames.com/))
 
-## Code scaffolding
+## 🔧 Instalación
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
+### 1. Clonar el repositorio
 
 ```bash
-ng build
+git clone <url-del-repositorio>
+cd WAYIRAE-SPORTS
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+### 2. Instalar dependencias del Frontend (Angular)
 
 ```bash
-ng test
+npm install
 ```
 
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
+### 3. Instalar dependencias del Backend (Express)
 
 ```bash
-ng e2e
+cd server
+npm install
+cd ..
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+### 4. Configurar Riot API Key
 
-## Additional Resources
+Crea un archivo `.env` en la carpeta `server/`:
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+```bash
+cd server
+# En Windows:
+copy NUL .env
+# En Linux/Mac:
+touch .env
+```
+
+Edita el archivo `.env` y agrega tu API key:
+
+```env
+RIOT_API_KEY=tu_api_key_aqui
+PORT=3001
+```
+
+**Importante:** Para obtener tu API key:
+1. Ve a [https://developer.riotgames.com/](https://developer.riotgames.com/)
+2. Inicia sesión con tu cuenta de Riot Games
+3. Copia la "DEVELOPMENT API KEY"
+4. ⚠️ Las API keys de desarrollo expiran cada 24 horas
+
+## ▶️ Ejecutar la aplicación
+
+Necesitas ejecutar **dos servidores** simultáneamente:
+
+### Terminal 1 - Backend (Express)
+
+```bash
+cd server
+npm start
+```
+
+El servidor backend correrá en `http://localhost:3001`
+
+### Terminal 2 - Frontend (Angular)
+
+```bash
+npm start
+```
+
+La aplicación Angular correrá en `http://localhost:4200`
+
+## 🌐 Usar la aplicación
+
+1. Abre tu navegador en `http://localhost:4200`
+2. Navega por la página de inicio para conocer WAYIRA E-SPORTS
+3. Haz clic en "Buscar Jugador" o ve a la ruta `/search`
+4. Ingresa el nombre del jugador y su tagline (ej: "Faker" y "KR1")
+5. Selecciona la región
+6. ¡Presiona buscar!
+
+### Ejemplo de búsqueda:
+
+- **Nombre:** Faker
+- **Tagline:** KR1
+- **Región:** KR - Corea
+
+## 📁 Estructura del proyecto
+
+```
+WAYIRAE-SPORTS/
+├── src/
+│   ├── app/
+│   │   ├── components/
+│   │   │   ├── header/          # Navegación
+│   │   │   └── footer/          # Pie de página
+│   │   ├── pages/
+│   │   │   ├── home/            # Página principal
+│   │   │   └── summoner-search/ # Buscador de jugadores
+│   │   ├── services/
+│   │   │   └── riot-api.service.ts  # Servicio para API
+│   │   ├── app.ts
+│   │   ├── app.routes.ts
+│   │   └── app.config.ts
+│   ├── styles.css               # Estilos globales
+│   └── index.html
+├── server/
+│   ├── server.js                # Backend Express
+│   ├── package.json
+│   └── .env                     # Variables de entorno (crear)
+├── proxy.conf.json              # Configuración proxy
+├── angular.json
+├── package.json
+└── README.md
+```
+
+## 🎨 Tecnologías utilizadas
+
+### Frontend
+- **Angular 20** - Framework principal
+- **TypeScript** - Lenguaje
+- **RxJS** - Programación reactiva
+- **CSS3** - Estilos modernos con gradientes
+
+### Backend
+- **Express** - Servidor API
+- **Node.js** - Runtime
+- **node-fetch** - Llamadas HTTP
+- **dotenv** - Variables de entorno
+- **cors** - CORS middleware
+
+### APIs
+- **Riot Games API** - Datos de League of Legends
+
+## 🔐 Seguridad
+
+- La API key de Riot **NUNCA** se expone en el frontend
+- Todas las llamadas a Riot API se hacen desde el backend
+- Sistema de caché para optimizar y respetar rate limits
+- CORS configurado apropiadamente
+
+## 🚀 Despliegue en producción
+
+### Backend
+
+Para producción necesitarás:
+1. Solicitar una API key de producción en el portal de Riot
+2. Configurar variables de entorno en tu servidor
+3. Usar un servicio como:
+   - Railway
+   - Render
+   - Heroku
+   - DigitalOcean
+
+### Frontend
+
+Compilar para producción:
+
+```bash
+npm run build
+```
+
+Los archivos estáticos estarán en `dist/wayirae-sports/browser/`
+
+Puedes desplegarlos en:
+- Vercel
+- Netlify
+- Firebase Hosting
+- GitHub Pages
+
+**Importante:** Asegúrate de configurar la URL de tu backend en producción.
+
+## 📝 Notas importantes
+
+### Riot API - Rate Limits
+
+Las API keys de desarrollo tienen límites:
+- 20 requests cada 1 segundo
+- 100 requests cada 2 minutos
+
+El backend incluye un sistema de caché para minimizar llamadas.
+
+### Regiones disponibles
+
+- **NA** (na1) - América del Norte
+- **BR** (br1) - Brasil
+- **LAN** (la1) - Latinoamérica Norte
+- **LAS** (la2) - Latinoamérica Sur
+- **EUW** (euw1) - Europa Oeste
+- **EUNE** (eun1) - Europa Este
+- **KR** (kr) - Corea
+- **JP** (jp1) - Japón
+
+## 🆘 Solución de problemas
+
+### Error: "API Key no configurada"
+
+Verifica que:
+1. Existe el archivo `.env` en la carpeta `server/`
+2. Tiene la variable `RIOT_API_KEY=...`
+3. Reiniciaste el servidor backend después de crear el `.env`
+
+### Error: "Jugador no encontrado"
+
+Verifica que:
+1. El nombre del jugador esté correcto
+2. El tagline sea correcto (sin el símbolo #)
+3. La región seleccionada sea la correcta
+
+### Error 429 (Too Many Requests)
+
+Has excedido el rate limit. Espera unos minutos antes de hacer más búsquedas.
+
+### El frontend no se conecta al backend
+
+Verifica que:
+1. El servidor backend está corriendo en el puerto 3001
+2. El archivo `proxy.conf.json` existe
+3. Reiniciaste el servidor de Angular después de crear el proxy
+
+## 📧 Contacto
+
+WAYIRA E-SPORTS S.A.S.
+- 📍 La Guajira, Colombia
+- 📧 info@wayiraesports.com
+
+## ⚖️ Licencia
+
+Este proyecto es propiedad de WAYIRA E-SPORTS S.A.S.
+
+WAYIRA E-SPORTS no está afiliado con Riot Games. League of Legends y todas las marcas relacionadas son propiedad de Riot Games, Inc.
+
+---
+
+Desarrollado con ❤️ para la comunidad de e-Sports en Colombia 🇨🇴

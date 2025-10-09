@@ -1,0 +1,115 @@
+<!-- Hero Section -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-text">
+      <h1 class="hero-title">
+        <span class="gradient-text">WAYIRA</span>
+        <span class="accent-text">E-SPORTS</span>
+      </h1>
+      <p class="hero-subtitle">
+        Impulsando el talento en deportes electrónicos en La Guajira y Colombia
+      </p>
+      <p class="hero-description">
+        Promovemos, difundimos y profesionalizamos los e-Sports a través de eventos,
+        formación y desarrollo de la comunidad gaming.
+      </p>
+      <div class="hero-buttons">
+        <a routerLink="/search" class="btn btn-primary">
+          <span>Buscar Jugador</span>
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </a>
+        <a href="#about" class="btn btn-secondary">Conocer más</a>
+      </div>
+    </div>
+    <div class="hero-image">
+      <div class="floating-element">🎮</div>
+    </div>
+  </div>
+  <div class="hero-wave">
+    <svg viewBox="0 0 1200 120" preserveAspectRatio="none">
+      <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"></path>
+    </svg>
+  </div>
+</section>
+
+<!-- About Section -->
+<section id="about" class="about-section">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Quiénes Somos</h2>
+      <div class="title-underline"></div>
+    </div>
+
+    <div class="about-content">
+      <div class="about-card">
+        <div class="card-icon">🎯</div>
+        <h3>Misión</h3>
+        <p>
+          Ser líderes en el ecosistema de los deportes electrónicos en La Guajira y 
+          referentes destacados en Colombia, ofreciendo plataformas competitivas, 
+          oportunidades de desarrollo profesional y experiencias digitales de calidad.
+        </p>
+      </div>
+
+      <div class="about-card">
+        <div class="card-icon">🚀</div>
+        <h3>Visión</h3>
+        <p>
+          En los próximos 5 años, ser reconocidos nacional e internacionalmente como 
+          organización referente en e-Sports por nuestra innovación, calidad de torneos 
+          y aporte al desarrollo de la industria digital y cultural.
+        </p>
+      </div>
+    </div>
+
+    <!-- Valores -->
+    <div class="valores-grid">
+      @for (valor of valores; track valor.title) {
+        <div class="valor-card">
+          <div class="valor-icon">{{ valor.icon }}</div>
+          <h4>{{ valor.title }}</h4>
+          <p>{{ valor.description }}</p>
+        </div>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- Services Section -->
+<section id="services" class="services-section">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Nuestros Servicios</h2>
+      <div class="title-underline"></div>
+    </div>
+
+    <div class="services-grid">
+      @for (servicio of servicios; track servicio.title) {
+        <div class="service-card">
+          <div class="service-icon">{{ servicio.icon }}</div>
+          <h3>{{ servicio.title }}</h3>
+          <p>{{ servicio.description }}</p>
+        </div>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-content">
+      <h2>¿Listo para competir?</h2>
+      <p>Busca perfiles de jugadores de League of Legends y conoce sus estadísticas</p>
+      <a routerLink="/search" class="btn btn-primary btn-large">
+        <span>Buscar Jugador</span>
+        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+        </svg>
+      </a>
+    </div>
+  </div>
+</section>
+
