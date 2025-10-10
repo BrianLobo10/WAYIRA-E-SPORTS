@@ -1,0 +1,362 @@
+.twitch-container {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  border-radius: 16px;
+  padding: 3rem;
+  margin: 4rem 0;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(145, 70, 255, 0.2);
+}
+
+.twitch-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.twitch-title {
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.twitch-icon {
+  font-size: 1.8rem;
+  filter: drop-shadow(0 0 10px rgba(145, 70, 255, 0.5));
+}
+
+.live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  background: rgba(255, 0, 0, 0.1);
+  color: #ff4444;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: 1px solid rgba(255, 0, 0, 0.3);
+}
+
+.live-indicator.live {
+  background: rgba(0, 255, 0, 0.1);
+  color: #00ff88;
+  border-color: rgba(0, 255, 0, 0.3);
+  animation: pulse 2s infinite;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: blink 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.3; }
+}
+
+.twitch-embed-wrapper {
+  position: relative;
+  width: 100%;
+  height: 0;
+  padding-bottom: 70%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  margin-bottom: 1.5rem;
+}
+
+.twitch-iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 12px;
+}
+
+.twitch-offline-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+  border-radius: 12px;
+}
+
+.offline-placeholder {
+  text-align: center;
+  color: #ffffff;
+  padding: 3rem;
+}
+
+.offline-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  display: block;
+  filter: drop-shadow(0 0 20px rgba(145, 70, 255, 0.5));
+}
+
+.offline-placeholder h4 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: #00d4ff;
+}
+
+.offline-placeholder p {
+  font-size: 1rem;
+  color: #b0b0b0;
+  margin-bottom: 1.5rem;
+}
+
+.offline-info {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.offline-info p {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+  color: #e0e0e0;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  z-index: 10;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(145, 70, 255, 0.3);
+  border-top: 4px solid #9146ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-overlay p {
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.twitch-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.twitch-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  min-width: 140px;
+  justify-content: center;
+}
+
+.twitch-btn.primary {
+  background: linear-gradient(135deg, #9146ff 0%, #6441a5 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(145, 70, 255, 0.3);
+}
+
+.twitch-btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(145, 70, 255, 0.4);
+}
+
+
+.btn-icon {
+  font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+  .twitch-container {
+    padding: 2rem;
+    margin: 2.5rem 0;
+    border-radius: 12px;
+    min-height: 400px;
+  }
+
+  .twitch-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 1.2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .twitch-title {
+    font-size: 1.4rem;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .twitch-icon {
+    font-size: 1.6rem;
+  }
+
+  .live-indicator {
+    font-size: 0.85rem;
+    padding: 0.5rem 1rem;
+  }
+
+  .twitch-embed-wrapper {
+    margin-bottom: 1.5rem;
+    border-radius: 8px;
+    min-height: 250px;
+  }
+
+  .offline-placeholder {
+    padding: 2.5rem 1.5rem;
+  }
+
+  .offline-icon {
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .offline-placeholder h4 {
+    font-size: 1.4rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .offline-placeholder p {
+    font-size: 1rem;
+    margin-bottom: 1.2rem;
+    line-height: 1.4;
+  }
+
+  .offline-info {
+    padding: 1rem;
+  }
+
+  .offline-info p {
+    font-size: 0.85rem;
+    margin: 0.4rem 0;
+  }
+
+  .twitch-actions {
+    flex-direction: column;
+    align-items: center;
+    margin-top: 1rem;
+  }
+
+  .twitch-btn {
+    width: 100%;
+    max-width: 280px;
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .twitch-container {
+    padding: 1.5rem;
+    margin: 2rem 0;
+    border-radius: 8px;
+    min-height: 650px;
+  }
+
+  .twitch-title {
+    font-size: 1.2rem;
+  }
+
+  .twitch-icon {
+    font-size: 1.4rem;
+  }
+
+  .live-indicator {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+  }
+
+  .twitch-embed-wrapper {
+    border-radius: 6px;
+    min-height: 400px;
+  }
+
+  .offline-placeholder {
+    padding: 1rem 1.5rem;
+  }
+
+  .offline-icon {
+    font-size: 4rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .offline-placeholder h4 {
+    font-size: 1.4rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .offline-placeholder p {
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.4;
+  }
+
+  .offline-info {
+    padding: 1.2rem;
+  }
+
+  .offline-info p {
+    font-size: 0.9rem;
+    margin: 0.5rem 0;
+  }
+
+  .twitch-actions {
+    margin-top: 1.5rem;
+  }
+
+  .twitch-btn {
+    padding: 0.9rem 1.5rem;
+    font-size: 1rem;
+    max-width: 280px;
+  }
+}

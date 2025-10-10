@@ -1,23 +1,36 @@
 <header class="header">
   <div class="container">
     <div class="header-content">
-      <!-- Logo -->
       <div class="logo">
         <a routerLink="/">
+          <img src="image.png" alt="Wayira Esports" class="logo-image">
           <span class="logo-text">WAYIRA</span>
           <span class="logo-accent">E-SPORTS</span>
         </a>
       </div>
-
-      <!-- Navigation -->
-      <nav class="nav" [class.active]="menuOpen">
-        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Inicio</a>
+      
+      <nav #navElement class="nav" [class.active]="menuOpen">
+        @if (isHomePage()) {
+          <div class="nav-item dropdown" (mouseenter)="!menuOpen && toggleDropdown()" (mouseleave)="!menuOpen && closeDropdown()">
+            <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="dropdown-trigger" (click)="toggleDropdown(); $event.preventDefault()">
+              Inicio
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </a>
+            <div class="dropdown-menu" [class.active]="dropdownOpen">
+              <a (click)="scrollToSection('about')" class="dropdown-item">Nosotros</a>
+              <a (click)="scrollToSection('services')" class="dropdown-item">Servicios</a>
+            </div>
+          </div>
+        } @else {
+          <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Inicio</a>
+        }
         <a routerLink="/search" routerLinkActive="active">Buscar Jugador</a>
-        <a href="#about">Nosotros</a>
-        <a href="#services">Servicios</a>
+        <a routerLink="/roulette" routerLinkActive="active" class="roulette-link">Ruleta Wayira</a>
+        <a routerLink="/contact" routerLinkActive="active">Contacto</a>
       </nav>
-
-      <!-- Mobile menu button -->
+      
       <button class="menu-toggle" (click)="toggleMenu()" [class.active]="menuOpen">
         <span></span>
         <span></span>

@@ -1,0 +1,210 @@
+<div class="contact-page">
+  <section class="contact-hero">
+    <div class="container">
+      <div class="hero-content">
+        <h1>Contáctanos</h1>
+        <p>¿Tienes alguna sugerencia, pregunta o quieres colaborar con nosotros? ¡Nos encantaría escucharte!</p>
+      </div>
+    </div>
+    <div class="hero-wave">
+      <svg viewBox="0 0 1200 120" preserveAspectRatio="none">
+        <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"></path>
+      </svg>
+    </div>
+  </section>
+
+  <div class="contact-container">
+    <div class="contact-content">
+      <div class="contact-form-section">
+        <app-section-header title="Envíanos un Mensaje"></app-section-header>
+        
+        <form (ngSubmit)="onSubmit()" class="contact-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="name">Nombre Completo *</label>
+              <input
+                type="text"
+                id="name"
+                [(ngModel)]="name"
+                name="name"
+                placeholder="Tu nombre completo"
+                class="form-input"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="email">Email *</label>
+              <input
+                type="email"
+                id="email"
+                [(ngModel)]="email"
+                name="email"
+                placeholder="tu@email.com"
+                class="form-input"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="contactType">Tipo de Consulta</label>
+            <select
+              id="contactType"
+              [(ngModel)]="contactType"
+              name="contactType"
+              class="form-select"
+            >
+              @for (type of contactTypes; track type.value) {
+                <option [value]="type.value">{{ type.icon }} {{ type.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="subject">Asunto</label>
+            <input
+              type="text"
+              id="subject"
+              [(ngModel)]="subject"
+              name="subject"
+              placeholder="Resumen de tu consulta"
+              class="form-input"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="message">Mensaje *</label>
+            <textarea
+              id="message"
+              [(ngModel)]="message"
+              name="message"
+              placeholder="Cuéntanos en detalle qué necesitas..."
+              rows="6"
+              class="form-textarea"
+              required
+            ></textarea>
+          </div>
+
+          @if (submitError()) {
+            <div class="error-message">
+              <i class="error-icon">⚠️</i>
+              {{ submitError() }}
+            </div>
+          }
+
+          @if (submitSuccess()) {
+            <div class="success-message">
+              <i class="success-icon">✅</i>
+              ¡Mensaje enviado correctamente! Te responderemos pronto.
+            </div>
+          }
+
+          <button type="submit" class="submit-btn" [disabled]="isSubmitting()">
+            @if (isSubmitting()) {
+              <span class="spinner"></span>
+              <span>Enviando...</span>
+            } @else {
+              <i class="btn-icon">📤</i>
+              <span>Enviar Mensaje</span>
+            }
+          </button>
+        </form>
+      </div>
+      
+      <div class="contact-info-section">
+        <app-section-header title="Información de Contacto"></app-section-header>
+        
+        <div class="contact-cards">
+          <div class="contact-card">
+            <div class="card-icon">
+              <i class="fas fa-envelope"></i>
+            </div>
+            <div class="card-content">
+              <h3>Email</h3>
+              <p>{{ contactInfo.email }}</p>
+              <button class="copy-btn" (click)="copyToClipboard(contactInfo.email)">
+                <i class="fas fa-copy"></i>
+                Copiar
+              </button>
+            </div>
+          </div>
+
+          <div class="contact-card">
+            <div class="card-icon">
+              <i class="fas fa-phone"></i>
+            </div>
+            <div class="card-content">
+              <h3>Teléfono</h3>
+              <p>{{ contactInfo.phone }}</p>
+              <button class="copy-btn" (click)="copyToClipboard(contactInfo.phone)">
+                <i class="fas fa-copy"></i>
+                Copiar
+              </button>
+            </div>
+          </div>
+
+          <div class="contact-card">
+            <div class="card-icon">
+              <i class="fab fa-discord"></i>
+            </div>
+            <div class="card-content">
+              <h3>Discord</h3>
+              <p>Únete a nuestro servidor</p>
+              <button class="action-btn discord-btn" (click)="goToLink(contactInfo.discord)">
+                <i class="fab fa-discord"></i>
+                Unirse
+              </button>
+            </div>
+          </div>
+
+          <div class="contact-card">
+            <div class="card-icon">
+              <i class="fab fa-facebook-f"></i>
+            </div>
+            <div class="card-content">
+              <h3>Facebook</h3>
+              <p>Síguenos en Facebook</p>
+              <button class="action-btn facebook-btn" (click)="goToLink(contactInfo.facebook)">
+                <i class="fab fa-facebook-f"></i>
+                Seguir
+              </button>
+            </div>
+          </div>
+
+          <div class="contact-card">
+            <div class="card-icon">
+              <i class="fab fa-instagram"></i>
+            </div>
+            <div class="card-content">
+              <h3>Instagram</h3>
+              <p>@wayiraesports</p>
+              <button class="action-btn instagram-btn" (click)="goToLink(contactInfo.instagram)">
+                <i class="fab fa-instagram"></i>
+                Seguir
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="faq-section">
+          <h3>Preguntas Frecuentes</h3>
+          <div class="faq-list">
+            <div class="faq-item">
+              <h4>¿Cuánto tiempo tardan en responder?</h4>
+              <p>Generalmente respondemos en un plazo de 24-48 horas durante días hábiles.</p>
+            </div>
+            <div class="faq-item">
+              <h4>¿Puedo reportar bugs de la aplicación?</h4>
+              <p>¡Por supuesto! Usa el tipo "Reportar Bug" y describe detalladamente el problema.</p>
+            </div>
+            <div class="faq-item">
+              <h4>¿Aceptan colaboraciones?</h4>
+              <p>Sí, estamos abiertos a colaboraciones. Usa el tipo "Colaboración" para más detalles.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

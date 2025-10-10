@@ -1,0 +1,89 @@
+<div class="roulette-page">
+  <section class="roulette-hero">
+    <div class="container">
+      <div class="hero-content">
+        <h1 class="hero-title">🎯 Ruleta Wayira</h1>
+        <p class="hero-subtitle">La suerte decide tu destino, campeón</p>
+      </div>
+    </div>
+  </section>
+  
+  <section class="roulette-section">
+    <div class="container">
+      <div class="roulette-content">
+        <div class="input-section">
+          <div class="section-header">
+            <h2>⚔️ Configura tu Ruleta ⚔️</h2>
+            <p class="section-subtitle">Elige las opciones que quieres incluir en la ruleta</p>
+          </div>
+          
+          <div class="options-input-container">
+            <textarea 
+              [(ngModel)]="optionsText"
+              (input)="onTextChange()"
+              placeholder="Ingresa las opciones de la ruleta, una por línea:&#10;Ejemplo:&#10;Jungla&#10;Mid&#10;Top&#10;ADC&#10;Support"
+              rows="8"
+              class="options-input">
+            </textarea>
+          </div>
+          
+          <div class="options-count">
+            <span class="count-icon">🎯</span>
+            {{ options().length }} opciones disponibles
+          </div>
+        </div>
+        
+        <div class="roulette-display">
+          <div class="roulette-wrapper">
+            <canvas #canvas id="canvas" width="550" height="550"></canvas>
+            <div class="roulette-glow"></div>
+            <div class="center-display" *ngIf="isSpinning()">
+              <div class="spinning-text">{{ currentSpinningText() }}</div>
+            </div>
+          </div>
+          
+          <div class="spin-button-container">
+            <button 
+              (click)="spin()" 
+              [disabled]="isSpinning() || options().length < 2"
+              class="spin-button">
+              <span class="button-icon">🎯</span>
+              <span class="button-text">{{ isSpinning() ? 'GIRANDO...' : 'GIRA LA RULETA!' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <div class="winner-section" *ngIf="showWinner()">
+    <div class="winner-display">
+      <div class="winner-header">
+        <div class="winner-crown">👑</div>
+        <h1>¡VICTORIA!</h1>
+        <div class="winner-timer">
+          <span class="timer-icon">⏱️</span>
+          <span class="timer-text">{{ winnerTimer() }}s</span>
+        </div>
+      </div>
+      
+      <div class="winner-content">
+        <div class="winner-name">{{ winner() }}</div>
+        <div class="winner-subtitle">¡Has ganado, campeón!</div>
+      </div>
+      
+      <div class="winner-actions">
+        <button class="close-button" (click)="closeWinnerModal()">
+          <span class="close-icon">✕</span>
+          <span class="close-text">Cerrar</span>
+        </button>
+      </div>
+      
+      <div class="winner-effects">
+        <div class="sparkle">✨</div>
+        <div class="sparkle">✨</div>
+        <div class="sparkle">✨</div>
+      </div>
+    </div>
+  </div>
+</div>

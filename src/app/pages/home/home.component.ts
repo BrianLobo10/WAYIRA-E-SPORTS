@@ -1,9 +1,14 @@
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { UniversalCardComponent } from '../../components/universal-card/universal-card.component';
+import { CardsGridComponent } from '../../components/cards-grid/cards-grid.component';
+import { SectionHeaderComponent } from '../../components/section-header/section-header.component';
+import { TwitchEmbedComponent } from '../../components/twitch-embed/twitch-embed.component';
+import { CommunitySectionComponent } from '../../components/community-section/community-section.component';
 
 @Component({
   selector: 'app-home',
-  imports: [RouterLink],
+  imports: [RouterLink, UniversalCardComponent, CardsGridComponent, SectionHeaderComponent, TwitchEmbedComponent, CommunitySectionComponent],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css'
 })
@@ -51,11 +56,6 @@ export class HomeComponent {
       icon: '🤝',
       title: 'Alianzas Estratégicas',
       description: 'Conexión con marcas y patrocinadores para visibilidad y crecimiento'
-    },
-    {
-      icon: '💻',
-      title: 'Desarrollo Tecnológico',
-      description: 'Plataformas para gestión de torneos, rankings y comunidad'
     }
   ];
 }

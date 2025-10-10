@@ -58,7 +58,6 @@ export class SummonerSearchComponent {
           this.summonerData.set(data);
           this.loading.set(false);
           
-          // Cargar partidas y maestría de campeones
           this.loadAdditionalData(data.puuid);
         },
         error: (err) => {
@@ -85,7 +84,6 @@ export class SummonerSearchComponent {
       }
     };
     
-    // Cargar partidas y maestría por separado para que un error no afecte al otro
     this.riotApiService.getMatches(this.selectedRegion, puuid, 20).subscribe({
       next: (matches) => {
         this.matches.set(matches);
@@ -161,6 +159,15 @@ export class SummonerSearchComponent {
     return this.championService.getChampionName(championId);
   }
 
+  formatMasteryPoints(points: number): string {
+    if (points >= 1000000) {
+      return (points / 1000000).toFixed(1) + 'M';
+    } else if (points >= 1000) {
+      return (points / 1000).toFixed(1) + 'K';
+    }
+    return points.toString();
+  }
+
   getParticipantData(match: MatchData): any {
     const summonerPuuid = this.summoner()?.puuid;
     return match.info.participants.find(p => p.puuid === summonerPuuid);
@@ -179,15 +186,6 @@ export class SummonerSearchComponent {
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
   }
 
-  formatMasteryPoints(points: number): string {
-    if (points >= 1000000) {
-      return (points / 1000000).toFixed(1) + 'M';
-    } else if (points >= 1000) {
-      return (points / 1000).toFixed(1) + 'K';
-    }
-    return points.toString();
-  }
-
   formatTimestamp(timestamp: number): string {
     const date = new Date(timestamp);
     const now = new Date();
@@ -203,26 +201,25 @@ export class SummonerSearchComponent {
   getQueueName(queueId: number): string {
     const queueMap: { [key: number]: string } = {
       0: 'Personalizada',
-      400: 'Normal 5v5 Draft',
+      400: 'Normal',
       420: 'Ranked Solo/Duo',
-      430: 'Normal 5v5 Blind',
+      430: 'Normal',
       440: 'Ranked Flex',
       450: 'ARAM',
       700: 'Clash',
-      830: 'Co-op vs IA Intro',
-      840: 'Co-op vs IA Principiante',
-      850: 'Co-op vs IA Intermedio',
+      830: 'Co-op vs IA',
+      840: 'Co-op vs IA',
+      850: 'Co-op vs IA',
       900: 'URF',
       1020: 'One For All',
       1300: 'Nexus Blitz',
       1400: 'Ultimate Spellbook',
       1700: 'Arena',
-      1900: 'Pick URF'
+      1900: 'URF'
     };
     return queueMap[queueId] || 'Normal';
   }
 
-  // Métodos para la gráfica de LP
   getCurrentLeague(): LeagueEntry | null {
     const data = this.summonerData();
     if (!data?.leagues) return null;
@@ -234,40 +231,33 @@ export class SummonerSearchComponent {
     const league = this.getCurrentLeague();
     if (!league) return 0;
     
-    // Calcular progreso basado en LP (asumiendo 100 LP para subir de división)
     return Math.min((league.leaguePoints / 100) * 100, 100);
   }
 
   getLPHistory(): { lp: number, isWin: boolean, date: string }[] {
-    // Simular historial de LP para la gráfica con mejor distribución
     const league = this.getCurrentLeague();
     if (!league) return [];
     
     const currentLP = league.leaguePoints;
     const history: { lp: number, isWin: boolean, date: string }[] = [];
     
-    // Generar datos simulados más realistas y suaves
-    let baseLP = Math.max(0, currentLP - 60); // Empezar 60 LP abajo
+    let baseLP = Math.max(0, currentLP - 60);
     
     for (let i = 0; i < 12; i++) {
-      // Crear una progresión más natural con curvas suaves
-      const progress = i / 11; // 0 a 1
+      const progress = i / 11;
       const targetLP = currentLP;
       
-      // Usar una función de suavizado (ease-in-out)
       const smoothProgress = progress < 0.5 
         ? 2 * progress * progress 
         : 1 - Math.pow(-2 * progress + 2, 2) / 2;
       
       const lp = Math.round(baseLP + (targetLP - baseLP) * smoothProgress);
       
-      // Agregar variación realista pero suave
       const variation = Math.sin(progress * Math.PI * 2) * 8 + (Math.random() - 0.5) * 6;
       const finalLP = Math.max(0, Math.min(100, lp + variation));
       
-      const isWin = Math.random() > 0.3; // 70% win rate
+      const isWin = Math.random() > 0.3;
       
-      // Crear fecha simulada
       const date = new Date();
       date.setDate(date.getDate() - (11 - i));
       
@@ -308,7 +298,6 @@ export class SummonerSearchComponent {
         const prevX = ((i - 1) / (history.length - 1)) * width + padding;
         const prevY = 200 - (history[i - 1].lp / 100) * height - padding;
         
-        // Crear curva suave usando control points
         const cp1x = prevX + (x - prevX) * 0.3;
         const cp1y = prevY;
         const cp2x = prevX + (x - prevX) * 0.7;
