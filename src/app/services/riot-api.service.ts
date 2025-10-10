@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { getApiUrl } from '../config/api.config';
 
 export interface SummonerData {
   id: string;
@@ -75,23 +76,22 @@ export interface ChampionMastery {
 })
 export class RiotApiService {
   private http = inject(HttpClient);
-  private apiUrl = '/api';
 
   getSummoner(region: string, gameName: string, tagLine: string): Observable<SummonerData> {
     return this.http.get<SummonerData>(
-      `${this.apiUrl}/summoner/${region}/${gameName}/${tagLine}`
+      getApiUrl(`/summoner/${region}/${gameName}/${tagLine}`)
     );
   }
 
   getMatches(region: string, puuid: string, count: number = 5): Observable<MatchData[]> {
     return this.http.get<MatchData[]>(
-      `${this.apiUrl}/matches/${region}/${puuid}?count=${count}`
+      getApiUrl(`/matches/${region}/${puuid}?count=${count}`)
     );
   }
 
   getChampionMastery(region: string, puuid: string, count: number = 5): Observable<ChampionMastery[]> {
     return this.http.get<ChampionMastery[]>(
-      `${this.apiUrl}/mastery/${region}/${puuid}?count=${count}`
+      getApiUrl(`/mastery/${region}/${puuid}?count=${count}`)
     );
   }
 }

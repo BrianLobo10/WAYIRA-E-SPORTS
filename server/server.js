@@ -7,7 +7,7 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const RIOT_API_KEY = process.env.RIOT_API_KEY || 'RGAPI-f1e69878-36bd-4c66-82ed-f99a356745cc';
+const RIOT_API_KEY = process.env.RIOT_API_KEY || 'RGAPI-b984278b-da0e-46c2-9aca-fc784ef15acb';
 
 // Middleware
 app.use(cors());
