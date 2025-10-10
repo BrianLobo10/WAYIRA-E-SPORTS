@@ -66,6 +66,8 @@ export interface ChampionMastery {
   championPointsSinceLastLevel: number;
   championPointsUntilNextLevel: number;
   tokensEarned: number;
+  worldRank?: number;
+  serverRank?: number;
 }
 
 @Injectable({

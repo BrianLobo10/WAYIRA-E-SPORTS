@@ -1,11 +1,9 @@
 <div class="search-container">
-  <!-- Hero -->
   <div class="search-hero">
     <h1>Buscar Jugador de League of Legends</h1>
     <p>Encuentra estadísticas y ranking de cualquier invocador</p>
   </div>
 
-  <!-- Search Form -->
   <div class="search-form-container">
     <form (ngSubmit)="searchSummoner()" class="search-form">
       <div class="form-row">
@@ -61,7 +59,6 @@
       </button>
     </form>
 
-    <!-- Error Message -->
     @if (error()) {
       <div class="error-message">
         <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
@@ -72,10 +69,8 @@
     }
   </div>
 
-  <!-- Results -->
   @if (summoner()) {
     <div class="results-container">
-      <!-- Profile Card -->
       <div class="profile-card">
         <div class="profile-header">
           <img 
@@ -96,159 +91,70 @@
         </div>
       </div>
 
-      <!-- Ranked Stats -->
-      <div class="ranked-container">
-        <h3 class="section-title">Estadísticas Rankeadas</h3>
-        
-        
-        @if (summonerData()?.leagues && summonerData()!.leagues.length > 0) {
-          <!-- Queue Toggle -->
-          <div class="queue-toggle">
-            <button 
-              class="toggle-btn" 
-              [class.active]="selectedQueue() === 'RANKED_SOLO_5x5'"
-              (click)="switchQueue('RANKED_SOLO_5x5')"
-            >
-              Solo/Duo
-            </button>
-            <button 
-              class="toggle-btn" 
-              [class.active]="selectedQueue() === 'RANKED_FLEX_SR'"
-              (click)="switchQueue('RANKED_FLEX_SR')"
-            >
-              Flex
-            </button>
+
+      <div class="stats-mastery-container">
+        <div class="ranked-stats-section">
+          <h3 class="section-title">Estadísticas Rankeadas</h3>
+          
+          <div class="development-message">
+            <div class="dev-icon">🚧</div>
+            <h4>En Desarrollo</h4>
+            <p>Las estadísticas rankeadas están siendo mejoradas. Pronto tendrás acceso a información detallada de ranking, LP y historial de partidas.</p>
           </div>
+        </div>
 
-          @if (getCurrentLeague()) {
-            <div class="ranked-stats-container">
-              <!-- Rank Info - Estilo Blitz.gg -->
-              <div class="rank-info-card blitz-style">
-                <div class="rank-header">
-                  <h4>{{ getQueueDisplayName(selectedQueue()) }}</h4>
-                </div>
-                
-                <div class="rank-content">
-                  <div class="rank-emblem-container">
-                    <img 
-                      [src]="getRankImageUrl(getCurrentLeague()!.tier)" 
-                      [alt]="getCurrentLeague()!.tier"
-                      class="rank-emblem"
-                    />
-                  </div>
-                  
-                  <div class="rank-info-section">
-                    <div class="rank-tier-info">
-                      <span class="rank-tier" [style.color]="getTierColor(getCurrentLeague()!.tier)">
-                        {{ getCurrentLeague()!.tier }} {{ getCurrentLeague()!.rank }}
-                      </span>
-                      <span class="rank-lp">{{ getCurrentLeague()!.leaguePoints }} LP</span>
-                    </div>
-                    
-                    <!-- Progress Bar -->
-                    <div class="lp-progress-container">
-                      <div class="lp-progress-bar">
-                        <div 
-                          class="lp-progress-fill" 
-                          [style.width.%]="getLPProgress()"
-                        ></div>
-                      </div>
-                    </div>
-                    
-                    <div class="rank-stats-row">
-                      <span class="winrate">{{ getWinRate(getCurrentLeague()!) }}% WR</span>
-                      <span class="wins-losses">
-                        {{ getCurrentLeague()!.wins }}W - {{ getCurrentLeague()!.losses }}L
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- LP Graph - Estilo Blitz.gg -->
-              <div class="lp-graph-card blitz-style">
-                <h4>LP Graph</h4>
-                <div class="lp-graph-container">
-                  <svg class="graph-svg" viewBox="0 0 400 200">
-                    <!-- Grid lines -->
-                    <defs>
-                      <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
-                      </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#grid)" />
-                    
-                    <!-- Graph line and points -->
-                    @if (getLPHistory().length > 0) {
-                      <!-- Línea de conexión suave -->
-                      <path 
-                        [attr.d]="getSmoothPath()"
-                        class="graph-line"
-                        fill="none"
-                      />
-                      
-                      <!-- Puntos individuales - centrados en la línea -->
-                      @for (point of getLPHistory(); track $index; let i = $index) {
-                        <circle 
-                          [attr.cx]="getPointX(i)"
-                          [attr.cy]="getPointY(i)"
-                          r="5"
-                          [class]="point.isWin ? 'win-point' : 'loss-point'"
-                        />
-                      }
-                    }
-                  </svg>
-                </div>
-              </div>
+        <div class="mastery-section">
+          <h3 class="section-title">Campeones con Mayor Maestría</h3>
+          
+          @if (loadingMatches()) {
+            <div class="loading-container">
+              <span class="spinner"></span>
+              <span>Cargando campeones...</span>
             </div>
-          } @else {
-            <div class="no-ranked">
-              <div class="sad-face">😞</div>
-              <p>No hay datos de {{ getQueueDisplayName(selectedQueue()) }} para este jugador</p>
+          } @else if (championMastery().length > 0) {
+            <div class="mastery-grid">
+              @for (champ of championMastery(); track champ.championId) {
+                <div class="mastery-card">
+                  <img 
+                    [src]="getChampionImageUrl(champ.championId)" 
+                    [alt]="getChampionNameById(champ.championId)"
+                    class="champion-icon"
+                    (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
+                  />
+                  <div class="mastery-info">
+                    <div class="champion-name">{{ getChampionNameById(champ.championId) }}</div>
+                    <div class="mastery-level">Nivel {{ champ.championLevel }}</div>
+                    <div class="mastery-points">{{ formatMasteryPoints(champ.championPoints) }} puntos</div>
+                    
+                    @if (champ.worldRank || champ.serverRank) {
+                      <div class="ranking-info">
+                        @if (champ.worldRank) {
+                          <div class="rank-item world-rank">
+                            <i class="fas fa-globe"></i>
+                            <span>Mundial: #{{ champ.worldRank }}</span>
+                          </div>
+                        }
+                        @if (champ.serverRank) {
+                          <div class="rank-item server-rank">
+                            <i class="fas fa-server"></i>
+                            <span>Servidor: #{{ champ.serverRank }}</span>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
             </div>
           }
-        } @else {
-          <div class="no-ranked">
-            <div class="sad-face">😞</div>
-            <p>Este jugador no tiene partidas rankeadas esta temporada</p>
-            <p class="no-ranked-subtitle">Las estadísticas rankeadas aparecerán cuando el jugador juegue partidas de Solo/Duo o Flex</p>
-          </div>
-        }
+        </div>
       </div>
 
-      <!-- Champion Mastery -->
-      <div class="mastery-container">
-        <h3 class="section-title">Campeones con Mayor Maestría</h3>
-        
-        @if (loadingMatches()) {
-          <div class="loading-container">
-            <span class="spinner"></span>
-            <span>Cargando campeones...</span>
-          </div>
-        } @else if (championMastery().length > 0) {
-          <div class="mastery-grid">
-            @for (champ of championMastery(); track champ.championId) {
-              <div class="mastery-card">
-                <img 
-                  [src]="getChampionImageUrl(champ.championId)" 
-                  [alt]="getChampionNameById(champ.championId)"
-                  class="champion-icon"
-                  (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
-                />
-                <div class="mastery-info">
-                  <div class="champion-name">{{ getChampionNameById(champ.championId) }}</div>
-                  <div class="mastery-level">Nivel {{ champ.championLevel }}</div>
-                  <div class="mastery-points">{{ formatMasteryPoints(champ.championPoints) }} puntos</div>
-                </div>
-              </div>
-            }
-          </div>
-        }
-      </div>
-
-      <!-- Match History -->
       <div class="matches-container">
-        <h3 class="section-title">Partidas Recientes</h3>
+        <div class="matches-header">
+          <h3 class="section-title">Partidas Recientes</h3>
+          <div class="matches-count">{{ matches().length }} partidas</div>
+        </div>
         
         @if (loadingMatches()) {
           <div class="loading-container">
@@ -268,7 +174,7 @@
 
                   <div class="match-champion">
                     <img 
-                      [src]="'https://ddragon.leagueoflegends.com/cdn/14.1.1/img/champion/' + participant.championName + '.png'" 
+                      [src]="'https://ddragon.leagueoflegends.com/cdn/14.24.1/img/champion/' + participant.championName + '.png'" 
                       [alt]="participant.championName"
                       class="match-champion-icon"
                       (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"

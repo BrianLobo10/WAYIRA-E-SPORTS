@@ -1,0 +1,229 @@
+.universal-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.universal-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #00d4ff, #0099cc, #00d4ff);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.universal-card:hover::before {
+  transform: scaleX(1);
+}
+
+.universal-card:hover {
+  transform: translateY(-8px);
+  border-color: rgba(0, 212, 255, 0.3);
+  box-shadow: 0 20px 40px rgba(0, 212, 255, 0.1);
+}
+
+.card-service {
+  background: linear-gradient(135deg, rgba(15, 5, 32, 0.5), rgba(45, 27, 78, 0.3));
+  border-color: rgba(124, 58, 237, 0.2);
+}
+
+.card-service:hover {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(45, 27, 78, 0.4));
+  border-color: #016C6C;
+  box-shadow: 0 20px 40px rgba(124, 58, 237, 0.2);
+}
+
+.card-valor {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.card-valor:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06));
+  border-color: rgba(0, 212, 255, 0.2);
+  box-shadow: 0 15px 30px rgba(0, 212, 255, 0.08);
+}
+
+.card-about {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(45, 27, 78, 0.3));
+  border-color: rgba(124, 58, 237, 0.3);
+}
+
+.card-about:hover {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(45, 27, 78, 0.4));
+  border-color: #016C6C;
+  box-shadow: 0 20px 40px rgba(124, 58, 237, 0.2);
+}
+
+.card-small {
+  padding: 1.5rem;
+  min-height: 200px;
+}
+
+.card-medium {
+  padding: 2rem;
+  min-height: 250px;
+}
+
+.card-large {
+  padding: 2.5rem;
+  min-height: 300px;
+}
+
+.card-icon {
+  font-size: 3rem;
+  margin-bottom: 1.5rem;
+  display: block;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+  flex-shrink: 0;
+}
+
+.card-small .card-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.card-large .card-icon {
+  font-size: 3.5rem;
+  margin-bottom: 2rem;
+}
+
+.card-title {
+  color: #ffffff;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, #ffffff, #00d4ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  flex-shrink: 0;
+}
+
+.card-small .card-title {
+  font-size: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.card-medium .card-title {
+  font-size: 1.5rem;
+}
+
+.card-large .card-title {
+  font-size: 1.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.card-description {
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.6;
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-small .card-description {
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.card-medium .card-description {
+  font-size: 1rem;
+}
+
+.card-large .card-description {
+  font-size: 1.1rem;
+  line-height: 1.7;
+}
+
+@media (max-width: 1200px) {
+  .universal-card {
+    padding: 1.75rem;
+  }
+  
+  .card-icon {
+    font-size: 2.75rem;
+  }
+  
+  .card-title {
+    font-size: 1.4rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .universal-card {
+    padding: 1.5rem;
+    min-height: 220px;
+  }
+  
+  .card-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .card-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .card-description {
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+  
+  .card-small {
+    min-height: 180px;
+    padding: 1.25rem;
+  }
+  
+  .card-large {
+    min-height: 250px;
+    padding: 1.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .universal-card {
+    padding: 1.25rem;
+    min-height: 200px;
+  }
+  
+  .card-icon {
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .card-title {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .card-description {
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+  
+  .card-small {
+    min-height: 160px;
+    padding: 1rem;
+  }
+  
+  .card-large {
+    min-height: 220px;
+    padding: 1.5rem;
+  }
+}

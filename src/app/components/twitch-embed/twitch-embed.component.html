@@ -1,0 +1,52 @@
+<div class="twitch-container">
+  <div class="twitch-header">
+    <h3 class="twitch-title">
+      <i class="twitch-icon">📺</i>
+      Wayira Esports en Twitch
+    </h3>
+    <div class="live-indicator" [class.live]="isLive()">
+      <span class="live-dot"></span>
+      {{ isLive() ? 'EN VIVO' : 'OFFLINE' }}
+    </div>
+  </div>
+
+  <div class="twitch-embed-wrapper">
+    @if (isLive() && !iframeError()) {
+      <iframe
+        [src]="safeTwitchUrl"
+        frameborder="0"
+        allowfullscreen="true"
+        scrolling="no"
+        allow="autoplay; fullscreen"
+        class="twitch-iframe"
+        (load)="onIframeLoad()"
+        (error)="onIframeError()">
+      </iframe>
+      @if (!iframeLoaded()) {
+        <div class="loading-overlay">
+          <div class="loading-spinner"></div>
+          <p>Cargando stream...</p>
+        </div>
+      }
+    } @else {
+      <div class="twitch-offline-content">
+        <div class="offline-placeholder">
+          <i class="offline-icon">📺</i>
+          <h4>{{ iframeError() ? 'Error al cargar Twitch' : 'Canal Offline' }}</h4>
+          <p>{{ iframeError() ? 'No se pudo cargar el contenido de Twitch' : 'Wayira Esports no está transmitiendo en este momento' }}</p>
+          <div class="offline-info">
+            <p>🔗 Canal: wayiraesports</p>
+            <p>📺 Último stream disponible en Twitch</p>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="twitch-actions">
+    <button class="twitch-btn primary" (click)="goToTwitch()">
+      <i class="btn-icon">🎮</i>
+      Ver en Twitch
+    </button>
+  </div>
+</div>

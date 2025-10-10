@@ -97,18 +97,144 @@
   font-style: italic;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
+  .container {
+    padding: 0 1.5rem;
+  }
+  
   .footer-content {
-    grid-template-columns: 1fr;
-    gap: 2rem;
+    gap: 2.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .footer {
+    padding: 2rem 0 1rem;
+    margin-top: 2rem;
+  }
+
+  .container {
+    padding: 0 1.5rem;
+  }
+
+  .footer-content {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  .services-section {
+    display: none;
+  }
+
+  .wayira-section {
+    display: none;
   }
 
   .footer-section {
     text-align: center;
   }
 
+  .footer-section h3 {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .footer-section h4 {
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .footer-section p {
+    font-size: 0.85rem;
+    line-height: 1.4;
+  }
+
+  .footer-section ul li {
+    font-size: 0.85rem;
+    margin-bottom: 0.4rem;
+  }
+
   .social-links {
     justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .social-links a {
+    width: 32px;
+    height: 32px;
+  }
+
+  .footer-bottom {
+    padding-top: 1rem;
+  }
+
+  .footer-bottom p {
+    font-size: 0.8rem;
+    margin: 0.3rem 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .footer {
+    padding: 1.5rem 0 0.8rem;
+    margin-top: 1.5rem;
+  }
+
+  .container {
+    padding: 0 1rem;
+  }
+
+  .footer-content {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .wayira-section {
+    display: none;
+  }
+
+  .footer-section h3 {
+    font-size: 1.1rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .footer-section h4 {
+    font-size: 0.9rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .footer-section p {
+    font-size: 0.8rem;
+    line-height: 1.3;
+  }
+
+  .footer-section ul li {
+    font-size: 0.8rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .social-links {
+    gap: 0.4rem;
+    margin-top: 0.3rem;
+  }
+
+  .social-links a {
+    width: 28px;
+    height: 28px;
+  }
+
+  .footer-bottom {
+    padding-top: 0.8rem;
+  }
+
+  .footer-bottom p {
+    font-size: 0.75rem;
+    margin: 0.2rem 0;
+  }
+
+  .riot-disclaimer {
+    font-size: 0.7rem;
   }
 }
 

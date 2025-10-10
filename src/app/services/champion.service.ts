@@ -25,13 +25,11 @@ export class ChampionService {
     
     this.loading.set(true);
     
-    // Cargar la lista de campeones desde Data Dragon
-    this.http.get<{ data: ChampionData }>('https://ddragon.leagueoflegends.com/cdn/14.1.1/data/es_MX/champion.json')
+    this.http.get<{ data: ChampionData }>('https://ddragon.leagueoflegends.com/cdn/14.24.1/data/es_MX/champion.json')
       .subscribe({
         next: (response) => {
           const championMap: { [key: number]: string } = {};
           
-          // Convertir de nombre a ID numérico
           Object.values(response.data).forEach(champ => {
             championMap[parseInt(champ.key)] = champ.id;
           });
@@ -42,14 +40,12 @@ export class ChampionService {
         error: (err) => {
           console.error('Error cargando campeones:', err);
           this.loading.set(false);
-          // Fallback a mapeo básico
           this.loadBasicMapping();
         }
       });
   }
 
   private loadBasicMapping() {
-    // Mapeo básico como fallback
     this.champions.set({
       1: 'Annie', 2: 'Olaf', 3: 'Galio', 4: 'TwistedFate', 5: 'XinZhao',
       6: 'Urgot', 7: 'LeBlanc', 8: 'Vladimir', 9: 'Fiddlesticks', 10: 'Kayle',
@@ -83,8 +79,12 @@ export class ChampionService {
       498: 'Xayah', 516: 'Ornn', 517: 'Sylas', 518: 'Neeko', 523: 'Aphelios',
       526: 'Rell', 555: 'Pyke', 711: 'Vex', 777: 'Yone', 875: 'Sett',
       876: 'Lillia', 887: 'Gwen', 888: 'Renata', 895: 'Nilah', 897: 'KSante',
-      901: 'Smolder', 902: 'Milio', 910: 'Hwei', 950: 'Naafiri'
+      901: 'Smolder', 902: 'Milio', 910: 'Hwei', 950: 'Naafiri',
+      1000: 'Aurora',
+      1001: 'Ambessa',
+      1002: 'Mel'
     });
+    
   }
 
   getChampionName(championId: number): string {
