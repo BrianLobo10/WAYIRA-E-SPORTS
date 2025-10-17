@@ -47,6 +47,7 @@ export interface ParticipantData {
   deaths: number;
   assists: number;
   win: boolean;
+  teamId: number;
   totalMinionsKilled: number;
   goldEarned: number;
   champLevel: number;

@@ -2,7 +2,7 @@
   background: linear-gradient(135deg, #000000 0%, #00363D 100%);
   color: #FFFFFF;
   padding: 3rem 0 1.5rem;
-  margin-top: 5rem;
+  margin-top: 0rem; /* Reducido de 5rem a 2rem */
   border-top: 2px solid #016C6C;
 }
 
@@ -110,7 +110,7 @@
 @media (max-width: 768px) {
   .footer {
     padding: 2rem 0 1rem;
-    margin-top: 2rem;
+    margin-top: 0rem; /* Reducido de 2rem a 1rem en móvil */
   }
 
   .container {
@@ -178,7 +178,7 @@
 @media (max-width: 480px) {
   .footer {
     padding: 1.5rem 0 0.8rem;
-    margin-top: 1.5rem;
+    margin-top: 0rem; /* Reducido de 1.5rem a 0.5rem en móviles pequeños */
   }
 
   .container {

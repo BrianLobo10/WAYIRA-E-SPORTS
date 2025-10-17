@@ -166,7 +166,11 @@
             @for (match of matches(); track match.metadata.matchId) {
               @let participant = getParticipantData(match);
               @if (participant) {
-                <div class="match-card" [class.win]="participant.win" [class.loss]="!participant.win">
+                <div class="match-card" 
+                     [class.win]="participant.win" 
+                     [class.loss]="!participant.win"
+                     (click)="openMatchDetails(match)"
+                     [title]="'Click para ver detalles de la partida'">
                   <div class="match-result">
                     <span class="result-text">{{ participant.win ? 'VICTORIA' : 'DERROTA' }}</span>
                     <span class="match-mode">{{ getQueueName(match.info.queueId) }}</span>
@@ -197,6 +201,11 @@
                       <span>{{ getMatchDuration(match.info.gameDuration) }}</span>
                     </div>
                   </div>
+                  
+                  <div class="match-click-hint">
+                    <span class="click-icon">👆</span>
+                    <span class="click-text">Click para detalles</span>
+                  </div>
                 </div>
               }
             }
@@ -209,5 +218,118 @@
       </div>
     </div>
   }
+  
+  <!-- Modal de detalles de la partida -->
+  <div class="match-modal" *ngIf="selectedMatch()" (click)="closeMatchDetails()">
+    <div class="match-modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">Detalles de la Partida</h3>
+        <button class="close-modal-btn" (click)="closeMatchDetails()">
+          <span>✕</span>
+        </button>
+      </div>
+      
+      <div class="modal-body" *ngIf="selectedMatch()">
+        <div class="match-info">
+          <div class="match-mode-info">
+            <span class="mode-icon">⚔️</span>
+            <span class="mode-name">{{ getQueueName(selectedMatch()!.info.queueId) }}</span>
+          </div>
+          <div class="match-duration">
+            <span class="duration-icon">⏱️</span>
+            <span class="duration-text">{{ getMatchDuration(selectedMatch()!.info.gameDuration) }}</span>
+          </div>
+          <div class="match-date">
+            <span class="date-icon">📅</span>
+            <span class="date-text">{{ formatTimestamp(selectedMatch()!.info.gameCreation) }}</span>
+          </div>
+        </div>
+        
+        <div class="teams-container">
+          <!-- Equipo Azul (Victoria) -->
+          <div class="team blue-team" [class.winner]="getTeamWon(selectedMatch()!, 100)">
+            <div class="team-header">
+              <h4 class="team-title">Equipo Azul</h4>
+              <div class="team-result" *ngIf="getTeamWon(selectedMatch()!, 100)">
+                <span class="win-text">VICTORIA</span>
+              </div>
+            </div>
+            <div class="players-list">
+              @for (participant of getTeamPlayers(selectedMatch()!, 100); track participant.puuid) {
+                <div class="player-card" 
+                     (click)="searchPlayer(participant.summonerName)"
+                     [title]="'Click para buscar a ' + participant.summonerName">
+                  <img 
+                    [src]="'https://ddragon.leagueoflegends.com/cdn/14.24.1/img/champion/' + participant.championName + '.png'" 
+                    [alt]="participant.championName"
+                    class="player-champion-icon"
+                    (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
+                  />
+                  <div class="player-info">
+                    <div class="player-name">{{ participant.summonerName }}</div>
+                    <div class="player-champion">{{ participant.championName }}</div>
+                    <div class="player-kda">{{ participant.kills }}/{{ participant.deaths }}/{{ participant.assists }}</div>
+                  </div>
+                  <div class="player-items">
+                    @for (item of [participant.item0, participant.item1, participant.item2, participant.item3, participant.item4, participant.item5, participant.item6]; track $index) {
+                      <div class="item-slot" *ngIf="item > 0">
+                        <img 
+                          [src]="'https://ddragon.leagueoflegends.com/cdn/14.24.1/img/item/' + item + '.png'" 
+                          [alt]="'Item ' + item"
+                          class="item-icon"
+                          (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/item/0.png'"
+                        />
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+          
+          <!-- Equipo Rojo (Derrota) -->
+          <div class="team red-team" [class.winner]="getTeamWon(selectedMatch()!, 200)">
+            <div class="team-header">
+              <h4 class="team-title">Equipo Rojo</h4>
+              <div class="team-result" *ngIf="getTeamWon(selectedMatch()!, 200)">
+                <span class="win-text">VICTORIA</span>
+              </div>
+            </div>
+            <div class="players-list">
+              @for (participant of getTeamPlayers(selectedMatch()!, 200); track participant.puuid) {
+                <div class="player-card" 
+                     (click)="searchPlayer(participant.summonerName)"
+                     [title]="'Click para buscar a ' + participant.summonerName">
+                  <img 
+                    [src]="'https://ddragon.leagueoflegends.com/cdn/14.24.1/img/champion/' + participant.championName + '.png'" 
+                    [alt]="participant.championName"
+                    class="player-champion-icon"
+                    (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
+                  />
+                  <div class="player-info">
+                    <div class="player-name">{{ participant.summonerName }}</div>
+                    <div class="player-champion">{{ participant.championName }}</div>
+                    <div class="player-kda">{{ participant.kills }}/{{ participant.deaths }}/{{ participant.assists }}</div>
+                  </div>
+                  <div class="player-items">
+                    @for (item of [participant.item0, participant.item1, participant.item2, participant.item3, participant.item4, participant.item5, participant.item6]; track $index) {
+                      <div class="item-slot" *ngIf="item > 0">
+                        <img 
+                          [src]="'https://ddragon.leagueoflegends.com/cdn/14.24.1/img/item/' + item + '.png'" 
+                          [alt]="'Item ' + item"
+                          class="item-icon"
+                          (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/item/0.png'"
+                        />
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
