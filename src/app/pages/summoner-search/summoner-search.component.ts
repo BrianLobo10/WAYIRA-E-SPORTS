@@ -26,6 +26,7 @@ export class SummonerSearchComponent {
   championMastery = signal<ChampionMastery[]>([]);
   error = signal<string | null>(null);
   selectedQueue = signal<'RANKED_SOLO_5x5' | 'RANKED_FLEX_SR'>('RANKED_SOLO_5x5');
+  selectedMatch = signal<MatchData | null>(null);
 
   regions = [
     { code: 'na1', name: 'NA - América del Norte' },
@@ -320,6 +321,41 @@ export class SummonerSearchComponent {
     const history = this.getLPHistory();
     if (history.length === 0) return 0;
     return 200 - (history[index].lp / 100) * 180 - 10;
+  }
+
+  // Funciones para el modal de detalles de la partida
+  openMatchDetails(match: MatchData) {
+    this.selectedMatch.set(match);
+  }
+
+  closeMatchDetails() {
+    this.selectedMatch.set(null);
+  }
+
+  getTeamPlayers(match: MatchData, teamId: number): any[] {
+    return match.info.participants.filter(participant => participant.teamId === teamId);
+  }
+
+  getTeamWon(match: MatchData, teamId: number): boolean {
+    const teamPlayers = this.getTeamPlayers(match, teamId);
+    return teamPlayers.length > 0 && teamPlayers[0].win;
+  }
+
+  searchPlayer(playerName: string) {
+    // Extraer nombre y tagline del nombre del jugador
+    const parts = playerName.split('#');
+    if (parts.length === 2) {
+      this.gameName = parts[0];
+      this.tagLine = parts[1];
+    } else {
+      // Si no tiene tagline, usar el nombre completo y un tagline por defecto
+      this.gameName = playerName;
+      this.tagLine = 'NA1'; // Tagline por defecto
+    }
+    
+    // Cerrar el modal y buscar
+    this.closeMatchDetails();
+    this.searchSummoner();
   }
 }
 

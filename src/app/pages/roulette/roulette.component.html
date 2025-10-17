@@ -13,15 +13,15 @@
       <div class="roulette-content">
         <div class="input-section">
           <div class="section-header">
-            <h2>⚔️ Configura tu Ruleta ⚔️</h2>
-            <p class="section-subtitle">Elige las opciones que quieres incluir en la ruleta</p>
+            <h2>Configura tu Ruleta</h2>
+            <p class="section-subtitle">Escriba los nombres que quiere incluir en la ruleta</p>
           </div>
           
           <div class="options-input-container">
             <textarea 
               [(ngModel)]="optionsText"
               (input)="onTextChange()"
-              placeholder="Ingresa las opciones de la ruleta, una por línea:&#10;Ejemplo:&#10;Jungla&#10;Mid&#10;Top&#10;ADC&#10;Support"
+              placeholder="Escriba aqui su lista de participantes"
               rows="8"
               class="options-input">
             </textarea>
@@ -29,7 +29,7 @@
           
           <div class="options-count">
             <span class="count-icon">🎯</span>
-            {{ options().length }} opciones disponibles
+            {{ options().length }} Participantes
           </div>
         </div>
         
