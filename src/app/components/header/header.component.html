@@ -38,7 +38,13 @@
             @if (currentUser()?.photoURL) {
               <img [src]="currentUser()!.photoURL" [alt]="currentUser()!.displayName" class="user-avatar">
             } @else {
-              <span class="user-avatar-placeholder">{{ currentUser()?.displayName?.charAt(0).toUpperCase() || 'U' }}</span>
+              <span class="user-avatar-placeholder">
+                @if (currentUser()?.displayName) {
+                  {{ currentUser()!.displayName.charAt(0).toUpperCase() }}
+                } @else {
+                  U
+                }
+              </span>
             }
             Perfil
           </a>

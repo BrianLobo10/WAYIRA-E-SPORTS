@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Usuarios: solo lectura/escritura propia
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Posts: lectura pública, escritura autenticada
+    match /posts/{postId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && 
+        (resource.data.authorId == request.auth.uid);
+    }
+    
+    // Mensajes: solo entre usuarios autenticados
+    match /messages/{messageId} {
+      allow read, write: if request.auth != null && 
+        (resource.data.fromId == request.auth.uid || 
+         resource.data.toId == request.auth.uid);
+    }
+    
+    // Torneos: lectura pública, escritura solo admin
+    match /tournaments/{tournamentId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+  }
+}
+
