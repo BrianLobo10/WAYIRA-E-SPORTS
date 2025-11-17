@@ -341,10 +341,82 @@
   color: #fff;
 }
 
+.login-link,
+.profile-link,
+.messages-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #FFFFFF;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 1rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.login-link:hover,
+.profile-link:hover,
+.messages-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.user-avatar,
+.user-avatar-placeholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.user-avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.messages-link svg {
+  width: 20px;
+  height: 20px;
+}
+
+.logout-btn {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #ef4444;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: #ef4444;
+}
+
 @media (max-width: 768px) {
   .roulette-link {
     width: 100%;
     text-align: center;
+    font-size: 1.2rem;
+    padding: 1rem 0;
+  }
+
+  .login-link,
+  .profile-link,
+  .messages-link,
+  .logout-btn {
+    width: 100%;
+    justify-content: center;
     font-size: 1.2rem;
     padding: 1rem 0;
   }

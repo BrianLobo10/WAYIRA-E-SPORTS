@@ -1,6 +1,7 @@
-import { Component, HostListener, ElementRef, ViewChild } from '@angular/core';
+import { Component, HostListener, ElementRef, ViewChild, inject, signal, OnInit } from '@angular/core';
 import { RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { FirebaseService, UserProfile } from '../services/firebase.service';
 
 @Component({
   selector: 'app-header',
@@ -8,13 +9,37 @@ import { CommonModule } from '@angular/common';
   templateUrl: './header.component.html',
   styleUrl: './header.component.css'
 })
-export class HeaderComponent {
+export class HeaderComponent implements OnInit {
   @ViewChild('navElement') navElement!: ElementRef;
+  
+  private firebaseService = inject(FirebaseService);
+  private router = inject(Router);
   
   menuOpen = false;
   dropdownOpen = false;
+  currentUser = signal<UserProfile | null>(null);
+  isAuthenticated = signal(false);
 
-  constructor(private router: Router) {}
+  ngOnInit() {
+    this.firebaseService.currentUser.subscribe(user => {
+      this.isAuthenticated.set(!!user);
+      if (user) {
+        this.loadUserProfile(user.uid);
+      } else {
+        this.currentUser.set(null);
+      }
+    });
+  }
+
+  async loadUserProfile(uid: string) {
+    const profile = await this.firebaseService.getUserProfile(uid);
+    this.currentUser.set(profile);
+  }
+
+  async logout() {
+    await this.firebaseService.logout();
+    this.router.navigate(['/']);
+  }
 
   isHomePage(): boolean {
     return this.router.url === '/';
