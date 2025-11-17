@@ -22,11 +22,11 @@ export class ContactComponent {
   submitError = signal('');
 
   contactTypes = [
-    { value: 'suggestion', label: 'Sugerencia', icon: '💡' },
-    { value: 'bug', label: 'Reportar Bug', icon: '🐛' },
-    { value: 'feature', label: 'Solicitar Función', icon: '✨' },
-    { value: 'partnership', label: 'Colaboración', icon: '🤝' },
-    { value: 'other', label: 'Otro', icon: '📝' }
+    { value: 'suggestion', label: 'Sugerencia', icon: 'lightbulb' },
+    { value: 'bug', label: 'Reportar Bug', icon: 'bug' },
+    { value: 'feature', label: 'Solicitar Función', icon: 'sparkles' },
+    { value: 'partnership', label: 'Colaboración', icon: 'handshake' },
+    { value: 'other', label: 'Otro', icon: 'document' }
   ];
 
   contactInfo = {

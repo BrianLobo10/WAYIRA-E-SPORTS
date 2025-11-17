@@ -15,22 +15,22 @@ import { CommunitySectionComponent } from '../../components/community-section/co
 export class HomeComponent {
   valores = [
     {
-      icon: '⚡',
+      icon: 'star',
       title: 'Excelencia',
       description: 'Altos estándares en cada competición y evento'
     },
     {
-      icon: '🤝',
+      icon: 'shield',
       title: 'Integridad',
       description: 'Honestidad, transparencia y responsabilidad'
     },
     {
-      icon: '👥',
+      icon: 'users',
       title: 'Trabajo en equipo',
       description: 'Éxito construido en colaboración'
     },
     {
-      icon: '🌈',
+      icon: 'globe',
       title: 'Inclusión',
       description: 'E-sports para todo el mundo sin discriminación'
     }
@@ -38,22 +38,22 @@ export class HomeComponent {
 
   servicios = [
     {
-      icon: '🏆',
+      icon: 'trophy',
       title: 'Torneos y Eventos',
       description: 'Competencias desde nivel local hasta ligas nacionales con cobertura profesional'
     },
     {
-      icon: '🎓',
+      icon: 'graduation',
       title: 'Formación de Jugadores',
       description: 'Entrenamiento, coaching y desarrollo de habilidades para equipos y jugadores'
     },
     {
-      icon: '🎬',
+      icon: 'video',
       title: 'Producción de Contenido',
       description: 'Transmisiones, análisis, entrevistas y cobertura multimedia profesional'
     },
     {
-      icon: '🤝',
+      icon: 'handshake',
       title: 'Alianzas Estratégicas',
       description: 'Conexión con marcas y patrocinadores para visibilidad y crecimiento'
     }

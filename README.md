@@ -1,22 +1,23 @@
-# WAYIRA E-SPORTS 🎮
+# WAYIRA E-SPORTS
 
 Plataforma web para WAYIRA E-SPORTS S.A.S., empresa colombiana dedicada a la promoción y profesionalización de los deportes electrónicos.
 
-## 🚀 Características
+## Características
 
 - **Página de inicio** con información de la empresa (Misión, Visión, Valores, Servicios)
 - **Buscador de jugadores** de League of Legends integrado con Riot Games API
-  - 📊 Estadísticas de ranking (Solo/Duo y Flex)
-  - 🎮 Top 5 campeones más jugados con maestría
-  - 📜 Historial de últimas 10 partidas
-  - 🏆 Diferenciación de tipos de cola (ARAM, Ranked, Normal, etc.)
-  - 📈 KDA, CS, duración de partidas
-- **Diseño moderno** con estilo gaming profesional
+  - Estadísticas de ranking (Solo/Duo y Flex)
+  - Top 5 campeones más jugados con maestría
+  - Historial de últimas 10 partidas
+  - Diferenciación de tipos de cola (ARAM, Ranked, Normal, etc.)
+  - KDA, CS, duración de partidas
+- **Diseño profesional** con estilo empresarial y toque gaming
 - **Responsive** - funciona perfectamente en móviles, tablets y desktop
 - **Backend seguro** - API key protegida en el servidor
 - **Carga de campeones dinámica** desde Data Dragon API
+- **Autenticación con Firebase** usando Riot Games
 
-## 📋 Prerequisitos
+## Prerequisitos
 
 - **Node.js** (v18 o superior)
 - **npm** o **yarn**

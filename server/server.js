@@ -62,7 +62,7 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
     
     const cacheKey = `summoner-${region}-${cleanGameName}-${cleanTagLine}`;
     
-    console.log(`🔍 Buscando jugador: ${cleanGameName}#${cleanTagLine} en región ${region}`);
+    console.log(`Buscando jugador: ${cleanGameName}#${cleanTagLine} en región ${region}`);
     
     const summonerData = await getCachedData(cacheKey, async () => {
       // 1. Obtener PUUID usando Account-V1
@@ -76,7 +76,7 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
         if (accountResponse.status === 404) {
           // Intentar con el nombre original si el limpio falla
           if (cleanGameName !== gameName || cleanTagLine !== tagLine) {
-            console.log(`🔄 Intentando con nombre original: ${gameName}#${tagLine}`);
+            console.log(`Intentando con nombre original: ${gameName}#${tagLine}`);
             const originalAccountUrl = `https://${routing}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`;
             
             const originalAccountResponse = await fetch(originalAccountUrl, {
@@ -85,7 +85,7 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
             
             if (originalAccountResponse.ok) {
               const originalAccount = await originalAccountResponse.json();
-              console.log(`✅ Jugador encontrado con nombre original`);
+              console.log(`Jugador encontrado con nombre original`);
               return await getSummonerDataFromPuuid(region, originalAccount.puuid, RIOT_API_KEY);
             }
           }
@@ -309,9 +309,9 @@ app.get('/health', (req, res) => {
 
 // Iniciar servidor
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor API corriendo en http://localhost:${PORT}`);
-  console.log(`🔑 API Key ${RIOT_API_KEY ? 'configurada ✓' : 'NO configurada ✗'}`);
+  console.log(`Servidor API corriendo en http://localhost:${PORT}`);
+  console.log(`API Key ${RIOT_API_KEY ? 'configurada' : 'NO configurada'}`);
   if (!RIOT_API_KEY) {
-    console.log('⚠️  Configura RIOT_API_KEY en el archivo .env');
+    console.log('Configura RIOT_API_KEY en el archivo .env');
   }
 });

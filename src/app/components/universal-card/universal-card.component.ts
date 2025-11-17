@@ -1,12 +1,13 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { SvgIconComponent } from '../svg-icon/svg-icon.component';
 
 export type CardType = 'service' | 'valor' | 'about';
 
 @Component({
   selector: 'app-universal-card',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SvgIconComponent],
   templateUrl: './universal-card.component.html',
   styleUrls: ['./universal-card.component.css']
 })
