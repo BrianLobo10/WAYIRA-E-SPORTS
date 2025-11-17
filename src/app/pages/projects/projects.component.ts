@@ -29,9 +29,9 @@ export class ProjectsComponent {
     },
     {
       icon: 'video',
-      title: 'Producción de Contenido',
-      description: 'Serie de documentales y highlights sobre la escena competitiva colombiana',
-      status: 'En producción',
+      title: 'Transmisiones en Vivo',
+      description: 'Lives y streams profesionales de torneos y eventos competitivos',
+      status: 'Activo',
       date: '2024'
     },
     {

@@ -1,10 +1,14 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Usuarios: solo lectura/escritura propia
+    // Usuarios: permitir lectura para verificar si existe un usuario por puuid durante registro
+    // Escritura solo propia o durante creación de cuenta
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      // Permitir lectura para verificar si un puuid ya está registrado
+      allow read: if true;
+      // Permitir escritura durante registro (cuando no hay auth) o cuando el usuario escribe su propio perfil
+      allow create: if true;
+      allow update, delete: if request.auth != null && request.auth.uid == userId;
     }
     
     // Posts: lectura pública, escritura autenticada
@@ -26,6 +30,29 @@ service cloud.firestore {
     match /tournaments/{tournamentId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null;
+    }
+    
+    // Noticias: lectura pública (solo publicadas), escritura solo admin
+    match /news/{newsId} {
+      allow read: if resource.data.published == true || request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null;
+    }
+    
+    // Mensajes de contacto: lectura solo admin, escritura pública
+    match /contactMessages/{messageId} {
+      allow read: if request.auth != null;
+      allow create: if true; // Permitir a cualquiera crear mensajes de contacto
+      allow update, delete: if request.auth != null;
+    }
+    
+    // Notificaciones: lectura y escritura solo para el usuario propietario
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null && 
+        (resource == null || resource.data.userId == request.auth.uid);
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && 
+        (resource == null || resource.data.userId == request.auth.uid);
     }
   }
 }

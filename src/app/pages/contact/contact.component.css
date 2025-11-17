@@ -47,26 +47,66 @@
 
 .contact-container {
   padding: 4rem 0;
-  background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #0f0f23 100%);
+  background: #0f1419;
   position: relative;
   z-index: 1;
 }
 
 .contact-content {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.2fr 1fr;
   gap: 4rem;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 0 2rem;
+  align-items: start;
+}
+
+.contact-form-wrapper > .section-title,
+.contact-info-section > .section-title {
+  margin-top: 0;
+}
+
+.contact-form-wrapper > .section-description,
+.contact-info-section > .section-description {
+  margin-bottom: 2rem;
+}
+
+.contact-form-wrapper,
+.contact-info-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.section-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.2;
+}
+
+.section-description {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 2rem 0;
+  line-height: 1.6;
 }
 
 .contact-form-section {
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(26, 35, 50, 0.6);
   padding: 2.5rem;
-  border-radius: 20px;
-  border: 2px solid rgba(1, 108, 108, 0.3);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  height: fit-content;
+}
+
+@media (max-width: 1024px) {
+  .contact-content {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+  }
 }
 
 .contact-form {
@@ -79,6 +119,13 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .form-group {
@@ -205,140 +252,148 @@
 .contact-info-section {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 0rem;
 }
 
 .contact-cards {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 1rem;
 }
 
 .contact-card {
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(1, 108, 108, 0.3);
-  border-radius: 15px;
+  background: rgba(26, 35, 50, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
   padding: 1.5rem;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
+  align-items: flex-start;
+  gap: 1.25rem;
   transition: all 0.3s ease;
-  text-align: center;
-  flex-direction: column;
+  min-height: auto;
 }
 
 .contact-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-  border-color: rgba(0, 212, 255, 0.5);
+  border-color: rgba(99, 102, 241, 0.5);
+  background: rgba(26, 35, 50, 0.8);
 }
 
 .card-icon {
-  font-size: 2rem;
-  color: #00d4ff;
-  min-width: 60px;
-  text-align: center;
+  font-size: 1.75rem;
+  color: #6366f1;
+  min-width: 48px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(99, 102, 241, 0.1);
+  border-radius: 10px;
+  flex-shrink: 0;
 }
 
 .card-content {
   flex: 1;
-  text-align: center;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
+  gap: 0.75rem;
+  min-width: 0;
 }
 
 .card-content h3 {
-  color: #fff;
-  font-size: 1.2rem;
+  color: #ffffff;
+  font-size: 1.125rem;
   font-weight: 600;
-  margin: 0 0 0.5rem 0;
-  text-align: center !important;
-  width: 100%;
+  margin: 0;
 }
 
 .card-content p {
-  color: #b0b0b0;
-  margin: 0 0 1rem 0;
-  text-align: center !important;
-  width: 100%;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
 }
 
 .copy-btn,
 .action-btn {
-  padding: 0.9rem 1.2rem !important;
-  border: 2px solid rgba(1, 108, 108, 0.3) !important;
-  border-radius: 10px !important;
-  font-size: 1rem !important;
-  font-weight: 600 !important;
+  padding: 0.625rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 0.5rem !important;
-  background: rgba(0, 0, 0, 0.6);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: transparent;
   color: #fff;
-  min-height: 48px !important;
-  box-sizing: border-box !important;
-  width: 100% !important;
+  min-height: 36px;
+  box-sizing: border-box;
+  width: auto;
+  align-self: flex-start;
 }
 
 .copy-btn {
-  background: rgba(0, 0, 0, 0.6) !important;
-  color: #00d4ff !important;
-  border-color: rgba(0, 212, 255, 0.3) !important;
+  color: #818cf8;
+  border-color: rgba(129, 140, 248, 0.3);
 }
 
 .copy-btn:hover {
-  background: rgba(0, 212, 255, 0.2);
-  border-color: #00d4ff;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
-}
-
-.action-btn {
-  color: white !important;
-  font-weight: 600 !important;
+  background: rgba(129, 140, 248, 0.1);
+  border-color: #818cf8;
 }
 
 .discord-btn {
-  background: linear-gradient(135deg, #5865f2 0%, #4752c4 100%) !important;
-  border-color: #5865f2 !important;
-  color: white !important;
+  background: rgba(88, 101, 242, 0.1);
+  border-color: rgba(88, 101, 242, 0.3);
+  color: #5865f2;
+}
+
+.discord-btn:hover {
+  background: rgba(88, 101, 242, 0.2);
+  border-color: #5865f2;
 }
 
 .facebook-btn {
-  background: linear-gradient(135deg, #1877f2 0%, #166fe5 100%) !important;
-  border-color: #1877f2 !important;
-  color: white !important;
+  background: rgba(24, 119, 242, 0.1);
+  border-color: rgba(24, 119, 242, 0.3);
+  color: #1877f2;
+}
+
+.facebook-btn:hover {
+  background: rgba(24, 119, 242, 0.2);
+  border-color: #1877f2;
 }
 
 .instagram-btn {
-  background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%) !important;
-  border-color: #dc2743 !important;
-  color: white !important;
+  background: rgba(225, 48, 108, 0.1);
+  border-color: rgba(225, 48, 108, 0.3);
+  color: #e1306c;
+}
+
+.instagram-btn:hover {
+  background: rgba(225, 48, 108, 0.2);
+  border-color: #e1306c;
 }
 
 .action-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  opacity: 0.9;
+  transform: translateY(-1px);
 }
 
 .faq-section {
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(1, 108, 108, 0.3);
-  border-radius: 15px;
+  background: rgba(26, 35, 50, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
   padding: 2rem;
   margin-top: 2rem;
 }
 
-.faq-section h3 {
-  color: #00d4ff;
+.faq-title {
+  color: #ffffff;
   font-size: 1.5rem;
   font-weight: 700;
   margin: 0 0 1.5rem 0;
@@ -351,10 +406,10 @@
 }
 
 .faq-item {
-  padding: 1rem;
-  background: rgba(1, 108, 108, 0.1);
-  border-radius: 10px;
-  border-left: 3px solid #00d4ff;
+  padding: 1.25rem;
+  background: rgba(99, 102, 241, 0.05);
+  border-radius: 8px;
+  border-left: 3px solid #6366f1;
 }
 
 .faq-item h4 {

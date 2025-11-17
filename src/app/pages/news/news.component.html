@@ -10,27 +10,202 @@
 
   <section class="news-content">
     <div class="container">
-      <app-section-header title="Últimas Noticias"></app-section-header>
-      
-      <div class="news-grid">
-        @for (item of news; track item.title) {
-          <article class="news-card">
-            <div class="news-image">
-              <img [src]="item.image" [alt]="item.title">
-              <span class="news-category">{{ item.category }}</span>
-            </div>
-            <div class="news-body">
-              <div class="news-meta">
-                <span class="news-date">{{ item.date }}</span>
-              </div>
-              <h3 class="news-title">{{ item.title }}</h3>
-              <p class="news-excerpt">{{ item.excerpt }}</p>
-              <a href="#" class="news-link">Leer más</a>
-            </div>
-          </article>
+      <div class="news-header">
+        <app-section-header title="Últimas Noticias"></app-section-header>
+        @if (isAdmin()) {
+          <button class="btn-create-news" (click)="openCreateModal()">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Crear Noticia
+          </button>
         }
       </div>
+      
+      @if (loading()) {
+        <div class="loading-container">
+          <span class="spinner"></span>
+          <span>Cargando noticias...</span>
+        </div>
+      } @else if (news().length === 0) {
+        <div class="empty-state">
+          <p>No hay noticias disponibles aún.</p>
+          @if (isAdmin()) {
+            <button class="btn-create-news" (click)="openCreateModal()">
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              Crear Primera Noticia
+            </button>
+          }
+        </div>
+      } @else {
+        <div class="news-grid">
+          @for (item of news(); track item.id) {
+            <article class="news-card">
+              @if (item.imageUrl) {
+                <div class="news-image">
+                  <img [src]="item.imageUrl" [alt]="item.title">
+                  <span class="news-category">{{ item.category }}</span>
+                </div>
+              } @else {
+                <div class="news-image-placeholder">
+                  <span class="news-category">{{ item.category }}</span>
+                </div>
+              }
+              <div class="news-body">
+                <div class="news-meta">
+                  <span class="news-date">{{ formatDate(item.createdAt) }}</span>
+                  @if (isAdmin()) {
+                    <div class="news-actions">
+                      <button class="btn-edit" (click)="openEditModal(item)" title="Editar">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button class="btn-delete" (click)="deleteNews(item.id!)" title="Eliminar">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  }
+                </div>
+                <h3 class="news-title">{{ item.title }}</h3>
+                <p class="news-excerpt">{{ item.excerpt }}</p>
+                @if (!item.published) {
+                  <span class="news-draft-badge">Borrador</span>
+                }
+              </div>
+            </article>
+          }
+        </div>
+      }
     </div>
   </section>
+
+  <!-- Create/Edit News Modal -->
+  @if (showCreateModal() || showEditModal()) {
+    <div class="modal-overlay" (click)="closeModal()">
+      <div class="modal-content news-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>{{ showEditModal() ? 'Editar Noticia' : 'Crear Nueva Noticia' }}</h3>
+          <button class="close-btn" (click)="closeModal()" [disabled]="uploading()">
+            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="newsTitle">Título *</label>
+            <input 
+              type="text" 
+              id="newsTitle"
+              [(ngModel)]="newsTitle"
+              placeholder="Título de la noticia"
+              class="form-input"
+              [disabled]="uploading()"
+              required>
+          </div>
+
+          <div class="form-group">
+            <label for="newsExcerpt">Resumen *</label>
+            <textarea 
+              id="newsExcerpt"
+              [(ngModel)]="newsExcerpt"
+              placeholder="Breve resumen de la noticia"
+              class="form-textarea"
+              rows="3"
+              [disabled]="uploading()"
+              required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="newsContent">Contenido *</label>
+            <textarea 
+              id="newsContent"
+              [(ngModel)]="newsContent"
+              placeholder="Contenido completo de la noticia"
+              class="form-textarea"
+              rows="10"
+              [disabled]="uploading()"
+              required></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="newsCategory">Categoría *</label>
+              <select 
+                id="newsCategory"
+                [(ngModel)]="newsCategory"
+                class="form-select"
+                [disabled]="uploading()">
+                @for (cat of categories; track cat) {
+                  <option [value]="cat">{{ cat }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="newsImage">Imagen</label>
+              <input 
+                type="file" 
+                id="newsImage"
+                accept="image/*"
+                (change)="onImageSelected($event)"
+                class="form-input"
+                [disabled]="uploading()">
+              @if (newsImageUrl()) {
+                <div class="image-preview">
+                  <img [src]="newsImageUrl()" alt="Preview">
+                  <button type="button" class="remove-image" (click)="newsImageUrl.set(''); newsImageFile.set(null)">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              }
+              <p class="form-hint">O ingresa una URL de imagen</p>
+              <input 
+                type="url" 
+                id="newsImageUrl"
+                [(ngModel)]="newsImageUrl"
+                placeholder="https://ejemplo.com/imagen.jpg"
+                class="form-input"
+                [disabled]="uploading() || !!newsImageFile()">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input 
+                type="checkbox"
+                [(ngModel)]="newsPublished"
+                [disabled]="uploading()">
+              <span>Publicar inmediatamente</span>
+            </label>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn-cancel" (click)="closeModal()" [disabled]="uploading()">
+              Cancelar
+            </button>
+            <button 
+              class="btn-submit" 
+              (click)="showEditModal() ? updateNews() : createNews()" 
+              [disabled]="uploading() || !newsTitle().trim() || !newsContent().trim() || !newsExcerpt().trim()">
+              @if (uploading()) {
+                <span class="spinner-small"></span>
+                <span>{{ showEditModal() ? 'Guardando...' : 'Creando...' }}</span>
+              } @else {
+                <span>{{ showEditModal() ? 'Guardar Cambios' : 'Crear Noticia' }}</span>
+              }
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
 </div>
 

@@ -1,8 +1,9 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { FirebaseService } from '../../../services/firebase.service';
+import { RiotApiService } from '../../../services/riot-api.service';
 
 @Component({
   selector: 'app-register',
@@ -11,12 +12,15 @@ import { FirebaseService } from '../../../services/firebase.service';
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.css']
 })
-export class RegisterComponent {
+export class RegisterComponent implements OnInit {
   gameName = signal('');
   tagLine = signal('');
   region = signal('la1');
+  email = signal('');
   password = signal('');
   confirmPassword = signal('');
+  showPassword = signal(false);
+  showConfirmPassword = signal(false);
   loading = signal(false);
   error = signal('');
   errors = signal<{ [key: string]: string }>({});
@@ -33,7 +37,24 @@ export class RegisterComponent {
   ];
 
   private firebaseService = inject(FirebaseService);
+  private riotApiService = inject(RiotApiService);
   private router = inject(Router);
+
+  ngOnInit() {
+    // Verificar si ya está logueado y redirigir
+    const user = this.firebaseService.getCurrentUser();
+    if (user) {
+      this.router.navigate(['/']);
+      return;
+    }
+    
+    // También suscribirse al observable por si el estado cambia
+    this.firebaseService.currentUser.subscribe(user => {
+      if (user) {
+        this.router.navigate(['/']);
+      }
+    });
+  }
 
   async onRegister() {
     this.errors.set({});
@@ -41,6 +62,12 @@ export class RegisterComponent {
 
     // Validaciones
     const validationErrors: { [key: string]: string } = {};
+
+    if (!this.email().trim()) {
+      validationErrors['email'] = 'El email es requerido';
+    } else if (!this.isValidEmail(this.email())) {
+      validationErrors['email'] = 'El email no es válido';
+    }
 
     if (!this.gameName().trim()) {
       validationErrors['gameName'] = 'El nombre de invocador es requerido';
@@ -80,29 +107,44 @@ export class RegisterComponent {
     this.loading.set(true);
 
     try {
-      // Verificar que el invocador existe en Riot Games
-      const response = await fetch(`/api/summoner/${this.region()}/${this.gameName()}/${this.tagLine()}`);
-      
-      if (!response.ok) {
-        throw new Error('Invocador no encontrado. Verifica tu nombre de invocador, tagline y región.');
-      }
-
-      const summonerData = await response.json();
-
-      // Registrar en Firebase usando Riot Games
-      await this.firebaseService.registerWithRiot(
-        this.gameName(),
-        this.tagLine(),
+      // Verificar que el invocador existe en Riot Games usando el mismo servicio que la búsqueda
+      this.riotApiService.getSummoner(
         this.region(),
-        summonerData.puuid,
-        this.password()
-      );
+        this.gameName().trim(),
+        this.tagLine().trim()
+      ).subscribe({
+        next: async (summonerData) => {
+          try {
+            // Registrar en Firebase usando Riot Games
+            await this.firebaseService.registerWithRiot(
+              this.gameName().trim(),
+              this.tagLine().trim(),
+              this.region(),
+              summonerData.puuid,
+              this.password(),
+              this.email()
+            );
 
-      this.router.navigate(['/']);
+            this.router.navigate(['/']);
+          } catch (err: any) {
+            this.error.set(err.message || 'Error al registrarse. Por favor intenta nuevamente.');
+            this.loading.set(false);
+          }
+        },
+        error: (err) => {
+          this.loading.set(false);
+          if (err.status === 404) {
+            this.error.set('Invocador no encontrado. Verifica tu nombre de invocador, tagline y región.');
+          } else if (err.error?.error) {
+            this.error.set(err.error.error);
+          } else {
+            this.error.set('Error al verificar el invocador. Verifica que tu cuenta de Riot Games sea válida.');
+          }
+        }
+      });
     } catch (err: any) {
-      this.error.set(err.message || 'Error al registrarse. Verifica que tu cuenta de Riot Games sea válida.');
-    } finally {
       this.loading.set(false);
+      this.error.set(err.message || 'Error al registrarse. Verifica que tu cuenta de Riot Games sea válida.');
     }
   }
 
@@ -111,6 +153,11 @@ export class RegisterComponent {
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumbers = /[0-9]/.test(password);
     return hasUpperCase && hasLowerCase && hasNumbers;
+  }
+
+  isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   }
 }
 

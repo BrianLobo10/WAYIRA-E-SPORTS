@@ -34,8 +34,14 @@
 
 
 .about-content {
-  padding: 4rem 0;
+  padding: 4rem 2rem;
   background: #0f1419;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
 }
 
 .about-intro {
@@ -49,6 +55,7 @@
   font-size: 2.5rem;
   font-weight: 700;
   margin-bottom: 2rem;
+  margin-top: 2rem;
   color: #ffffff;
 }
 
@@ -59,9 +66,70 @@
   margin-bottom: 1.5rem;
 }
 
+.mission-vision {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin: 4rem auto;
+  max-width: 1200px;
+  padding: 0 2rem;
+}
+
+.mission-vision-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 2.5rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.mission-vision-card:hover {
+  transform: translateY(-8px);
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 20px 40px rgba(99, 102, 241, 0.1);
+}
+
+.card-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1.5rem;
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+
+.mission-vision-card h3 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 1rem;
+}
+
+.mission-vision-card p {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.8);
+}
+
 .achievements-grid,
+.services-grid,
 .team-grid {
   margin-top: 3rem;
+  margin-bottom: 4rem;
+}
+
+app-section-header {
+  display: block;
+  margin-bottom: 2rem;
+}
+
+.services-grid {
+  margin-bottom: 4rem;
 }
 
 @media (max-width: 768px) {
@@ -75,6 +143,26 @@
   
   .about-intro h2 {
     font-size: 2rem;
+  }
+
+  .mission-vision {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    margin: 3rem auto;
+    padding: 0 1rem;
+  }
+
+  .mission-vision-card {
+    padding: 2rem;
+  }
+
+  .card-icon {
+    width: 60px;
+    height: 60px;
+  }
+
+  .mission-vision-card h3 {
+    font-size: 1.5rem;
   }
 }
 

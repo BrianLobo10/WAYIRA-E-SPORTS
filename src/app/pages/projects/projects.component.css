@@ -34,12 +34,24 @@
 
 
 .projects-content {
-  padding: 4rem 0;
+  padding: 4rem 2rem;
   background: #0f1419;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+app-section-header {
+  display: block;
+  margin-bottom: 2rem;
 }
 
 .projects-grid {
   margin-top: 3rem;
+  margin-bottom: 4rem;
 }
 
 .project-card {

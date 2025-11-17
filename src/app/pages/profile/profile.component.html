@@ -21,16 +21,24 @@
             <div class="profile-name-section">
               <h1 class="profile-username">{{ profile()!.displayName }}</h1>
               @if (isOwnProfile()) {
-                <button class="btn-edit" routerLink="/profile/edit">
+                <button class="btn-edit" (click)="openEditModal()">
                   <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                   Editar Perfil
                 </button>
               } @else {
-                <button class="btn-follow" [class.following]="isFollowing()" (click)="followUser()">
-                  {{ isFollowing() ? 'Siguiendo' : 'Seguir' }}
-                </button>
+                <div class="profile-actions">
+                  <button class="btn-follow" [class.following]="isFollowing()" (click)="followUser()">
+                    {{ isFollowing() ? 'Siguiendo' : 'Seguir' }}
+                  </button>
+                  <button class="btn-message" (click)="sendMessage()">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    Mensaje
+                  </button>
+                </div>
               }
             </div>
             <div class="profile-stats">
@@ -86,6 +94,15 @@
           </div>
         } @else {
           <div class="posts-grid">
+            @if (isOwnProfile()) {
+              <div class="post-thumbnail create-post-thumbnail" (click)="openCreateModal()">
+                <div class="create-post-thumbnail-content">
+                  <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+              </div>
+            }
             @for (post of posts(); track post.id) {
               <div class="post-thumbnail" (click)="openPost(post)">
                 @if (post.images && post.images.length > 0) {
@@ -151,45 +168,73 @@
             <div class="post-modal-author">
               @if (selectedPost()!.authorPhoto) {
                 <img [src]="selectedPost()!.authorPhoto" [alt]="selectedPost()!.authorName" class="author-avatar">
+              } @else {
+                <div class="author-avatar-placeholder">
+                  {{ selectedPost()!.authorName.charAt(0).toUpperCase() }}
+                </div>
               }
-              <span class="author-name">{{ selectedPost()!.authorName }}</span>
+              <a [routerLink]="['/profile', selectedPost()!.authorId]" class="author-name-link" (click)="closePostModal()">
+                {{ selectedPost()!.authorName }}
+              </a>
             </div>
             <div class="post-modal-comments">
-              <p class="post-text">{{ selectedPost()!.content }}</p>
-              <div class="comments-list">
-                @for (comment of selectedPost()!.comments || []; track $index) {
-                  <div class="comment-item">
-                    <div class="comment-header">
-                      @if (comment.authorPhoto) {
-                        <img [src]="comment.authorPhoto" [alt]="comment.authorName" class="comment-avatar">
-                      }
-                      <span class="comment-author">{{ comment.authorName }}</span>
+              <div class="post-content-section">
+                <p class="post-text">{{ selectedPost()!.content }}</p>
+              </div>
+              <div class="comments-section">
+                <div class="comments-header">
+                  <h4>Comentarios</h4>
+                </div>
+                <div class="comments-list">
+                  @for (comment of selectedPost()!.comments || []; track $index) {
+                    <div class="comment-item">
+                      <div class="comment-header">
+                        @if (comment.authorPhoto) {
+                          <img [src]="comment.authorPhoto" [alt]="comment.authorName" class="comment-avatar">
+                        } @else {
+                          <div class="comment-avatar-placeholder">
+                            {{ comment.authorName.charAt(0).toUpperCase() }}
+                          </div>
+                        }
+                        <a [routerLink]="['/profile', comment.authorId]" class="comment-author-link" (click)="closePostModal()">
+                          {{ comment.authorName }}
+                        </a>
+                      </div>
+                      <p class="comment-content">{{ comment.content }}</p>
+                      <div class="comment-actions">
+                        <button class="comment-btn" (click)="likeComment($index)">
+                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                          </svg>
+                          <span>{{ (comment.likes || []).length }}</span>
+                        </button>
+                        <button class="comment-btn" (click)="dislikeComment($index)">
+                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
+                          </svg>
+                          <span>{{ (comment.dislikes || []).length }}</span>
+                        </button>
+                      </div>
                     </div>
-                    <p class="comment-content">{{ comment.content }}</p>
-                    <div class="comment-actions">
-                      <button class="comment-btn" (click)="likeComment($index)">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                        </svg>
-                        {{ (comment.likes || []).length }}
-                      </button>
-                      <button class="comment-btn" (click)="dislikeComment($index)">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
-                        </svg>
-                        {{ (comment.dislikes || []).length }}
-                      </button>
-                    </div>
-                  </div>
-                }
+                  }
+                </div>
               </div>
             </div>
             <div class="post-modal-actions">
-              <button class="action-btn" (click)="likePost(selectedPost()!)">
-                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" [class.liked]="isLiked(selectedPost()!)">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-              </button>
+              <div class="post-reactions">
+                <button class="action-btn" (click)="likePost(selectedPost()!)" [class.liked]="isLiked(selectedPost()!)">
+                  <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" [attr.fill]="isLiked(selectedPost()!) ? 'currentColor' : 'none'">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                  <span>{{ (selectedPost()!.likes || []).length }}</span>
+                </button>
+                <button class="action-btn" (click)="dislikePost(selectedPost()!)" [class.disliked]="isDisliked(selectedPost()!)">
+                  <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" [attr.fill]="isDisliked(selectedPost()!) ? 'currentColor' : 'none'">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
+                  </svg>
+                  <span>{{ (selectedPost()!.dislikes || []).length }}</span>
+                </button>
+              </div>
               <div class="comment-input-container">
                 <input 
                   type="text" 
@@ -204,6 +249,185 @@
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Edit Profile Modal -->
+  @if (showEditModal()) {
+    <div class="modal-overlay" (click)="closeEditModal()">
+      <div class="modal-content edit-profile-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Editar Perfil</h3>
+          <button class="close-btn" (click)="closeEditModal()" [disabled]="uploadingPhoto()">
+            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="edit-photo-section">
+            <div class="photo-preview">
+              @if (editPhotoPreview()) {
+                <img [src]="editPhotoPreview()!" alt="Preview" class="preview-photo">
+              } @else if (profile()?.photoURL) {
+                <img [src]="profile()!.photoURL!" alt="Current photo" class="preview-photo">
+              } @else {
+                <div class="photo-placeholder">
+                  {{ (profile()?.displayName && profile()!.displayName.charAt(0).toUpperCase()) || 'U' }}
+                </div>
+              }
+            </div>
+            <div class="photo-options">
+              <label class="file-label" [class.disabled]="uploadingPhoto()">
+                <input type="file" accept="image/*" (change)="onPhotoSelected($event)" [disabled]="uploadingPhoto()">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>Subir Foto</span>
+              </label>
+              <button class="champion-btn" (click)="toggleChampionSelector()" [class.active]="showChampionSelector()" [disabled]="uploadingPhoto()">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                <span>Personaje LoL</span>
+              </button>
+            </div>
+            @if (showChampionSelector()) {
+              <div class="champion-selector">
+                <div class="champion-search">
+                  <input type="text" placeholder="Buscar personaje..." class="champion-search-input" #searchInput (input)="filterChampions(searchInput.value)">
+                </div>
+                <div class="champions-grid">
+                  @for (champion of filteredChampions(); track champion) {
+                    <button class="champion-item" (click)="selectChampion(champion)" [class.selected]="selectedChampion() === champion">
+                      <span>{{ champion }}</span>
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+          <div class="form-group">
+            <label>Nombre de Usuario</label>
+            <input type="text" [(ngModel)]="editDisplayName" [disabled]="uploadingPhoto()" class="form-input">
+          </div>
+          <div class="form-group">
+            <label>Biografía</label>
+            <textarea [(ngModel)]="editBio" [disabled]="uploadingPhoto()" class="form-textarea" rows="4" placeholder="Cuéntanos sobre ti..."></textarea>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-cancel" (click)="closeEditModal()" [disabled]="uploadingPhoto()">
+              Cancelar
+            </button>
+            <button class="btn-submit" (click)="saveProfile()" [disabled]="uploadingPhoto() || !editDisplayName().trim()">
+              @if (uploadingPhoto()) {
+                <span class="spinner-small"></span>
+                <span>Guardando...</span>
+              } @else {
+                <span>Guardar Cambios</span>
+              }
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Create Post Modal from Profile -->
+  @if (showCreatePostModal()) {
+    <div class="modal-overlay" (click)="closeCreatePostModal()">
+      <div class="modal-content create-post-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Crear Nueva Publicación</h3>
+          <button class="close-btn" (click)="closeCreatePostModal()" [disabled]="uploadingPost()">
+            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          @if (currentUserProfile()) {
+            <div class="post-author-info">
+              @if (currentUserProfile()!.photoURL) {
+                <img [src]="currentUserProfile()!.photoURL" [alt]="currentUserProfile()!.displayName" class="author-avatar-small">
+              } @else {
+                <span class="author-avatar-placeholder-small">
+                  {{ (currentUserProfile()!.displayName && currentUserProfile()!.displayName.charAt(0).toUpperCase()) || 'U' }}
+                </span>
+              }
+              <span class="author-name-small">{{ currentUserProfile()!.displayName || 'Usuario' }}</span>
+            </div>
+          }
+          <textarea 
+            [(ngModel)]="newPostContent" 
+            placeholder="¿Qué estás pensando?"
+            class="post-textarea"
+            rows="8"
+            [disabled]="uploadingPost()">
+          </textarea>
+          
+          @if (newPostImages().length > 0) {
+            <div class="preview-images">
+              @for (img of newPostImages(); track $index) {
+                <div class="preview-image-container">
+                  <img [src]="getImagePreview(img)" [alt]="img.name" class="preview-image">
+                  <button class="remove-image-btn" (click)="removePostImage($index)" [disabled]="uploadingPost()">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              }
+            </div>
+          }
+          
+          @if (newPostVideo()) {
+            <div class="preview-video-container">
+              <video [src]="getVideoPreview(newPostVideo()!)" controls class="preview-video"></video>
+              <button class="remove-video-btn" (click)="removePostVideo()" [disabled]="uploadingPost()">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Eliminar video
+              </button>
+            </div>
+          }
+          
+          <div class="file-uploads">
+            <label class="file-label" [class.disabled]="uploadingPost()">
+              <input type="file" accept="image/*" multiple (change)="onPostImageSelected($event)" [disabled]="uploadingPost()">
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span>Agregar Imágenes</span>
+            </label>
+            <label class="file-label" [class.disabled]="uploadingPost()">
+              <input type="file" accept="video/*" (change)="onPostVideoSelected($event)" [disabled]="uploadingPost() || !!newPostVideo()">
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              <span>Agregar Video</span>
+            </label>
+          </div>
+          
+          <div class="modal-footer">
+            <button class="btn-cancel" (click)="closeCreatePostModal()" [disabled]="uploadingPost()">
+              Cancelar
+            </button>
+            <button class="btn-submit" (click)="createPostFromProfile()" [disabled]="uploadingPost() || !newPostContent().trim()">
+              @if (uploadingPost()) {
+                <span class="spinner-small"></span>
+                <span>Publicando...</span>
+              } @else {
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+                <span>Publicar</span>
+              }
+            </button>
           </div>
         </div>
       </div>
