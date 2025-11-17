@@ -45,7 +45,8 @@
             <label for="region">Región</label>
             <select
               id="region"
-              [(ngModel)]="region"
+              [ngModel]="region()"
+              (ngModelChange)="region.set($event)"
               name="region"
               class="form-select"
             >

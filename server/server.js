@@ -6,8 +6,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
+// Cloud Run usa PORT automáticamente, local usa 3001
 const PORT = process.env.PORT || 3001;
-const RIOT_API_KEY = process.env.RIOT_API_KEY || '***CLAVE_ELIMINADA***';
+const RIOT_API_KEY = process.env.RIOT_API_KEY;
 
 // Middleware
 app.use(cors());
