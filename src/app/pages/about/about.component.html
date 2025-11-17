@@ -16,6 +16,28 @@
         <p>Desde nuestros inicios, nos hemos enfocado en crear oportunidades reales para jugadores, organizar eventos de calidad y construir una comunidad sólida alrededor de los e-Sports.</p>
       </div>
 
+      <div class="mission-vision">
+        <div class="mission-vision-card">
+          <div class="card-icon">
+            <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3>Misión</h3>
+          <p>Promover, difundir y profesionalizar los deportes electrónicos en Colombia, creando oportunidades para jugadores y construyendo una comunidad sólida alrededor de los e-Sports.</p>
+        </div>
+        <div class="mission-vision-card">
+          <div class="card-icon">
+            <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </div>
+          <h3>Visión</h3>
+          <p>Ser la organización líder en e-Sports en Colombia, reconocida por la excelencia en la organización de eventos, la formación de talento y la construcción de una comunidad gaming inclusiva y profesional.</p>
+        </div>
+      </div>
+
       <app-section-header title="Nuestros Logros"></app-section-header>
       <app-cards-grid [columns]="4" gap="medium" [responsive]="true" class="achievements-grid">
         @for (achievement of achievements; track achievement.title) {
@@ -25,6 +47,19 @@
             [description]="achievement.value + ' - ' + achievement.description"
             type="service"
             size="small">
+          </app-universal-card>
+        }
+      </app-cards-grid>
+
+      <app-section-header title="Nuestros Servicios"></app-section-header>
+      <app-cards-grid [columns]="3" gap="medium" [responsive]="true" class="services-grid">
+        @for (service of services; track service.title) {
+          <app-universal-card 
+            [icon]="service.icon" 
+            [title]="service.title" 
+            [description]="service.description"
+            type="service"
+            size="medium">
           </app-universal-card>
         }
       </app-cards-grid>

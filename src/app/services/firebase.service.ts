@@ -16,7 +16,9 @@ import {
   Timestamp,
   onSnapshot,
   QuerySnapshot,
-  DocumentData
+  DocumentData,
+  collectionData,
+  collectionSnapshots
 } from '@angular/fire/firestore';
 import { 
   Auth, 
@@ -25,7 +27,8 @@ import {
   signOut,
   onAuthStateChanged,
   User,
-  updateProfile
+  updateProfile,
+  sendEmailVerification
 } from '@angular/fire/auth';
 import { 
   Storage, 
@@ -56,11 +59,12 @@ export interface Post {
   id?: string;
   authorId: string;
   authorName: string;
-  authorPhoto?: string;
+  authorPhoto?: string | null;
   content: string;
   images?: string[];
   video?: string;
   likes: string[];
+  dislikes?: string[];
   comments: Comment[];
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -70,25 +74,42 @@ export interface Comment {
   id?: string;
   authorId: string;
   authorName: string;
-  authorPhoto?: string;
+  authorPhoto?: string | null;
   content: string;
   likes: string[];
   dislikes: string[];
   createdAt: Timestamp;
 }
 
+export interface News {
+  id?: string;
+  title: string;
+  content: string;
+  excerpt: string;
+  category: string;
+  imageUrl?: string | null;
+  authorId: string;
+  authorName: string;
+  published: boolean;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
 export interface Tournament {
   id?: string;
   name: string;
   description: string;
+  game: string; // Juego del torneo (League of Legends, Valorant, etc.)
   startDate: Timestamp;
   endDate: Timestamp;
   maxTeams: number;
   teams: Team[];
-  status: 'upcoming' | 'ongoing' | 'finished';
+  status: 'upcoming' | 'ongoing' | 'finished' | 'confirmed';
   createdBy: string;
   createdAt: Timestamp;
   bracket?: BracketMatch[];
+  confirmed?: boolean;
+  confirmedAt?: Timestamp;
 }
 
 export interface Team {
@@ -125,6 +146,31 @@ export interface Message {
   read: boolean;
 }
 
+export interface ContactMessage {
+  id?: string;
+  name: string;
+  email: string;
+  subject?: string;
+  message: string;
+  contactType: string;
+  createdAt: Timestamp;
+  read: boolean;
+}
+
+export interface Notification {
+  id?: string;
+  userId: string; // Usuario que recibe la notificación
+  type: 'like' | 'comment' | 'follow' | 'message';
+  fromUserId: string; // Usuario que realiza la acción
+  fromUserName: string;
+  fromUserPhoto?: string | null;
+  postId?: string; // Para likes y comments
+  commentId?: string; // Para comments
+  message?: string; // Para mensajes
+  read: boolean;
+  createdAt: Timestamp;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -143,22 +189,44 @@ export class FirebaseService {
   }
 
   // Auth Methods
-  async registerWithRiot(gameName: string, tagLine: string, region: string, puuid: string, password: string) {
-    // Generar email único basado en puuid
-    const email = `${puuid}@riot.wayira.local`;
+  async registerWithRiot(gameName: string, tagLine: string, region: string, puuid: string, password: string, userEmail?: string) {
+    // Para Firebase Auth, necesitamos un email válido. Si el usuario proporciona uno, lo usamos.
+    // Si no, generamos uno basado en puuid (aunque no sea un email real, Firebase lo acepta)
+    const authEmail = userEmail || `${puuid}@riot.wayira.local`;
     
-    // Verificar si el usuario ya existe por puuid
-    const existingUser = await this.findUserByPuuid(puuid);
-    if (existingUser) {
-      throw new Error('Esta cuenta de Riot Games ya está registrada');
+    // Verificar si el usuario ya existe por puuid (antes de crear la cuenta)
+    // Esto requiere permisos de lectura pública en Firestore
+    try {
+      const existingUser = await this.findUserByPuuid(puuid);
+      if (existingUser) {
+        throw new Error('Esta cuenta de Riot Games ya está registrada');
+      }
+    } catch (error: any) {
+      // Si hay error de permisos, continuar con el registro (el usuario se creará y luego verificaremos)
+      if (!error.message.includes('ya está registrada')) {
+        console.warn('No se pudo verificar usuario existente, continuando con registro:', error.message);
+      } else {
+        throw error;
+      }
     }
 
-    const userCredential = await createUserWithEmailAndPassword(this.auth, email, password);
+    const userCredential = await createUserWithEmailAndPassword(this.auth, authEmail, password);
     const user = userCredential.user;
+    
+    // Enviar email de verificación de Firebase si se proporciona un email real
+    if (userEmail && userEmail.includes('@') && !userEmail.includes('@riot.wayira.local')) {
+      try {
+        await sendEmailVerification(user);
+        console.log('Email de verificación enviado a', userEmail);
+      } catch (error: any) {
+        console.warn('No se pudo enviar email de verificación:', error.message);
+        // No bloquear el registro si falla el envío de email
+      }
+    }
     
     const userProfile: UserProfile = {
       uid: user.uid,
-      email: email,
+      email: userEmail || authEmail, // Guardar el email real del usuario si se proporciona
       displayName: gameName,
       role: 'user',
       gameName,
@@ -194,8 +262,16 @@ export class FirebaseService {
       throw new Error('Los datos de invocador no coinciden con la cuenta registrada');
     }
 
+    // Verificar que la región coincida
+    if (userProfile.region && userProfile.region.toLowerCase() !== region.toLowerCase()) {
+      throw new Error(`La región no coincide. Tu cuenta está registrada en la región ${userProfile.region.toUpperCase()}.`);
+    }
+
     // El email está en el formato puuid@riot.wayira.local
-    const email = `${puuid}@riot.wayira.local`;
+    // Pero usamos el email del perfil si existe, o el generado
+    const email = userProfile.email && userProfile.email.includes('@') 
+      ? userProfile.email 
+      : `${puuid}@riot.wayira.local`;
     
     // Configurar persistencia de sesión
     const { setPersistence, browserLocalPersistence, browserSessionPersistence } = await import('firebase/auth');
@@ -204,7 +280,15 @@ export class FirebaseService {
     
     // Intentar iniciar sesión con la contraseña proporcionada
     try {
-      return await signInWithEmailAndPassword(this.auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
+      
+      // Verificar que el uid coincida con el del perfil
+      if (userCredential.user.uid !== userProfile.uid) {
+        console.warn(`UID mismatch: Auth uid (${userCredential.user.uid}) != Profile uid (${userProfile.uid})`);
+        console.warn('Esto puede indicar que el usuario tiene múltiples cuentas. El perfil se cargará usando el uid de Firebase Auth.');
+      }
+      
+      return userCredential;
     } catch (error: any) {
       if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
         throw new Error('Contraseña incorrecta. Verifica tus credenciales.');
@@ -223,21 +307,21 @@ export class FirebaseService {
     }
     
     const docSnap = querySnapshot.docs[0];
-    const data: any = docSnap.data();
+    const data = docSnap.data() as DocumentData;
     return {
       id: docSnap.id,
-      uid: data['uid'] || docSnap.id,
-      email: data['email'] || '',
-      displayName: data['displayName'] || '',
-      role: data['role'] || 'user',
-      gameName: data['gameName'],
-      tagLine: data['tagLine'],
-      region: data['region'],
-      puuid: data['puuid'],
-      photoURL: data['photoURL'],
-      bio: data['bio'],
-      followers: data['followers'] || [],
-      following: data['following'] || [],
+      uid: (data['uid'] as string) || docSnap.id,
+      email: (data['email'] as string) || '',
+      displayName: (data['displayName'] as string) || '',
+      role: (data['role'] as 'user' | 'admin') || 'user',
+      gameName: data['gameName'] as string | undefined,
+      tagLine: data['tagLine'] as string | undefined,
+      region: data['region'] as string | undefined,
+      puuid: data['puuid'] as string | undefined,
+      photoURL: data['photoURL'] as string | undefined,
+      bio: data['bio'] as string | undefined,
+      followers: (data['followers'] as string[]) || [],
+      following: (data['following'] as string[]) || [],
       createdAt: data['createdAt'] || Timestamp.now()
     } as UserProfile;
   }
@@ -275,14 +359,147 @@ export class FirebaseService {
 
   // User Profile Methods
   async getUserProfile(uid: string): Promise<UserProfile | null> {
+    try {
+      const docRef = doc(this.firestore, 'users', uid);
+      const result = await from(getDoc(docRef)).pipe(
+        map((docSnap: any) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            return {
+              uid: docSnap.id,
+              ...data
+            } as UserProfile;
+          } else {
+            console.warn(`User profile not found for uid: ${uid}`);
+            return null;
+          }
+        })
+      ).toPromise();
+      return result || null;
+    } catch (error) {
+      console.error(`Error getting user profile for uid ${uid}:`, error);
+      return null;
+    }
+  }
+
+  // Observable para obtener el perfil del usuario en tiempo real
+  getUserProfileRealtime(uid: string): Observable<UserProfile | null> {
     const docRef = doc(this.firestore, 'users', uid);
-    const docSnap = await getDoc(docRef);
-    return docSnap.exists() ? docSnap.data() as UserProfile : null;
+    return new Observable((observer) => {
+      const unsubscribe = onSnapshot(docRef, 
+        (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            observer.next({
+              uid: docSnap.id,
+              ...data
+            } as UserProfile);
+          } else {
+            observer.next(null);
+          }
+        },
+        (error) => {
+          console.error(`Error getting user profile for uid ${uid}:`, error);
+          observer.next(null);
+        }
+      );
+      return () => unsubscribe();
+    });
   }
 
   async updateUserProfile(uid: string, data: Partial<UserProfile>) {
     const docRef = doc(this.firestore, 'users', uid);
-    return await updateDoc(docRef, { ...data, updatedAt: Timestamp.now() });
+    await updateDoc(docRef, { ...data, updatedAt: Timestamp.now() });
+    
+    // Si se actualizó la foto de perfil, actualizar también en publicaciones y comentarios
+    if (data.photoURL !== undefined) {
+      await this.updateUserPhotoInPosts(uid, data.photoURL);
+    }
+    
+    // Si se actualizó el nombre, actualizar también en publicaciones y comentarios
+    if (data.displayName !== undefined) {
+      await this.updateUserNameInPosts(uid, data.displayName);
+    }
+  }
+
+  private async updateUserPhotoInPosts(uid: string, photoURL: string | undefined) {
+    try {
+      // Actualizar foto en publicaciones del usuario
+      const postsQuery = query(
+        collection(this.firestore, 'posts'),
+        where('authorId', '==', uid)
+      );
+      const postsSnapshot = await getDocs(postsQuery);
+      
+      const updatePromises: Promise<void>[] = [];
+      postsSnapshot.forEach((postDoc) => {
+        const postRef = doc(this.firestore, 'posts', postDoc.id);
+        updatePromises.push(updateDoc(postRef, { authorPhoto: photoURL || null }));
+      });
+      
+      // Actualizar foto en comentarios del usuario en todas las publicaciones
+      const allPostsQuery = query(collection(this.firestore, 'posts'));
+      const allPostsSnapshot = await getDocs(allPostsQuery);
+      
+      allPostsSnapshot.forEach((postDoc) => {
+        const postData = postDoc.data() as Post;
+        if (postData.comments && postData.comments.length > 0) {
+          const updatedComments = postData.comments.map((comment: Comment) => {
+            if (comment.authorId === uid) {
+              return { ...comment, authorPhoto: photoURL || null };
+            }
+            return comment;
+          });
+          
+          const postRef = doc(this.firestore, 'posts', postDoc.id);
+          updatePromises.push(updateDoc(postRef, { comments: updatedComments }));
+        }
+      });
+      
+      await Promise.all(updatePromises);
+    } catch (error) {
+      console.error('Error updating user photo in posts:', error);
+    }
+  }
+
+  private async updateUserNameInPosts(uid: string, displayName: string) {
+    try {
+      // Actualizar nombre en publicaciones del usuario
+      const postsQuery = query(
+        collection(this.firestore, 'posts'),
+        where('authorId', '==', uid)
+      );
+      const postsSnapshot = await getDocs(postsQuery);
+      
+      const updatePromises: Promise<void>[] = [];
+      postsSnapshot.forEach((postDoc) => {
+        const postRef = doc(this.firestore, 'posts', postDoc.id);
+        updatePromises.push(updateDoc(postRef, { authorName: displayName }));
+      });
+      
+      // Actualizar nombre en comentarios del usuario en todas las publicaciones
+      const allPostsQuery = query(collection(this.firestore, 'posts'));
+      const allPostsSnapshot = await getDocs(allPostsQuery);
+      
+      allPostsSnapshot.forEach((postDoc) => {
+        const postData = postDoc.data() as Post;
+        if (postData.comments && postData.comments.length > 0) {
+          const updatedComments = postData.comments.map((comment: Comment) => {
+            if (comment.authorId === uid) {
+              return { ...comment, authorName: displayName };
+            }
+            return comment;
+          });
+          
+          const postRef = doc(this.firestore, 'posts', postDoc.id);
+          updatePromises.push(updateDoc(postRef, { comments: updatedComments }));
+        }
+      });
+      
+      await Promise.all(updatePromises);
+    } catch (error) {
+      console.error('Error updating user name in posts:', error);
+    }
   }
 
   async isAdmin(uid: string): Promise<boolean> {
@@ -291,15 +508,32 @@ export class FirebaseService {
   }
 
   // Posts Methods
-  async createPost(post: Omit<Post, 'id' | 'createdAt' | 'updatedAt' | 'likes' | 'comments'>): Promise<string> {
+  async createPost(post: Partial<Post> & { authorId: string; authorName: string; content: string }): Promise<string> {
     const postsRef = collection(this.firestore, 'posts');
-    const newPost: Omit<Post, 'id'> = {
-      ...post,
+    
+    // Construir el objeto del post omitiendo campos undefined
+    const newPost: any = {
+      authorId: post.authorId,
+      authorName: post.authorName,
+      content: post.content,
+      authorPhoto: post.authorPhoto || null, // Asegurar que no sea undefined
       likes: [],
+      dislikes: [],
       comments: [],
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now()
     };
+    
+    // Solo agregar images si existe y tiene elementos
+    if (post.images && Array.isArray(post.images) && post.images.length > 0) {
+      newPost.images = post.images;
+    }
+    
+    // Solo agregar video si existe (no undefined ni null)
+    if (post.video && typeof post.video === 'string') {
+      newPost.video = post.video;
+    }
+    
     const docRef = await addDoc(postsRef, newPost);
     return docRef.id;
   }
@@ -307,16 +541,21 @@ export class FirebaseService {
   getPosts(limitCount: number = 20): Observable<Post[]> {
     const postsRef = collection(this.firestore, 'posts');
     const q = query(postsRef, orderBy('createdAt', 'desc'), limit(limitCount));
-    return from(getDocs(q)).pipe(
-      map((snapshot: QuerySnapshot<DocumentData>) => snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as Post)))
+    return collectionSnapshots(q).pipe(
+      map((docs) => docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as Post)))
     );
   }
 
   getPostById(postId: string): Observable<Post | null> {
     const postRef = doc(this.firestore, 'posts', postId);
-    return from(getDoc(postRef)).pipe(
-      map((docSnap: any) => docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as Post : null)
-    );
+    return new Observable(observer => {
+      const unsubscribe = onSnapshot(postRef, (docSnap: any) => {
+        observer.next(docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as Post : null);
+      }, error => {
+        observer.error(error);
+      });
+      return () => unsubscribe();
+    });
   }
 
   async likePost(postId: string, userId: string) {
@@ -325,30 +564,148 @@ export class FirebaseService {
     if (postSnap.exists()) {
       const post = postSnap.data() as Post;
       const likes = post.likes || [];
-      if (likes.includes(userId)) {
-        await updateDoc(postRef, { likes: likes.filter(id => id !== userId) });
+      const dislikes = post.dislikes || [];
+      const wasLiked = likes.includes(userId);
+      const wasDisliked = dislikes.includes(userId);
+      
+      let updateData: any = {};
+      
+      if (wasLiked) {
+        updateData.likes = likes.filter(id => id !== userId);
       } else {
-        await updateDoc(postRef, { likes: [...likes, userId] });
+        // Remover de dislikes si estaba ahí
+        const newDislikes = wasDisliked ? dislikes.filter(id => id !== userId) : dislikes;
+        updateData.likes = [...likes, userId];
+        if (wasDisliked) {
+          updateData.dislikes = newDislikes;
+        }
+        
+        // Crear notificación solo si no es el propio autor
+        if (post.authorId !== userId) {
+          const currentUser = await this.getUserProfile(userId);
+          await this.createNotification({
+            userId: post.authorId,
+            type: 'like',
+            fromUserId: userId,
+            fromUserName: currentUser?.displayName || 'Usuario',
+            fromUserPhoto: currentUser?.photoURL || null,
+            postId: postId,
+            read: false
+          });
+        }
       }
+      
+      // Filtrar campos undefined
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined) {
+          delete updateData[key];
+        }
+      });
+      
+      await updateDoc(postRef, updateData);
+    }
+  }
+
+  async dislikePost(postId: string, userId: string) {
+    const postRef = doc(this.firestore, 'posts', postId);
+    const postSnap = await getDoc(postRef);
+    if (postSnap.exists()) {
+      const post = postSnap.data() as Post;
+      const likes = post.likes || [];
+      const dislikes = post.dislikes || [];
+      const wasDisliked = dislikes.includes(userId);
+      const wasLiked = likes.includes(userId);
+      
+      let updateData: any = {};
+      
+      if (wasDisliked) {
+        updateData.dislikes = dislikes.filter(id => id !== userId);
+      } else {
+        // Remover de likes si estaba ahí
+        const newLikes = wasLiked ? likes.filter(id => id !== userId) : likes;
+        updateData.dislikes = [...dislikes, userId];
+        if (wasLiked) {
+          updateData.likes = newLikes;
+        }
+      }
+      
+      // Filtrar campos undefined
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined) {
+          delete updateData[key];
+        }
+      });
+      
+      await updateDoc(postRef, updateData);
     }
   }
 
   async addComment(postId: string, comment: Omit<Comment, 'id' | 'createdAt' | 'likes' | 'dislikes'>) {
     const postRef = doc(this.firestore, 'posts', postId);
-    const postSnap = await getDoc(postRef);
-    if (postSnap.exists()) {
-      const post = postSnap.data() as Post;
-      const comments = post.comments || [];
-      const newComment: Comment = {
-        ...comment,
-        likes: [],
-        dislikes: [],
-        createdAt: Timestamp.now()
-      };
-      await updateDoc(postRef, { 
-        comments: [...comments, newComment],
-        updatedAt: Timestamp.now()
+    const result = await from(getDoc(postRef)).pipe(
+      map((postSnap: any) => {
+        if (postSnap.exists()) {
+          const post = postSnap.data() as Post;
+          const comments = post.comments || [];
+          const newComment: Comment = {
+            authorId: comment.authorId,
+            authorName: comment.authorName,
+            authorPhoto: comment.authorPhoto || null,
+            content: comment.content,
+            likes: [],
+            dislikes: [],
+            createdAt: Timestamp.now()
+          };
+          return {
+            comments: [...comments, newComment],
+            updatedAt: Timestamp.now()
+          };
+        }
+        return null;
+      })
+    ).toPromise();
+    
+    if (result) {
+      // Filtrar campos undefined y null de manera recursiva
+      const cleanData: any = {};
+      const resultAny = result as any;
+      Object.keys(resultAny).forEach(key => {
+        const value = resultAny[key];
+        if (value !== undefined && value !== null) {
+          if (Array.isArray(value)) {
+            cleanData[key] = value.map((item: any) => {
+              const cleanItem: any = {};
+              Object.keys(item).forEach(itemKey => {
+                if (item[itemKey] !== undefined && item[itemKey] !== null) {
+                  cleanItem[itemKey] = item[itemKey];
+                }
+              });
+              return cleanItem;
+            });
+          } else {
+            cleanData[key] = value;
+          }
+        }
       });
+      await updateDoc(postRef, cleanData);
+      
+      // Obtener el post actualizado para crear la notificación
+      const updatedPostSnap = await from(getDoc(postRef)).pipe(
+        map((snap: any) => snap.exists() ? snap.data() as Post : null)
+      ).toPromise();
+      
+      // Crear notificación solo si no es el propio autor
+      if (updatedPostSnap && updatedPostSnap.authorId !== comment.authorId) {
+        await this.createNotification({
+          userId: updatedPostSnap.authorId,
+          type: 'comment',
+          fromUserId: comment.authorId,
+          fromUserName: comment.authorName,
+          fromUserPhoto: comment.authorPhoto || null,
+          postId: postId,
+          read: false
+        });
+      }
     }
   }
 
@@ -417,6 +774,79 @@ export class FirebaseService {
     );
   }
 
+  getActiveTournament(): Observable<Tournament | null> {
+    const tournamentsRef = collection(this.firestore, 'tournaments');
+    // Query solo por status para evitar necesidad de índice compuesto
+    const q = query(
+      tournamentsRef,
+      where('status', '==', 'ongoing'),
+      limit(10) // Limitar resultados y ordenar en memoria
+    );
+    return from(getDocs(q)).pipe(
+      map((snapshot: QuerySnapshot<DocumentData>) => {
+        if (snapshot.empty) return null;
+        // Ordenar por createdAt en memoria
+        const tournaments = snapshot.docs
+          .map((doc: any) => ({ id: doc.id, ...doc.data() } as Tournament))
+          .sort((a, b) => {
+            const aTime = a.createdAt?.toMillis() || 0;
+            const bTime = b.createdAt?.toMillis() || 0;
+            return bTime - aTime; // Descendente
+          });
+        return tournaments[0] || null;
+      })
+    );
+  }
+
+  getAvailableTournaments(): Observable<Tournament[]> {
+    const tournamentsRef = collection(this.firestore, 'tournaments');
+    // Buscar torneos disponibles: upcoming, ongoing o confirmed
+    // Usar solo where para evitar necesidad de índice compuesto, ordenar en memoria
+    const q = query(
+      tournamentsRef,
+      where('status', 'in', ['upcoming', 'ongoing', 'confirmed']),
+      limit(50) // Obtener más para filtrar y ordenar en memoria
+    );
+    return from(getDocs(q)).pipe(
+      map((snapshot: QuerySnapshot<DocumentData>) => {
+        const tournaments = snapshot.docs
+          .map((doc: any) => ({ id: doc.id, ...doc.data() } as Tournament))
+          .sort((a, b) => {
+            const aTime = a.createdAt?.toMillis() || 0;
+            const bTime = b.createdAt?.toMillis() || 0;
+            return bTime - aTime; // Descendente (más recientes primero)
+          });
+        return tournaments;
+      })
+    );
+  }
+
+  hasAvailableTournaments(): Observable<boolean> {
+    const tournamentsRef = collection(this.firestore, 'tournaments');
+    // Buscar torneos disponibles: upcoming, ongoing o confirmed
+    // Usar solo where para evitar necesidad de índice compuesto
+    const q = query(
+      tournamentsRef,
+      where('status', 'in', ['upcoming', 'ongoing', 'confirmed']),
+      limit(1) // Solo necesitamos saber si existe al menos uno
+    );
+    
+    return new Observable<boolean>((observer) => {
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          observer.next(!snapshot.empty);
+        },
+        (error) => {
+          console.error('Error checking available tournaments:', error);
+          observer.next(false);
+        }
+      );
+      
+      return () => unsubscribe();
+    });
+  }
+
   async registerTeam(tournamentId: string, team: Team) {
     const tournamentRef = doc(this.firestore, 'tournaments', tournamentId);
     const tournamentSnap = await getDoc(tournamentRef);
@@ -441,6 +871,100 @@ export class FirebaseService {
     }
   }
 
+  // Search users by name or gameName
+  searchUsers(searchTerm: string, limitCount: number = 20): Observable<UserProfile[]> {
+    const usersRef = collection(this.firestore, 'users');
+    // Firestore doesn't support full-text search, so we'll fetch all and filter client-side
+    // For better performance, you could use Algolia or similar
+    const q = query(usersRef, limit(limitCount * 5)); // Fetch more to filter
+    return from(getDocs(q)).pipe(
+      map((snapshot: QuerySnapshot<DocumentData>) => {
+        const searchLower = searchTerm.toLowerCase();
+        return snapshot.docs
+          .map((doc: any) => ({ uid: doc.id, ...doc.data() } as UserProfile))
+          .filter((user: UserProfile) => {
+            const nameMatch = user.displayName?.toLowerCase().includes(searchLower);
+            const gameNameMatch = user.gameName?.toLowerCase().includes(searchLower);
+            return nameMatch || gameNameMatch;
+          })
+          .slice(0, limitCount);
+      })
+    );
+  }
+
+  // Get tournament by ID
+  getTournamentById(tournamentId: string): Observable<Tournament | null> {
+    const tournamentRef = doc(this.firestore, 'tournaments', tournamentId);
+    return from(getDoc(tournamentRef)).pipe(
+      map((docSnap: any) => {
+        if (docSnap.exists()) {
+          return { id: docSnap.id, ...docSnap.data() } as Tournament;
+        }
+        return null;
+      })
+    );
+  }
+
+  // Update tournament
+  async updateTournament(tournamentId: string, updates: Partial<Tournament>): Promise<void> {
+    const tournamentRef = doc(this.firestore, 'tournaments', tournamentId);
+    await updateDoc(tournamentRef, updates);
+  }
+
+  // Generate bracket structure
+  generateBracket(teams: Team[]): BracketMatch[] {
+    const matches: BracketMatch[] = [];
+    const numTeams = teams.length;
+    
+    if (numTeams < 2) return matches;
+    
+    // Shuffle teams for random bracket
+    const shuffled = [...teams].sort(() => Math.random() - 0.5);
+    
+    // Determine rounds based on number of teams
+    let currentRound = shuffled;
+    let roundNumber = 1;
+    
+    while (currentRound.length > 1) {
+      const nextRound: Team[] = [];
+      for (let i = 0; i < currentRound.length; i += 2) {
+        const team1 = currentRound[i];
+        const team2 = currentRound[i + 1];
+        
+        if (team1 && team2) {
+          const match: BracketMatch = {
+            id: `match-${roundNumber}-${i / 2}`,
+            round: this.getRoundType(numTeams, roundNumber),
+            team1Id: team1.id,
+            team1Name: team1.name,
+            team2Id: team2.id,
+            team2Name: team2.name,
+            winnerId: undefined,
+            matchDate: undefined
+          };
+          matches.push(match);
+          nextRound.push(team1); // Placeholder, will be updated with winner
+        } else if (team1) {
+          nextRound.push(team1); // Bye
+        }
+      }
+      currentRound = nextRound;
+      roundNumber++;
+    }
+    
+    return matches;
+  }
+
+  private getRoundType(numTeams: number, roundNumber: number): 'round16' | 'quarter' | 'semi' | 'final' {
+    const totalRounds = Math.ceil(Math.log2(numTeams));
+    const currentRound = totalRounds - roundNumber + 1;
+    
+    if (currentRound === totalRounds) return 'final';
+    if (currentRound === totalRounds - 1) return 'semi';
+    if (currentRound === totalRounds - 2) return 'quarter';
+    return 'round16';
+  }
+
   // Messages Methods
   async sendMessage(message: Omit<Message, 'id' | 'timestamp' | 'read' | 'fromName' | 'fromPhoto'>) {
     const messagesRef = collection(this.firestore, 'messages');
@@ -455,7 +979,18 @@ export class FirebaseService {
       timestamp: Timestamp.now(),
       read: false
     };
-    return await addDoc(messagesRef, newMessage);
+    await addDoc(messagesRef, newMessage);
+    
+    // Crear notificación de mensaje
+    await this.createNotification({
+      userId: message.toId,
+      type: 'message',
+      fromUserId: user.uid,
+      fromUserName: profile?.displayName || 'Usuario',
+      fromUserPhoto: profile?.photoURL || null,
+      message: message.content,
+      read: false
+    });
   }
 
   getMessages(userId1: string, userId2: string): Observable<Message[]> {
@@ -509,15 +1044,27 @@ export class FirebaseService {
 
   // Storage Methods
   async uploadImage(file: File, path: string): Promise<string> {
-    const storageRef = ref(this.storage, path);
-    await uploadBytes(storageRef, file);
-    return await getDownloadURL(storageRef);
+    try {
+      const storageRef = ref(this.storage, path);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      return url;
+    } catch (error: any) {
+      console.error('Error uploading image:', error);
+      throw new Error('Error al subir la imagen. Por favor intenta nuevamente.');
+    }
   }
 
   async uploadVideo(file: File, path: string): Promise<string> {
-    const storageRef = ref(this.storage, path);
-    await uploadBytes(storageRef, file);
-    return await getDownloadURL(storageRef);
+    try {
+      const storageRef = ref(this.storage, path);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      return url;
+    } catch (error: any) {
+      console.error('Error uploading video:', error);
+      throw new Error('Error al subir el video. Por favor intenta nuevamente.');
+    }
   }
 
   // Follow/Unfollow
@@ -534,9 +1081,19 @@ export class FirebaseService {
       
       if (!following.includes(targetUserId)) {
         await updateDoc(currentUserRef, { following: [...following, targetUserId] });
-      }
-      if (!followers.includes(currentUserId)) {
-        await updateDoc(targetUserRef, { followers: [...followers, currentUserId] });
+        if (!followers.includes(currentUserId)) {
+          await updateDoc(targetUserRef, { followers: [...followers, currentUserId] });
+        }
+        
+        // Crear notificación de seguimiento
+        await this.createNotification({
+          userId: targetUserId,
+          type: 'follow',
+          fromUserId: currentUserId,
+          fromUserName: currentUser.displayName,
+          fromUserPhoto: currentUser.photoURL || null,
+          read: false
+        });
       }
     }
   }
@@ -559,10 +1116,177 @@ export class FirebaseService {
 
   getUserPosts(userId: string): Observable<Post[]> {
     const postsRef = collection(this.firestore, 'posts');
-    const q = query(postsRef, where('authorId', '==', userId), orderBy('createdAt', 'desc'));
-    return from(getDocs(q)).pipe(
-      map((snapshot: QuerySnapshot<DocumentData>) => snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as Post)))
+    // Query solo por authorId para evitar necesidad de índice compuesto
+    const q = query(postsRef, where('authorId', '==', userId));
+    return collectionSnapshots(q).pipe(
+      map((docs) => {
+        // Ordenar por createdAt en memoria
+        return docs
+          .map((doc: any) => ({ id: doc.id, ...doc.data() } as Post))
+          .sort((a, b) => {
+            const aTime = a.createdAt?.toMillis() || 0;
+            const bTime = b.createdAt?.toMillis() || 0;
+            return bTime - aTime; // Descendente
+          });
+      })
     );
   }
+
+  // News Methods
+  async createNews(news: Omit<News, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    const newsRef = collection(this.firestore, 'news');
+    const newNews: Omit<News, 'id'> = {
+      ...news,
+      published: news.published || false,
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
+    };
+    const docRef = await addDoc(newsRef, newNews);
+    return docRef.id;
+  }
+
+  getNews(limitCount: number = 50): Observable<News[]> {
+    const newsRef = collection(this.firestore, 'news');
+    const q = query(newsRef, where('published', '==', true), orderBy('createdAt', 'desc'), limit(limitCount));
+    return from(getDocs(q)).pipe(
+      map((snapshot: QuerySnapshot<DocumentData>) => snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as News)))
+    );
+  }
+
+  getAllNews(limitCount: number = 100): Observable<News[]> {
+    const newsRef = collection(this.firestore, 'news');
+    const q = query(newsRef, orderBy('createdAt', 'desc'), limit(limitCount));
+    return from(getDocs(q)).pipe(
+      map((snapshot: QuerySnapshot<DocumentData>) => snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as News)))
+    );
+  }
+
+  getNewsById(newsId: string): Observable<News | null> {
+    const newsRef = doc(this.firestore, 'news', newsId);
+    return from(getDoc(newsRef)).pipe(
+      map((docSnap: any) => docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as News : null)
+    );
+  }
+
+  async updateNews(newsId: string, updates: Partial<Omit<News, 'id' | 'createdAt'>>): Promise<void> {
+    const newsRef = doc(this.firestore, 'news', newsId);
+    await updateDoc(newsRef, {
+      ...updates,
+      updatedAt: Timestamp.now()
+    });
+  }
+
+  async deleteNews(newsId: string): Promise<void> {
+    const newsRef = doc(this.firestore, 'news', newsId);
+    await deleteDoc(newsRef);
+  }
+
+  // Contact Messages Methods
+  async createContactMessage(message: Omit<ContactMessage, 'id' | 'createdAt' | 'read'>): Promise<string> {
+    const messagesRef = collection(this.firestore, 'contactMessages');
+    const newMessage: Omit<ContactMessage, 'id'> = {
+      ...message,
+      read: false,
+      createdAt: Timestamp.now()
+    };
+    const docRef = await addDoc(messagesRef, newMessage);
+    return docRef.id;
+  }
+
+  getContactMessages(limitCount: number = 100): Observable<ContactMessage[]> {
+    const messagesRef = collection(this.firestore, 'contactMessages');
+    const q = query(messagesRef, orderBy('createdAt', 'desc'), limit(limitCount));
+    return from(getDocs(q)).pipe(
+      map((snapshot: QuerySnapshot<DocumentData>) => snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as ContactMessage)))
+    );
+  }
+
+  async getAdminEmails(): Promise<string[]> {
+    const usersRef = collection(this.firestore, 'users');
+    const q = query(usersRef, where('role', '==', 'admin'));
+    const querySnapshot = await getDocs(q);
+    const emails: string[] = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data() as UserProfile;
+      if (data.email) {
+        emails.push(data.email);
+      }
+    });
+    return emails;
+  }
+
+  // Notification Methods
+  async createNotification(notification: Omit<Notification, 'id' | 'createdAt'>): Promise<string> {
+    const notificationsRef = collection(this.firestore, 'notifications');
+    const newNotification: Omit<Notification, 'id'> = {
+      ...notification,
+      createdAt: Timestamp.now()
+    };
+    const docRef = await addDoc(notificationsRef, newNotification);
+    
+    // Mantener solo las últimas 20 notificaciones por usuario
+    const q = query(
+      notificationsRef,
+      where('userId', '==', notification.userId),
+      orderBy('createdAt', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.size > 20) {
+      // Eliminar las notificaciones más antiguas (después de la 20)
+      const docsToDelete = snapshot.docs.slice(20);
+      const deletePromises = docsToDelete.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+    }
+    
+    return docRef.id;
+  }
+
+  getNotifications(userId: string): Observable<Notification[]> {
+    const notificationsRef = collection(this.firestore, 'notifications');
+    const q = query(
+      notificationsRef,
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc'),
+      limit(50)
+    );
+    return collectionSnapshots(q).pipe(
+      map((docs) => {
+        return docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as Notification));
+      })
+    );
+  }
+
+  getUnreadNotificationsCount(userId: string): Observable<number> {
+    const notificationsRef = collection(this.firestore, 'notifications');
+    const q = query(
+      notificationsRef,
+      where('userId', '==', userId),
+      where('read', '==', false)
+    );
+    return collectionSnapshots(q).pipe(
+      map((docs) => docs.length)
+    );
+  }
+
+  async markNotificationAsRead(notificationId: string): Promise<void> {
+    const notificationRef = doc(this.firestore, 'notifications', notificationId);
+    await updateDoc(notificationRef, { read: true });
+  }
+
+  async markAllNotificationsAsRead(userId: string): Promise<void> {
+    const notificationsRef = collection(this.firestore, 'notifications');
+    const q = query(
+      notificationsRef,
+      where('userId', '==', userId),
+      where('read', '==', false)
+    );
+    const querySnapshot = await getDocs(q);
+    const updatePromises = querySnapshot.docs.map((doc: any) => 
+      updateDoc(doc.ref, { read: true })
+    );
+    await Promise.all(updatePromises);
+  }
+
 }
 

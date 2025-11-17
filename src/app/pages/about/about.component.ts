@@ -46,15 +46,48 @@ export class AboutComponent {
     },
     {
       icon: 'video',
-      title: 'Horas de Contenido',
+      title: 'Horas de Transmisión',
       value: '500+',
-      description: 'Transmisiones y videos producidos'
+      description: 'Lives y streams de torneos'
     },
     {
       icon: 'globe',
       title: 'Alcance Nacional',
       value: 'Colombia',
       description: 'Presencia en todo el territorio'
+    }
+  ];
+
+  services = [
+    {
+      icon: 'trophy',
+      title: 'Organización de Torneos',
+      description: 'Competencias desde nivel local hasta ligas nacionales con cobertura profesional y transmisiones en vivo'
+    },
+    {
+      icon: 'graduation',
+      title: 'Formación de Jugadores',
+      description: 'Entrenamiento, coaching y desarrollo de habilidades para equipos y jugadores aspirantes a profesionales'
+    },
+    {
+      icon: 'video',
+      title: 'Transmisiones en Vivo',
+      description: 'Lives y streams profesionales de torneos y eventos competitivos en tiempo real'
+    },
+    {
+      icon: 'handshake',
+      title: 'Alianzas Estratégicas',
+      description: 'Conexión con marcas y patrocinadores para visibilidad y crecimiento del ecosistema'
+    },
+    {
+      icon: 'users',
+      title: 'Comunidad Gaming',
+      description: 'Construcción y gestión de una comunidad activa y comprometida con los e-Sports'
+    },
+    {
+      icon: 'globe',
+      title: 'Expansión Nacional',
+      description: 'Presencia y eventos en diferentes regiones de Colombia para promover el talento local'
     }
   ];
 }

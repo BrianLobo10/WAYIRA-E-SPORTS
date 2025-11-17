@@ -1,16 +1,18 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SectionHeaderComponent } from '../../components/section-header/section-header.component';
+import { FirebaseService } from '../../services/firebase.service';
 
 @Component({
   selector: 'app-contact',
   standalone: true,
-  imports: [CommonModule, FormsModule, SectionHeaderComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './contact.component.html',
   styleUrls: ['./contact.component.css']
 })
 export class ContactComponent {
+  private firebaseService = inject(FirebaseService);
+
   name = signal('');
   email = signal('');
   subject = signal('');
@@ -37,17 +39,35 @@ export class ContactComponent {
     instagram: 'https://www.instagram.com/wayiraesports'
   };
 
-  onSubmit() {
+  async onSubmit() {
     if (!this.validateForm()) return;
 
     this.isSubmitting.set(true);
     this.submitError.set('');
 
-    setTimeout(() => {
+    try {
+      // Guardar mensaje en Firestore
+      await this.firebaseService.createContactMessage({
+        name: this.name(),
+        email: this.email(),
+        subject: this.subject() || undefined,
+        message: this.message(),
+        contactType: this.contactType()
+      });
+
+      // Obtener emails de admins y notificar (aquí podrías integrar un servicio de email)
+      const adminEmails = await this.firebaseService.getAdminEmails();
+      console.log('Mensaje de contacto guardado. Notificar a admins:', adminEmails);
+      // TODO: Integrar servicio de email (EmailJS, SendGrid, etc.) para enviar notificaciones
+
       this.isSubmitting.set(false);
       this.submitSuccess.set(true);
       this.resetForm();
-    }, 2000);
+    } catch (error: any) {
+      console.error('Error al enviar mensaje:', error);
+      this.submitError.set('Error al enviar el mensaje. Por favor intenta nuevamente.');
+      this.isSubmitting.set(false);
+    }
   }
 
   private validateForm(): boolean {

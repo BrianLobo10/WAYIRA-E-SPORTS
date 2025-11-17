@@ -46,7 +46,11 @@ const regionalRouting = {
 // Endpoint para buscar summoner por nombre y tagline
 app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
   try {
-    const { region, gameName, tagLine } = req.params;
+    let { region, gameName, tagLine } = req.params;
+    
+    // Decodificar parámetros de URL
+    gameName = decodeURIComponent(gameName);
+    tagLine = decodeURIComponent(tagLine);
     
     if (!RIOT_API_KEY) {
       return res.status(500).json({ 
@@ -97,6 +101,9 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
       const accountData = await accountResponse.json();
       const puuid = accountData.puuid;
       
+      console.log(`PUUID obtenido: ${puuid}`);
+      console.log(`Buscando summoner en región: ${region}`);
+      
       // 2. Obtener datos del summoner
       const summonerUrl = `https://${region}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${puuid}`;
       const summonerResponse = await fetch(summonerUrl, {
@@ -104,7 +111,52 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
       });
       
       if (!summonerResponse.ok) {
-        throw new Error(`Error obteniendo datos del summoner: ${summonerResponse.status}`);
+        const errorText = await summonerResponse.text();
+        console.error(`Error obteniendo summoner (${summonerResponse.status}):`, errorText);
+        
+        // Si el summoner no existe en esta región, intentar con otras regiones de LATAM
+        if (summonerResponse.status === 404) {
+          const latamRegions = ['la1', 'la2', 'br1'];
+          for (const altRegion of latamRegions) {
+            if (altRegion === region) continue;
+            
+            console.log(`Intentando con región alternativa: ${altRegion}`);
+            const altSummonerUrl = `https://${altRegion}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${puuid}`;
+            const altSummonerResponse = await fetch(altSummonerUrl, {
+              headers: { 'X-Riot-Token': RIOT_API_KEY }
+            });
+            
+            if (altSummonerResponse.ok) {
+              console.log(`Summoner encontrado en región ${altRegion}`);
+              const summoner = await altSummonerResponse.json();
+              
+              // Obtener estadísticas rankeadas de la región donde se encontró
+              let leagueData = [];
+              try {
+                const leagueUrl = `https://${altRegion}.api.riotgames.com/lol/league/v4/entries/by-summoner/${summoner.id}`;
+                const leagueResponse = await fetch(leagueUrl, {
+                  headers: { 'X-Riot-Token': RIOT_API_KEY }
+                });
+                
+                if (leagueResponse.ok) {
+                  leagueData = await leagueResponse.json();
+                }
+              } catch (error) {
+                console.log('Error obteniendo estadísticas rankeadas:', error.message);
+              }
+              
+              return {
+                ...summoner,
+                gameName: accountData.gameName,
+                tagLine: accountData.tagLine,
+                leagues: leagueData,
+                actualRegion: altRegion
+              };
+            }
+          }
+        }
+        
+        throw new Error(`Error obteniendo datos del summoner: ${summonerResponse.status}. El jugador puede no tener cuenta en la región ${region}.`);
       }
       
       const summoner = await summonerResponse.json();
@@ -128,7 +180,8 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
         ...summoner,
         gameName: accountData.gameName,
         tagLine: accountData.tagLine,
-        leagues: leagueData
+        leagues: leagueData,
+        actualRegion: region
       };
     });
     

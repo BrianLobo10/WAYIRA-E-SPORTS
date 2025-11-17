@@ -1,6 +1,7 @@
 import { Component, signal, inject, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FirebaseService, Message, UserProfile } from '../../services/firebase.service';
 import { Observable } from 'rxjs';
 
@@ -13,6 +14,8 @@ import { Observable } from 'rxjs';
 })
 export class MessagesComponent implements OnInit {
   private firebaseService = inject(FirebaseService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
 
   conversations = signal<Array<{ userId: string; profile: UserProfile | null; lastMessage: Message | null; unread: number }>>([]);
   selectedConversation = signal<string | null>(null);
@@ -31,6 +34,13 @@ export class MessagesComponent implements OnInit {
   ngOnInit() {
     this.loadCurrentUser();
     this.loadConversations();
+    
+    // Verificar si hay un userId en queryParams
+    this.route.queryParams.subscribe(params => {
+      if (params['userId']) {
+        this.selectConversation(params['userId']);
+      }
+    });
   }
 
   async loadCurrentUser() {
@@ -70,6 +80,17 @@ export class MessagesComponent implements OnInit {
   }
 
   selectConversation(userId: string) {
+    // Verificar si el usuario existe en las conversaciones
+    const existingConv = this.conversations().find(c => c.userId === userId);
+    if (!existingConv) {
+      // Si no existe, cargar el perfil y crear una conversación temporal
+      this.firebaseService.getUserProfile(userId).then(profile => {
+        if (profile) {
+          this.conversations.update(convs => [...convs, { userId, profile, lastMessage: null, unread: 0 }]);
+        }
+      });
+    }
+    
     this.selectedConversation.set(userId);
     this.minimizedChats.update(chats => {
       const newChats = new Set(chats);
@@ -78,6 +99,9 @@ export class MessagesComponent implements OnInit {
     });
     this.loadMessages(userId);
     this.markAsRead(userId);
+    
+    // Limpiar queryParams después de seleccionar
+    this.router.navigate([], { queryParams: {} });
   }
 
   loadMessages(otherUserId: string) {

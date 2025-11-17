@@ -39,7 +39,7 @@
 .logo-text {
   font-size: 1.8rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #FFFFFF 0%, #016C6C 100%);
+  background: #FFFFFF ;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -49,13 +49,13 @@
 .logo-accent {
   font-size: 1.8rem;
   font-weight: 800;
-  color: #006968;
+  color: #FFFFFF;
   letter-spacing: -0.02em;
 }
 
 .nav {
   display: flex;
-  gap: 1.5rem;
+  gap: 1rem;
   align-items: center;
 }
 
@@ -67,6 +67,38 @@
   position: relative;
   transition: color 0.3s ease;
   padding: 0.5rem 0;
+}
+
+.nav-link-icon {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.nav-link-text {
+  display: inline;
+}
+
+.create-tournament-btn .nav-link-text {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+@media (max-width: 1024px) {
+  .nav-link-text {
+    display: none;
+  }
+  
+  .nav-link-icon {
+    padding: 0.5rem;
+    border-radius: 8px;
+  }
+  
+  .nav-link-icon:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
 }
 
 .nav a::after {
@@ -93,6 +125,86 @@
   color: #fff;
 }
 
+/* Notificaciones */
+app-notifications {
+  display: flex;
+  align-items: center;
+}
+
+.active-tournament-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #000000;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+  animation: pulse 2s infinite;
+}
+
+.active-tournament-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(251, 191, 36, 0.6);
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.active-tournament-btn svg {
+  color: #000000;
+}
+
+.tournament-text {
+  font-weight: 700;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(251, 191, 36, 0.7);
+  }
+}
+
+.create-tournament-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.65rem;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  color: #818cf8;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.75rem;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.create-tournament-btn:hover {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.4);
+  color: #a5b4fc;
+}
+
+.create-tournament-btn svg {
+  color: currentColor;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  opacity: 0.9;
+}
+
+.create-tournament-btn:hover svg {
+  color: #a5b4fc;
+}
+
 .dropdown {
   position: relative;
   display: inline-block;
@@ -114,22 +226,25 @@
 
 .dropdown-menu {
   position: absolute;
-  top: 100%;
-  right: 0;
-  transform: translateY(-10px);
+  top: calc(100% + 0.5rem);
+  left: 0;
   background: linear-gradient(135deg, #00363D 0%, #014C4A 100%);
   border: 1px solid rgba(1, 108, 108, 0.3);
   border-radius: 10px;
-  padding: 1.2rem 0;
+  padding: 0.5rem 0;
   min-width: 160px;
-  max-width: 180px;
   opacity: 0;
   visibility: hidden;
   transition: all 0.3s ease;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   z-index: 1001;
-  white-space: nowrap;
-  text-align: right;
+  text-align: left;
+}
+
+.more-menu {
+  min-width: 180px;
+  max-width: 200px;
+  text-align: left;
 }
 
 .dropdown-menu.active {
@@ -341,6 +456,10 @@
   color: #fff;
 }
 
+.profile-dropdown {
+  position: relative;
+}
+
 .login-link,
 .profile-link,
 .messages-link {
@@ -356,10 +475,72 @@
   transition: all 0.3s ease;
 }
 
+.profile-link.dropdown-trigger {
+  cursor: pointer;
+}
+
+.profile-name {
+  display: inline;
+}
+
 .login-link:hover,
 .profile-link:hover,
 .messages-link:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+.profile-menu {
+  min-width: 200px;
+  right: 0;
+}
+
+.profile-menu .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
+}
+
+.profile-menu .dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.profile-menu .logout-item {
+  color: #fca5a5;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+}
+
+.profile-menu .logout-item:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ffffff;
+}
+
+@media (max-width: 1024px) {
+  .profile-name {
+    display: none;
+  }
+  
+  .create-tournament-btn .nav-link-text {
+    display: none;
+  }
+  
+  .create-tournament-btn {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.7rem;
+    min-width: 40px;
+    justify-content: center;
+  }
 }
 
 .user-avatar,

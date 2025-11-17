@@ -11,8 +11,10 @@ import { RegisterComponent } from './pages/auth/register/register.component';
 import { BlogComponent } from './pages/blog/blog.component';
 import { ProfileComponent } from './pages/profile/profile.component';
 import { MessagesComponent } from './pages/messages/messages.component';
+import { TournamentsComponent } from './pages/tournaments/tournaments.component';
 import { authGuard } from './guards/auth.guard';
 import { adminGuard } from './guards/admin.guard';
+import { guestGuard } from './guards/guest.guard';
 
 export const routes: Routes = [
   {
@@ -49,11 +51,13 @@ export const routes: Routes = [
   },
   {
     path: 'login',
-    component: LoginComponent
+    component: LoginComponent,
+    canActivate: [guestGuard]
   },
   {
     path: 'register',
-    component: RegisterComponent
+    component: RegisterComponent,
+    canActivate: [guestGuard]
   },
   {
     path: 'profile/:id',
@@ -69,6 +73,10 @@ export const routes: Routes = [
     path: 'messages',
     component: MessagesComponent,
     canActivate: [authGuard]
+  },
+  {
+    path: 'tournaments',
+    component: TournamentsComponent
   },
   {
     path: '**',
