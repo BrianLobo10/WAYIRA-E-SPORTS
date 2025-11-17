@@ -5,7 +5,7 @@
   "description": "Backend API para WAYIRA E-SPORTS - League of Legends",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "pm2 start ecosystem.config.cjs --no-daemon",
     "dev": "nodemon server.js",
     "tunnel": "node start-with-ngrok.js",
     "pm2:start": "pm2 start ecosystem.config.cjs",

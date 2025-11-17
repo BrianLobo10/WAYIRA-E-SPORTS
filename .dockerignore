@@ -1,0 +1,26 @@
+# Ignorar todo excepto la carpeta server
+*
+!server/
+
+# Dentro de server, ignorar node_modules y logs
+server/node_modules
+server/logs
+server/.git
+
+# Archivos de desarrollo
+*.md
+.git
+.gitignore
+.env
+.env.local
+
+# Archivos de Angular (no necesarios para el servidor)
+src/
+dist/
+angular.json
+tsconfig*.json
+public/
+firebase.json
+firestore.rules
+storage.rules
+
