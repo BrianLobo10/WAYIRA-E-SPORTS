@@ -176,11 +176,9 @@ export class FirebaseService {
   }
 
   getCurrentUser(): User | null {
-    try {
-      return this.auth.currentUser as User | null;
-    } catch {
-      return null;
-    }
+    // Use the BehaviorSubject value for immediate synchronous access
+    // This is more reliable than auth.currentUser which can be null during initialization
+    return this.currentUser$.value;
   }
 
   // User Profile Methods
@@ -225,7 +223,7 @@ export class FirebaseService {
   getPostById(postId: string): Observable<Post | null> {
     const postRef = doc(this.firestore, 'posts', postId);
     return from(getDoc(postRef)).pipe(
-      map(docSnap => docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as Post : null)
+      map((docSnap: any) => docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as Post : null)
     );
   }
 
@@ -352,10 +350,16 @@ export class FirebaseService {
   }
 
   // Messages Methods
-  async sendMessage(message: Omit<Message, 'id' | 'timestamp' | 'read'>) {
+  async sendMessage(message: Omit<Message, 'id' | 'timestamp' | 'read' | 'fromName' | 'fromPhoto'>) {
     const messagesRef = collection(this.firestore, 'messages');
+    const user = this.getCurrentUser();
+    if (!user) throw new Error('User not authenticated');
+    
+    const profile = await this.getUserProfile(user.uid);
     const newMessage: Omit<Message, 'id'> = {
       ...message,
+      fromName: profile?.displayName || 'Usuario',
+      fromPhoto: profile?.photoURL,
       timestamp: Timestamp.now(),
       read: false
     };
@@ -375,22 +379,33 @@ export class FirebaseService {
     );
   }
 
-  getConversations(userId: string): Observable<Message[]> {
+  getConversations(userId: string): Observable<string[]> {
     const messagesRef = collection(this.firestore, 'messages');
-    const q = query(
+    const q1 = query(
       messagesRef,
       where('toId', '==', userId),
       orderBy('timestamp', 'desc')
     );
-    return from(getDocs(q)).pipe(
-      map((snapshot: QuerySnapshot<DocumentData>) => {
-        const messages = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as Message));
-        // Get unique conversations
-        const uniqueFromIds = new Set(messages.map((m: Message) => m.fromId));
-        return Array.from(uniqueFromIds).map((fromId: unknown) => {
-          const id = fromId as string;
-          return messages.find((m: Message) => m.fromId === id) || messages[0];
+    const q2 = query(
+      messagesRef,
+      where('fromId', '==', userId),
+      orderBy('timestamp', 'desc')
+    );
+    
+    return from(Promise.all([getDocs(q1), getDocs(q2)])).pipe(
+      map(([snapshot1, snapshot2]: [QuerySnapshot<DocumentData>, QuerySnapshot<DocumentData>]) => {
+        const messages1 = snapshot1.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as Message));
+        const messages2 = snapshot2.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as Message));
+        const allMessages = [...messages1, ...messages2];
+        const uniqueUserIds = new Set<string>();
+        allMessages.forEach((m: Message) => {
+          if (m.fromId === userId) {
+            uniqueUserIds.add(m.toId);
+          } else {
+            uniqueUserIds.add(m.fromId);
+          }
         });
+        return Array.from(uniqueUserIds);
       })
     );
   }

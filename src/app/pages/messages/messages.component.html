@@ -1,0 +1,133 @@
+<div class="messages-page">
+  <div class="messages-container">
+    <!-- Conversations List -->
+    <div class="conversations-sidebar">
+      <div class="sidebar-header">
+        <h2>Mensajes</h2>
+      </div>
+      <div class="conversations-list">
+        @if (conversations().length === 0) {
+          <div class="empty-conversations">
+            <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            <p>No hay conversaciones</p>
+          </div>
+        } @else {
+          @for (conv of conversations(); track conv.userId) {
+            <div 
+              class="conversation-item" 
+              [class.active]="selectedConversation() === conv.userId"
+              (click)="selectConversation(conv.userId)">
+              <div class="conversation-avatar">
+                @if (conv.profile?.photoURL) {
+                  <img [src]="conv.profile.photoURL" [alt]="conv.profile.displayName">
+                } @else {
+                  <div class="avatar-placeholder">
+                    {{ conv.profile?.displayName?.charAt(0).toUpperCase() || '?' }}
+                  </div>
+                }
+                @if (conv.unread > 0) {
+                  <span class="unread-badge">{{ conv.unread }}</span>
+                }
+              </div>
+              <div class="conversation-info">
+                <div class="conversation-header">
+                  <span class="conversation-name">{{ conv.profile?.displayName || 'Usuario' }}</span>
+                  @if (conv.lastMessage) {
+                    <span class="conversation-time">{{ formatTime(conv.lastMessage.timestamp) }}</span>
+                  }
+                </div>
+                <p class="conversation-preview">
+                  {{ conv.lastMessage?.content || 'Sin mensajes' }}
+                </p>
+              </div>
+            </div>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- Chat Window -->
+    <div class="chat-window">
+      @if (selectedConversation() && selectedUserProfile()) {
+        <div class="chat-header">
+          <div class="chat-user-info">
+            @if (selectedUserProfile()!.photoURL) {
+              <img [src]="selectedUserProfile()!.photoURL" [alt]="selectedUserProfile()!.displayName" class="chat-avatar">
+            } @else {
+              <div class="chat-avatar-placeholder">
+                {{ selectedUserProfile()!.displayName.charAt(0).toUpperCase() }}
+              </div>
+            }
+            <span class="chat-username">{{ selectedUserProfile()!.displayName }}</span>
+          </div>
+          <button class="minimize-btn" (click)="minimizeChat(selectedConversation()!)">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+            </svg>
+          </button>
+        </div>
+        <div class="chat-messages" #chatContainer>
+          @if (messages().length === 0) {
+            <div class="empty-messages">
+              <p>No hay mensajes aún. ¡Envía el primero!</p>
+            </div>
+          } @else {
+            @for (message of messages(); track message.id || $index) {
+              <div class="message" [class.sent]="message.fromId === currentUser()?.uid" [class.received]="message.fromId !== currentUser()?.uid">
+                <div class="message-content">
+                  <p>{{ message.content }}</p>
+                  <span class="message-time">{{ formatTime(message.timestamp) }}</span>
+                </div>
+              </div>
+            }
+          }
+        </div>
+        <div class="chat-input-container">
+          <input 
+            type="text" 
+            [(ngModel)]="newMessage" 
+            placeholder="Escribe un mensaje..."
+            class="chat-input"
+            (keyup.enter)="sendMessage()">
+          <button class="send-button" (click)="sendMessage()">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+          </button>
+        </div>
+      } @else {
+        <div class="no-chat-selected">
+          <svg width="64" height="64" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          <p>Selecciona una conversación para comenzar</p>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Minimized Chats (Stacked Bubbles) -->
+  @if (getMinimizedChats().length > 0) {
+    <div class="minimized-chats">
+      @for (chat of getMinimizedChats(); track chat.userId) {
+        <div class="minimized-chat-bubble" (click)="maximizeChat(chat.userId)">
+          @if (chat.profile?.photoURL) {
+            <img [src]="chat.profile.photoURL" [alt]="chat.profile.displayName">
+          } @else {
+            <div class="bubble-placeholder">
+              {{ chat.profile?.displayName?.charAt(0).toUpperCase() || '?' }}
+            </div>
+          }
+          <button class="close-bubble" (click)="closeChat(chat.userId); $event.stopPropagation()">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      }
+    </div>
+  }
+</div>
+

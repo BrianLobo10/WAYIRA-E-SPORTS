@@ -8,6 +8,11 @@ import { ProjectsComponent } from './pages/projects/projects.component';
 import { NewsComponent } from './pages/news/news.component';
 import { LoginComponent } from './pages/auth/login/login.component';
 import { RegisterComponent } from './pages/auth/register/register.component';
+import { BlogComponent } from './pages/blog/blog.component';
+import { ProfileComponent } from './pages/profile/profile.component';
+import { MessagesComponent } from './pages/messages/messages.component';
+import { authGuard } from './guards/auth.guard';
+import { adminGuard } from './guards/admin.guard';
 
 export const routes: Routes = [
   {
@@ -39,12 +44,31 @@ export const routes: Routes = [
     component: NewsComponent
   },
   {
+    path: 'blog',
+    component: BlogComponent
+  },
+  {
     path: 'login',
     component: LoginComponent
   },
   {
     path: 'register',
     component: RegisterComponent
+  },
+  {
+    path: 'profile/:id',
+    component: ProfileComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'profile',
+    component: ProfileComponent,
+    canActivate: [authGuard]
+  },
+  {
+    path: 'messages',
+    component: MessagesComponent,
+    canActivate: [authGuard]
   },
   {
     path: '**',
