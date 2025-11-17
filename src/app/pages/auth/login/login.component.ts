@@ -15,6 +15,8 @@ export class LoginComponent {
   gameName = signal('');
   tagLine = signal('');
   region = signal('la1');
+  password = signal('');
+  rememberMe = signal(false);
   loading = signal(false);
   error = signal('');
 
@@ -56,7 +58,9 @@ export class LoginComponent {
         this.gameName(),
         this.tagLine(),
         this.region(),
-        summonerData.puuid
+        summonerData.puuid,
+        this.password(),
+        this.rememberMe()
       );
 
       this.router.navigate(['/']);

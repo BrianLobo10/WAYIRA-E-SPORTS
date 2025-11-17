@@ -143,11 +143,9 @@ export class FirebaseService {
   }
 
   // Auth Methods
-  async registerWithRiot(gameName: string, tagLine: string, region: string, puuid: string) {
+  async registerWithRiot(gameName: string, tagLine: string, region: string, puuid: string, password: string) {
     // Generar email único basado en puuid
     const email = `${puuid}@riot.wayira.local`;
-    // Generar contraseña determinística basada en puuid (para que funcione el login)
-    const password = this.generatePasswordFromPuuid(puuid);
     
     // Verificar si el usuario ya existe por puuid
     const existingUser = await this.findUserByPuuid(puuid);
@@ -178,7 +176,7 @@ export class FirebaseService {
     return user;
   }
 
-  async loginWithRiot(gameName: string, tagLine: string, region: string, puuid: string) {
+  async loginWithRiot(gameName: string, tagLine: string, region: string, puuid: string, password: string, rememberMe: boolean = false) {
     // Buscar usuario por puuid en Firestore
     const userProfile = await this.findUserByPuuid(puuid);
     
@@ -199,15 +197,19 @@ export class FirebaseService {
     // El email está en el formato puuid@riot.wayira.local
     const email = `${puuid}@riot.wayira.local`;
     
-    // Intentar iniciar sesión (si falla, el usuario necesita re-registrarse)
+    // Configurar persistencia de sesión
+    const { setPersistence, browserLocalPersistence, browserSessionPersistence } = await import('firebase/auth');
+    const persistence = rememberMe ? browserLocalPersistence : browserSessionPersistence;
+    await setPersistence(this.auth, persistence);
+    
+    // Intentar iniciar sesión con la contraseña proporcionada
     try {
-      // Nota: Esto requiere que la contraseña se guarde o se use autenticación anónima
-      // Por ahora, usaremos una contraseña generada determinísticamente
-      const password = this.generatePasswordFromPuuid(puuid);
       return await signInWithEmailAndPassword(this.auth, email, password);
     } catch (error: any) {
-      // Si falla, el usuario necesita re-registrarse
-      throw new Error('Error al iniciar sesión. Por favor regístrate nuevamente.');
+      if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+        throw new Error('Contraseña incorrecta. Verifica tus credenciales.');
+      }
+      throw new Error('Error al iniciar sesión. Por favor intenta nuevamente.');
     }
   }
 

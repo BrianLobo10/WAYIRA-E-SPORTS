@@ -171,6 +171,26 @@
   color: #6366f1;
 }
 
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #6366f1;
+}
+
+.remember-me span {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.875rem;
+}
+
 @media (max-width: 768px) {
   .login-card {
     padding: 2rem;
