@@ -15,8 +15,11 @@ export class RegisterComponent {
   gameName = signal('');
   tagLine = signal('');
   region = signal('la1');
+  password = signal('');
+  confirmPassword = signal('');
   loading = signal(false);
   error = signal('');
+  errors = signal<{ [key: string]: string }>({});
 
   regions = [
     { code: 'la1', name: 'LAS - Latinoamérica Sur' },
@@ -33,13 +36,48 @@ export class RegisterComponent {
   private router = inject(Router);
 
   async onRegister() {
-    if (!this.gameName().trim() || !this.tagLine().trim()) {
-      this.error.set('Por favor completa todos los campos');
+    this.errors.set({});
+    this.error.set('');
+
+    // Validaciones
+    const validationErrors: { [key: string]: string } = {};
+
+    if (!this.gameName().trim()) {
+      validationErrors['gameName'] = 'El nombre de invocador es requerido';
+    } else if (this.gameName().trim().length < 3) {
+      validationErrors['gameName'] = 'El nombre debe tener al menos 3 caracteres';
+    } else if (this.gameName().trim().length > 16) {
+      validationErrors['gameName'] = 'El nombre no puede tener más de 16 caracteres';
+    }
+
+    if (!this.tagLine().trim()) {
+      validationErrors['tagLine'] = 'El tagline es requerido';
+    } else if (this.tagLine().trim().length < 3) {
+      validationErrors['tagLine'] = 'El tagline debe tener al menos 3 caracteres';
+    } else if (this.tagLine().trim().length > 5) {
+      validationErrors['tagLine'] = 'El tagline no puede tener más de 5 caracteres';
+    }
+
+    if (!this.password().trim()) {
+      validationErrors['password'] = 'La contraseña es requerida';
+    } else if (this.password().length < 8) {
+      validationErrors['password'] = 'La contraseña debe tener al menos 8 caracteres';
+    } else if (!this.isValidPassword(this.password())) {
+      validationErrors['password'] = 'La contraseña debe incluir mayúsculas, minúsculas y números';
+    }
+
+    if (!this.confirmPassword().trim()) {
+      validationErrors['confirmPassword'] = 'Confirma tu contraseña';
+    } else if (this.password() !== this.confirmPassword()) {
+      validationErrors['confirmPassword'] = 'Las contraseñas no coinciden';
+    }
+
+    if (Object.keys(validationErrors).length > 0) {
+      this.errors.set(validationErrors);
       return;
     }
 
     this.loading.set(true);
-    this.error.set('');
 
     try {
       // Verificar que el invocador existe en Riot Games
@@ -56,7 +94,8 @@ export class RegisterComponent {
         this.gameName(),
         this.tagLine(),
         this.region(),
-        summonerData.puuid
+        summonerData.puuid,
+        this.password()
       );
 
       this.router.navigate(['/']);
@@ -65,6 +104,13 @@ export class RegisterComponent {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  private isValidPassword(password: string): boolean {
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumbers = /[0-9]/.test(password);
+    return hasUpperCase && hasLowerCase && hasNumbers;
   }
 }
 

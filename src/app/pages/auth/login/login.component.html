@@ -55,6 +55,31 @@
             </select>
           </div>
 
+          <div class="form-group">
+            <label for="password">Contraseña *</label>
+            <input
+              type="password"
+              id="password"
+              [(ngModel)]="password"
+              name="password"
+              placeholder="Ingresa tu contraseña"
+              class="form-input"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="remember-me">
+              <input
+                type="checkbox"
+                [(ngModel)]="rememberMe"
+                name="rememberMe"
+                class="checkbox-input"
+              />
+              <span>Mantener sesión iniciada</span>
+            </label>
+          </div>
+
           @if (error()) {
             <div class="error-message">
               <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
