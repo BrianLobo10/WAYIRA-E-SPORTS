@@ -189,10 +189,23 @@ export class FirebaseService {
   }
 
   // Auth Methods
-  async registerWithRiot(gameName: string, tagLine: string, region: string, puuid: string, password: string, userEmail?: string) {
-    // Para Firebase Auth, necesitamos un email válido. Si el usuario proporciona uno, lo usamos.
-    // Si no, generamos uno basado en puuid (aunque no sea un email real, Firebase lo acepta)
-    const authEmail = userEmail || `${puuid}@riot.wayira.local`;
+  async registerWithRiot(gameName: string, tagLine: string, region: string, puuid: string, password: string, userEmail: string) {
+    // Validar que el email sea válido y obligatorio
+    if (!userEmail || !userEmail.trim()) {
+      throw new Error('El email es requerido');
+    }
+    
+    if (!this.isValidEmail(userEmail)) {
+      throw new Error('El email proporcionado no es válido');
+    }
+    
+    // Usar el email proporcionado por el usuario
+    const authEmail = userEmail.trim();
+    
+    // Validar que la contraseña cumpla con los requisitos de Firebase
+    if (password.length < 6) {
+      throw new Error('La contraseña debe tener al menos 6 caracteres');
+    }
     
     // Verificar si el usuario ya existe por puuid (antes de crear la cuenta)
     // Esto requiere permisos de lectura pública en Firestore
@@ -202,31 +215,127 @@ export class FirebaseService {
         throw new Error('Esta cuenta de Riot Games ya está registrada');
       }
     } catch (error: any) {
-      // Si hay error de permisos, continuar con el registro (el usuario se creará y luego verificaremos)
-      if (!error.message.includes('ya está registrada')) {
+      // Si hay error de contexto de inyección o permisos, continuar con el registro
+      // El usuario se creará y luego verificaremos si ya existe
+      if (error.message?.includes('injection context') || error.message?.includes('permission')) {
         console.warn('No se pudo verificar usuario existente, continuando con registro:', error.message);
-      } else {
+      } else if (error.message?.includes('ya está registrada')) {
         throw error;
+      } else {
+        console.warn('Error verificando usuario existente, continuando:', error.message);
       }
     }
+    
+    try {
+      const userCredential = await createUserWithEmailAndPassword(this.auth, authEmail, password);
+      const user = userCredential.user;
+      
+      // Enviar email de verificación de Firebase
+      if (userEmail && userEmail.includes('@')) {
+        try {
+          await sendEmailVerification(user);
+          console.log('Email de verificación enviado a', userEmail);
+        } catch (error: any) {
+          console.warn('No se pudo enviar email de verificación:', error.message);
+          // No bloquear el registro si falla el envío de email
+        }
+      }
+      
+      const userProfile: UserProfile = {
+        uid: user.uid,
+        email: userEmail || authEmail, // Guardar el email real del usuario si se proporciona
+        displayName: gameName,
+        role: 'user',
+        gameName,
+        tagLine,
+        region,
+        puuid,
+        followers: [],
+        following: [],
+        createdAt: Timestamp.now()
+      };
 
-    const userCredential = await createUserWithEmailAndPassword(this.auth, authEmail, password);
-    const user = userCredential.user;
-    
-    // Enviar email de verificación de Firebase si se proporciona un email real
-    if (userEmail && userEmail.includes('@') && !userEmail.includes('@riot.wayira.local')) {
-      try {
-        await sendEmailVerification(user);
-        console.log('Email de verificación enviado a', userEmail);
-      } catch (error: any) {
-        console.warn('No se pudo enviar email de verificación:', error.message);
-        // No bloquear el registro si falla el envío de email
+      await setDoc(doc(this.firestore, 'users', user.uid), userProfile);
+      await updateProfile(user, { displayName: gameName });
+      
+      return user;
+    } catch (error: any) {
+      // Manejar errores específicos de Firebase Auth
+      console.error('Error en registro Firebase Auth:', error);
+      
+      if (error.code === 'auth/email-already-in-use') {
+        // Verificar si existe un perfil en Firestore para este email
+        // Si no existe, es un usuario huérfano (borrado de Firestore pero no de Auth)
+        try {
+          const usersRef = collection(this.firestore, 'users');
+          const q = query(usersRef, where('email', '==', authEmail), limit(1));
+          const querySnapshot = await getDocs(q);
+          
+          if (querySnapshot.empty) {
+            // No hay perfil en Firestore, es un usuario huérfano
+            throw new Error('Este email está registrado en el sistema pero no tiene perfil. Por favor contacta al administrador o intenta iniciar sesión. Si no recuerdas tu contraseña, puedes usar "Olvidé mi contraseña".');
+          } else {
+            // Existe el perfil, el email realmente está en uso
+            throw new Error('Este email ya está registrado. Por favor usa otro email o inicia sesión.');
+          }
+        } catch (checkError: any) {
+          // Si hay error al verificar, lanzar el mensaje apropiado
+          if (checkError.message.includes('huérfano') || checkError.message.includes('contacta')) {
+            throw checkError;
+          }
+          // Si hay otro error (permisos, etc.), mostrar mensaje genérico
+          throw new Error('Este email ya está registrado. Por favor usa otro email o inicia sesión.');
+        }
+      } else if (error.code === 'auth/invalid-email') {
+        throw new Error('El email proporcionado no es válido.');
+      } else if (error.code === 'auth/weak-password') {
+        throw new Error('La contraseña es muy débil. Debe tener al menos 6 caracteres.');
+      } else if (error.code === 'auth/operation-not-allowed') {
+        throw new Error('El registro con email/contraseña no está habilitado. Contacta al administrador.');
+      } else if (error.code === 'auth/network-request-failed') {
+        throw new Error('Error de conexión. Verifica tu conexión a internet e intenta nuevamente.');
+      } else if (error.message) {
+        throw new Error(error.message);
+      } else {
+        throw new Error('Error al crear la cuenta. Por favor intenta nuevamente o contacta al administrador.');
       }
     }
-    
+  }
+
+  private isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
+  // Función para recrear perfil si el usuario existe en Auth pero no en Firestore
+  async recreateProfileIfOrphaned(email: string, password: string): Promise<User | null> {
+    try {
+      // Intentar iniciar sesión con el email y contraseña
+      const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
+      const user = userCredential.user;
+      
+      // Verificar si existe perfil en Firestore
+      const userDoc = await getDoc(doc(this.firestore, 'users', user.uid));
+      
+      if (!userDoc.exists()) {
+        // Usuario huérfano: existe en Auth pero no en Firestore
+        // Retornar el usuario para que se pueda recrear el perfil
+        return user;
+      }
+      
+      // El perfil existe, retornar null
+      return null;
+    } catch (error: any) {
+      // Si no puede iniciar sesión, retornar null
+      return null;
+    }
+  }
+
+  // Función para recrear el perfil de usuario en Firestore
+  async recreateUserProfile(uid: string, gameName: string, tagLine: string, region: string, puuid: string, email: string): Promise<void> {
     const userProfile: UserProfile = {
-      uid: user.uid,
-      email: userEmail || authEmail, // Guardar el email real del usuario si se proporciona
+      uid: uid,
+      email: email,
       displayName: gameName,
       role: 'user',
       gameName,
@@ -238,10 +347,8 @@ export class FirebaseService {
       createdAt: Timestamp.now()
     };
 
-    await setDoc(doc(this.firestore, 'users', user.uid), userProfile);
-    await updateProfile(user, { displayName: gameName });
-    
-    return user;
+    await setDoc(doc(this.firestore, 'users', uid), userProfile);
+    await updateProfile(this.auth.currentUser!, { displayName: gameName });
   }
 
   async loginWithRiot(gameName: string, tagLine: string, region: string, puuid: string, password: string, rememberMe: boolean = false) {
@@ -298,19 +405,20 @@ export class FirebaseService {
   }
 
   private async findUserByPuuid(puuid: string): Promise<UserProfile | null> {
-    const usersRef = collection(this.firestore, 'users');
-    const q = query(usersRef, where('puuid', '==', puuid), limit(1));
-    const querySnapshot = await getDocs(q);
-    
-    if (querySnapshot.empty) {
-      return null;
-    }
-    
-    const docSnap = querySnapshot.docs[0];
-    const data = docSnap.data() as DocumentData;
-    return {
-      id: docSnap.id,
-      uid: (data['uid'] as string) || docSnap.id,
+    try {
+      const usersRef = collection(this.firestore, 'users');
+      const q = query(usersRef, where('puuid', '==', puuid), limit(1));
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        return null;
+      }
+      
+      const docSnap = querySnapshot.docs[0];
+      const data = docSnap.data() as DocumentData;
+      return {
+        id: docSnap.id,
+        uid: (data['uid'] as string) || docSnap.id,
       email: (data['email'] as string) || '',
       displayName: (data['displayName'] as string) || '',
       role: (data['role'] as 'user' | 'admin') || 'user',
@@ -324,6 +432,15 @@ export class FirebaseService {
       following: (data['following'] as string[]) || [],
       createdAt: data['createdAt'] || Timestamp.now()
     } as UserProfile;
+    } catch (error: any) {
+      console.error('Error buscando usuario por puuid:', error);
+      // Si hay un error de contexto de inyección, retornar null y continuar
+      if (error.message?.includes('injection context')) {
+        console.warn('Firebase llamado fuera del contexto de inyección, continuando sin verificación');
+        return null;
+      }
+      throw error;
+    }
   }
 
   private generateSecurePassword(): string {
@@ -604,6 +721,28 @@ export class FirebaseService {
       
       await updateDoc(postRef, updateData);
     }
+  }
+
+  async updatePost(postId: string, updates: Partial<Post>): Promise<void> {
+    const postRef = doc(this.firestore, 'posts', postId);
+    const updateData: any = {
+      ...updates,
+      updatedAt: Timestamp.now()
+    };
+    
+    // Limpiar campos undefined
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
+    
+    await updateDoc(postRef, updateData);
+  }
+
+  async deletePost(postId: string): Promise<void> {
+    const postRef = doc(this.firestore, 'posts', postId);
+    await deleteDoc(postRef);
   }
 
   async dislikePost(postId: string, userId: string) {
@@ -911,44 +1050,66 @@ export class FirebaseService {
     await updateDoc(tournamentRef, updates);
   }
 
-  // Generate bracket structure
+  // Delete tournament
+  async deleteTournament(tournamentId: string): Promise<void> {
+    const tournamentRef = doc(this.firestore, 'tournaments', tournamentId);
+    await deleteDoc(tournamentRef);
+  }
+
+  // Generate bracket structure - Genera todos los partidos desde el inicio
   generateBracket(teams: Team[]): BracketMatch[] {
     const matches: BracketMatch[] = [];
     const numTeams = teams.length;
     
     if (numTeams < 2) return matches;
     
+    // Calcular número de rondas necesarias
+    const totalRounds = Math.ceil(Math.log2(numTeams));
+    
     // Shuffle teams for random bracket
     const shuffled = [...teams].sort(() => Math.random() - 0.5);
     
-    // Determine rounds based on number of teams
-    let currentRound = shuffled;
+    // Generar todos los partidos de todas las rondas desde el inicio
+    let currentRoundTeams = shuffled;
     let roundNumber = 1;
     
-    while (currentRound.length > 1) {
-      const nextRound: Team[] = [];
-      for (let i = 0; i < currentRound.length; i += 2) {
-        const team1 = currentRound[i];
-        const team2 = currentRound[i + 1];
+    while (roundNumber <= totalRounds) {
+      const roundType = this.getRoundType(numTeams, roundNumber);
+      const nextRoundTeams: Team[] = [];
+      
+      // Generar partidos de esta ronda
+      for (let i = 0; i < currentRoundTeams.length; i += 2) {
+        const team1 = currentRoundTeams[i];
+        const team2 = currentRoundTeams[i + 1];
         
-        if (team1 && team2) {
-          const match: BracketMatch = {
-            id: `match-${roundNumber}-${i / 2}`,
-            round: this.getRoundType(numTeams, roundNumber),
-            team1Id: team1.id,
-            team1Name: team1.name,
-            team2Id: team2.id,
-            team2Name: team2.name,
-            winnerId: undefined,
-            matchDate: undefined
-          };
-          matches.push(match);
-          nextRound.push(team1); // Placeholder, will be updated with winner
-        } else if (team1) {
-          nextRound.push(team1); // Bye
+        const match: BracketMatch = {
+          id: `match-${roundNumber}-${Math.floor(i / 2)}`,
+          round: roundType,
+          team1Id: team1?.id,
+          team1Name: team1?.name || 'TBD',
+          team2Id: team2?.id,
+          team2Name: team2?.name || 'TBD',
+          winnerId: undefined,
+          matchDate: undefined
+        };
+        
+        matches.push(match);
+        
+        // Para la siguiente ronda, usar placeholders TBD
+        if (roundNumber < totalRounds) {
+          nextRoundTeams.push({ 
+            id: `placeholder-${roundNumber}-${Math.floor(i / 2)}`,
+            name: 'TBD',
+            captainId: '',
+            captainName: '',
+            players: [],
+            substitutes: [],
+            registeredAt: Timestamp.now()
+          } as Team);
         }
       }
-      currentRound = nextRound;
+      
+      currentRoundTeams = nextRoundTeams;
       roundNumber++;
     }
     
@@ -1147,14 +1308,24 @@ export class FirebaseService {
 
   getNews(limitCount: number = 50): Observable<News[]> {
     const newsRef = collection(this.firestore, 'news');
-    const q = query(newsRef, where('published', '==', true), orderBy('createdAt', 'desc'), limit(limitCount));
+    // Usar solo where para evitar necesidad de índice compuesto, ordenar en el cliente
+    const q = query(newsRef, where('published', '==', true), limit(limitCount * 2)); // Traer más para ordenar
     return from(getDocs(q)).pipe(
-      map((snapshot: QuerySnapshot<DocumentData>) => snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as News)))
+      map((snapshot: QuerySnapshot<DocumentData>) => {
+        const news = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as News));
+        // Ordenar por fecha de creación descendente en el cliente
+        return news.sort((a, b) => {
+          const aTime = a.createdAt?.toMillis?.() || 0;
+          const bTime = b.createdAt?.toMillis?.() || 0;
+          return bTime - aTime;
+        }).slice(0, limitCount);
+      })
     );
   }
 
   getAllNews(limitCount: number = 100): Observable<News[]> {
     const newsRef = collection(this.firestore, 'news');
+    // Ordenar por createdAt descendente (requiere índice simple, no compuesto)
     const q = query(newsRef, orderBy('createdAt', 'desc'), limit(limitCount));
     return from(getDocs(q)).pipe(
       map((snapshot: QuerySnapshot<DocumentData>) => snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as News)))
@@ -1289,4 +1460,5 @@ export class FirebaseService {
   }
 
 }
+
 

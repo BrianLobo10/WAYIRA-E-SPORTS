@@ -85,7 +85,23 @@
           </button>
         </div>
 
-        @if (posts().length === 0) {
+        @if (posts().length === 0 && isOwnProfile()) {
+          <div class="empty-posts-container">
+            <div class="post-thumbnail create-post-thumbnail" (click)="openCreateModal()">
+              <div class="create-post-thumbnail-content">
+                <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+              </div>
+            </div>
+            <div class="empty-posts">
+              <svg width="64" height="64" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p>No hay publicaciones aún</p>
+            </div>
+          </div>
+        } @else if (posts().length === 0 && !isOwnProfile()) {
           <div class="empty-posts">
             <svg width="64" height="64" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -159,7 +175,40 @@
         <div class="post-modal-body">
           <div class="post-modal-image">
             @if (selectedPost()!.images && selectedPost()!.images!.length > 0) {
-              <img [src]="selectedPost()!.images![0]" [alt]="selectedPost()!.content">
+              <div class="post-image-carousel-modal">
+                <div class="carousel-container">
+                  @for (image of selectedPost()!.images!; track $index) {
+                    <div class="carousel-slide" [class.active]="$index === getCurrentImageIndex(selectedPost()!.id || '')">
+                      <img [src]="image" [alt]="selectedPost()!.content">
+                    </div>
+                  }
+                </div>
+                @if (selectedPost()!.images!.length > 1) {
+                  <button class="carousel-btn carousel-btn-prev" (click)="prevImage(selectedPost()!, $event)" title="Imagen anterior">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <button class="carousel-btn carousel-btn-next" (click)="nextImage(selectedPost()!, $event)" title="Siguiente imagen">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                  <div class="carousel-indicators">
+                    @for (image of selectedPost()!.images!; track $index) {
+                      <button 
+                        class="carousel-dot" 
+                        [class.active]="$index === getCurrentImageIndex(selectedPost()!.id || '')"
+                        (click)="goToImage(selectedPost()!, $index, $event)"
+                        [attr.aria-label]="'Ir a imagen ' + ($index + 1)">
+                      </button>
+                    }
+                  </div>
+                  <div class="carousel-counter">
+                    {{ getCurrentImageIndex(selectedPost()!.id || '') + 1 }} / {{ selectedPost()!.images!.length }}
+                  </div>
+                }
+              </div>
             } @else if (selectedPost()!.video) {
               <video [src]="selectedPost()!.video" controls></video>
             }
@@ -294,6 +343,12 @@
                 </svg>
                 <span>Personaje LoL</span>
               </button>
+              <button class="summoner-btn" (click)="toggleSummonerSearch()" [class.active]="showSummonerSearch()" [disabled]="uploadingPhoto()">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span>Foto Invocador</span>
+              </button>
             </div>
             @if (showChampionSelector()) {
               <div class="champion-selector">
@@ -305,6 +360,69 @@
                     <button class="champion-item" (click)="selectChampion(champion)" [class.selected]="selectedChampion() === champion">
                       <span>{{ champion }}</span>
                     </button>
+                  }
+                </div>
+              </div>
+            }
+            @if (showSummonerSearch()) {
+              <div class="summoner-search-section">
+                <div class="summoner-search-form">
+                  <div class="form-row">
+                    <div class="form-group-small">
+                      <label>Región</label>
+                      <select [(ngModel)]="selectedRegion" [disabled]="searchingSummoner()" class="form-select">
+                        @for (region of regions; track region.code) {
+                          <option [value]="region.code">{{ region.name }}</option>
+                        }
+                      </select>
+                    </div>
+                    <div class="form-group-small">
+                      <label>Nombre de Invocador</label>
+                      <input type="text" [(ngModel)]="summonerGameName" placeholder="Ej: Wayira" [disabled]="searchingSummoner()" class="form-input">
+                    </div>
+                    <div class="form-group-small">
+                      <label>Tagline</label>
+                      <input type="text" [(ngModel)]="summonerTagLine" placeholder="Ej: WAY" [disabled]="searchingSummoner()" class="form-input">
+                    </div>
+                    <div class="form-group-small">
+                      <label>&nbsp;</label>
+                      <button class="btn-search-summoner" (click)="searchSummoner()" [disabled]="searchingSummoner()">
+                        @if (searchingSummoner()) {
+                          <span class="spinner-small"></span>
+                          <span>Buscando...</span>
+                        } @else {
+                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                          </svg>
+                          <span>Buscar</span>
+                        }
+                      </button>
+                    </div>
+                  </div>
+                  @if (summonerError()) {
+                    <div class="error-message-small">
+                      <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                      </svg>
+                      <span>{{ summonerError() }}</span>
+                    </div>
+                  }
+                  @if (foundSummoner()) {
+                    <div class="summoner-result">
+                      <div class="summoner-preview">
+                        <img [src]="getProfileIconUrl(foundSummoner()!.profileIconId)" [alt]="foundSummoner()!.gameName" class="summoner-icon-preview">
+                        <div class="summoner-info">
+                          <h4>{{ foundSummoner()!.gameName }}#{{ foundSummoner()!.tagLine }}</h4>
+                          <p>Nivel {{ foundSummoner()!.summonerLevel }}</p>
+                        </div>
+                      </div>
+                      <button class="btn-use-icon" (click)="useSummonerIcon()">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Usar esta foto</span>
+                      </button>
+                    </div>
                   }
                 </div>
               </div>

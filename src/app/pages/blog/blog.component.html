@@ -19,13 +19,9 @@
           <span class="spinner"></span>
           <span>Cargando publicaciones...</span>
         </div>
-      } @else if (posts().length === 0) {
-        <div class="empty-state">
-          <p>No hay publicaciones aún. ¡Sé el primero en compartir!</p>
-        </div>
       } @else {
-        <div class="posts-grid">
-          @if (currentUser()) {
+        @if (posts().length === 0 && isAuthenticated()) {
+          <div class="empty-posts-container">
             <article class="post-card create-post-card" (click)="showCreateModal.set(true)">
               <div class="create-post-content">
                 <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -34,12 +30,58 @@
                 <p>Crear Publicación</p>
               </div>
             </article>
-          }
-          @for (post of posts(); track post.id) {
-            <article class="post-card" (click)="openPost(post)">
+            <div class="empty-state">
+              <p>No hay publicaciones aún. ¡Sé el primero en compartir!</p>
+            </div>
+          </div>
+        } @else {
+          <div class="posts-grid">
+            @if (isAuthenticated()) {
+              <article class="post-card create-post-card" (click)="showCreateModal.set(true)">
+                <div class="create-post-content">
+                  <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                  </svg>
+                  <p>Crear Publicación</p>
+                </div>
+              </article>
+            }
+            @for (post of posts(); track post.id) {
+              <article class="post-card" (click)="openPost(post)">
               @if (post.images && post.images.length > 0) {
-                <div class="post-image">
-                  <img [src]="post.images[0]" [alt]="post.content">
+                <div class="post-image-carousel">
+                  <div class="carousel-container">
+                    @for (image of post.images; track $index) {
+                      <div class="carousel-slide" [class.active]="$index === getCurrentImageIndex(post.id || '')">
+                        <img [src]="image" [alt]="post.content">
+                      </div>
+                    }
+                  </div>
+                  @if (post.images.length > 1) {
+                    <button class="carousel-btn carousel-btn-prev" (click)="prevImage(post, $event)" title="Imagen anterior">
+                      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <button class="carousel-btn carousel-btn-next" (click)="nextImage(post, $event)" title="Siguiente imagen">
+                      <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                    <div class="carousel-indicators">
+                      @for (image of post.images; track $index) {
+                        <button 
+                          class="carousel-dot" 
+                          [class.active]="$index === getCurrentImageIndex(post.id || '')"
+                          (click)="goToImage(post, $index, $event)"
+                          [attr.aria-label]="'Ir a imagen ' + ($index + 1)">
+                        </button>
+                      }
+                    </div>
+                    <div class="carousel-counter">
+                      {{ getCurrentImageIndex(post.id || '') + 1 }} / {{ post.images.length }}
+                    </div>
+                  }
                 </div>
               } @else if (post.video) {
                 <div class="post-video">
@@ -58,7 +100,23 @@
                     }
                     <a [routerLink]="['/profile', post.authorId]" class="author-name" (click)="$event.stopPropagation()">{{ post.authorName }}</a>
                   </div>
-                  <span class="post-date">{{ formatDate(post.createdAt) }}</span>
+                  <div class="post-header-right">
+                    <span class="post-date">{{ formatDate(post.createdAt) }}</span>
+                    @if (currentUser() && post.authorId === currentUser()!.uid) {
+                      <div class="post-actions">
+                        <button class="post-action-btn" (click)="openEditModal(post); $event.stopPropagation()" title="Editar">
+                          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button class="post-action-btn" (click)="deletePost(post); $event.stopPropagation()" title="Eliminar">
+                          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    }
+                  </div>
                 </div>
                 <p class="post-text">{{ post.content }}</p>
                 <div class="post-stats">
@@ -83,8 +141,9 @@
                 </div>
               </div>
             </article>
-          }
-        </div>
+            }
+          </div>
+        }
       }
     </div>
   </section>
@@ -102,16 +161,16 @@
           </button>
         </div>
         <div class="modal-body">
-          @if (currentUser()) {
+          @if (isAuthenticated()) {
             <div class="post-author-info">
-              @if (currentUser()!.photoURL) {
+              @if (currentUser()?.photoURL) {
                 <img [src]="currentUser()!.photoURL" [alt]="currentUser()!.displayName" class="author-avatar-small">
               } @else {
                 <span class="author-avatar-placeholder-small">
-                  {{ currentUser()!.displayName ? currentUser()!.displayName.charAt(0).toUpperCase() : 'U' }}
+                  {{ (currentUser()?.displayName || 'Usuario').charAt(0).toUpperCase() }}
                 </span>
               }
-              <span class="author-name-small">{{ currentUser()!.displayName || 'Usuario' }}</span>
+              <span class="author-name-small">{{ currentUser()?.displayName || 'Usuario' }}</span>
             </div>
           }
           <textarea 
@@ -201,7 +260,40 @@
         <div class="post-modal-body">
           <div class="post-modal-image">
             @if (selectedPost()!.images && selectedPost()!.images!.length > 0) {
-              <img [src]="selectedPost()!.images![0]" [alt]="selectedPost()!.content">
+              <div class="post-image-carousel-modal">
+                <div class="carousel-container">
+                  @for (image of selectedPost()!.images!; track $index) {
+                    <div class="carousel-slide" [class.active]="$index === getCurrentImageIndex(selectedPost()!.id || '')">
+                      <img [src]="image" [alt]="selectedPost()!.content">
+                    </div>
+                  }
+                </div>
+                @if (selectedPost()!.images!.length > 1) {
+                  <button class="carousel-btn carousel-btn-prev" (click)="prevImage(selectedPost()!, $event)" title="Imagen anterior">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <button class="carousel-btn carousel-btn-next" (click)="nextImage(selectedPost()!, $event)" title="Siguiente imagen">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                  <div class="carousel-indicators">
+                    @for (image of selectedPost()!.images!; track $index) {
+                      <button 
+                        class="carousel-dot" 
+                        [class.active]="$index === getCurrentImageIndex(selectedPost()!.id || '')"
+                        (click)="goToImage(selectedPost()!, $index, $event)"
+                        [attr.aria-label]="'Ir a imagen ' + ($index + 1)">
+                      </button>
+                    }
+                  </div>
+                  <div class="carousel-counter">
+                    {{ getCurrentImageIndex(selectedPost()!.id || '') + 1 }} / {{ selectedPost()!.images!.length }}
+                  </div>
+                }
+              </div>
             } @else if (selectedPost()!.video) {
               <video [src]="selectedPost()!.video" controls></video>
             }
@@ -291,6 +383,123 @@
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Edit Post Modal -->
+  @if (showEditModal()) {
+    <div class="modal-overlay" (click)="closeEditModal()">
+      <div class="modal-content create-post-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Editar Publicación</h3>
+          <button class="close-btn" (click)="closeEditModal()" [disabled]="uploading()">
+            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <textarea 
+            [(ngModel)]="editPostContent" 
+            placeholder="¿Qué estás pensando?"
+            class="post-textarea"
+            rows="8"
+            [disabled]="uploading()">
+          </textarea>
+          
+          <!-- Imágenes existentes -->
+          @if (existingImages().length > 0) {
+            <div class="preview-images">
+              @for (imageUrl of existingImages(); track imageUrl) {
+                <div class="preview-image-container">
+                  <img [src]="imageUrl" [alt]="'Imagen existente'" class="preview-image">
+                  <button type="button" class="remove-image-btn" (click)="removeExistingImage(imageUrl)">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Nuevas imágenes seleccionadas -->
+          @if (editPostImages().length > 0) {
+            <div class="preview-images">
+              @for (image of editPostImages(); track $index) {
+                <div class="preview-image-container">
+                  <img [src]="getImagePreview(image)" [alt]="'Nueva imagen ' + $index" class="preview-image">
+                  <button type="button" class="remove-image-btn" (click)="removeImage($index)">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Video existente -->
+          @if (existingVideo() && !editPostVideo()) {
+            <div class="preview-video-container">
+              <video [src]="existingVideo()!" controls class="preview-video"></video>
+              <button type="button" class="remove-video-btn" (click)="removeExistingVideo()">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Eliminar Video
+              </button>
+            </div>
+          }
+
+          <!-- Nuevo video seleccionado -->
+          @if (editPostVideo()) {
+            <div class="preview-video-container">
+              <video [src]="getVideoPreview(editPostVideo()!)" controls class="preview-video"></video>
+              <button type="button" class="remove-video-btn" (click)="removeVideo()">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Eliminar Video
+              </button>
+            </div>
+          }
+
+          <div class="file-uploads">
+            <label class="file-label">
+              <input type="file" accept="image/*" multiple (change)="onImageSelect($event)" [disabled]="uploading()">
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Imágenes
+            </label>
+            <label class="file-label">
+              <input type="file" accept="video/*" (change)="onVideoSelect($event)" [disabled]="uploading()">
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              Video
+            </label>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn-cancel" (click)="closeEditModal()" [disabled]="uploading()">
+              Cancelar
+            </button>
+            <button 
+              class="btn-submit" 
+              (click)="updatePost()" 
+              [disabled]="uploading() || !editPostContent().trim()">
+              @if (uploading()) {
+                <span class="spinner-small"></span>
+                <span>Guardando...</span>
+              } @else {
+                <span>Guardar Cambios</span>
+              }
+            </button>
           </div>
         </div>
       </div>

@@ -161,6 +161,18 @@
   box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.2);
 }
 
+.form-input[readonly] {
+  background: rgba(0, 212, 255, 0.05);
+  border-color: rgba(0, 212, 255, 0.2);
+  color: rgba(255, 255, 255, 0.7);
+  cursor: not-allowed;
+}
+
+.form-input[readonly]:focus {
+  border-color: rgba(0, 212, 255, 0.3);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+}
+
 .form-textarea {
   resize: vertical;
   min-height: 120px;

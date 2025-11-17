@@ -32,11 +32,18 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
     
-    // Noticias: lectura pública (solo publicadas), escritura solo admin
+    // Noticias: lectura pública para todos (solo publicadas), escritura solo admin
     match /news/{newsId} {
-      allow read: if resource.data.published == true || request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
+      // Permitir lectura pública de noticias publicadas
+      allow get: if resource.data.published == true;
+      // Permitir listar noticias públicamente (el servicio filtra por published == true)
+      // Firestore evaluará la regla 'get' para cada documento devuelto por la query
+      allow list: if true;
+      // Permitir lectura completa (incluyendo borradores) solo para admins
+      allow get, list: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow create, update, delete: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
     // Mensajes de contacto: lectura solo admin, escritura pública

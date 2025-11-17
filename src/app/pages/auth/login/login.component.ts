@@ -15,7 +15,7 @@ import { RiotApiService } from '../../../services/riot-api.service';
 export class LoginComponent implements OnInit {
   gameName = signal('');
   tagLine = signal('');
-  region = signal('la1');
+  region = signal('la2');
   password = signal('');
   showPassword = signal(false);
   rememberMe = signal(false);

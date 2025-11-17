@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { FirebaseService, UserProfile, Post, Comment } from '../../services/firebase.service';
+import { RiotApiService, SummonerData } from '../../services/riot-api.service';
 
 @Component({
   selector: 'app-profile',
@@ -36,6 +37,9 @@ export class ProfileComponent implements OnInit {
   showEditModal = signal(false);
   showCreatePostModal = signal(false);
   
+  // Carousel state for each post
+  postImageIndices = signal<Map<string, number>>(new Map());
+  
   // Edit profile
   editDisplayName = signal('');
   editBio = signal('');
@@ -44,6 +48,27 @@ export class ProfileComponent implements OnInit {
   uploadingPhoto = signal(false);
   showChampionSelector = signal(false);
   selectedChampion = signal<string | null>(null);
+  
+  // LoL Summoner search
+  private riotApiService = inject(RiotApiService);
+  showSummonerSearch = signal(false);
+  summonerGameName = signal('');
+  summonerTagLine = signal('');
+  selectedRegion = signal('la1');
+  foundSummoner = signal<SummonerData | null>(null);
+  searchingSummoner = signal(false);
+  summonerError = signal<string | null>(null);
+  
+  regions = [
+    { code: 'na1', name: 'NA - América del Norte' },
+    { code: 'br1', name: 'BR - Brasil' },
+    { code: 'la1', name: 'LAN - Latinoamérica Norte' },
+    { code: 'la2', name: 'LAS - Latinoamérica Sur' },
+    { code: 'euw1', name: 'EUW - Europa Oeste' },
+    { code: 'eun1', name: 'EUNE - Europa Este' },
+    { code: 'kr', name: 'KR - Corea' },
+    { code: 'jp1', name: 'JP - Japón' }
+  ];
   
   // Lista de campeones populares de LoL
   champions = [
@@ -156,7 +181,42 @@ export class ProfileComponent implements OnInit {
 
   openPost(post: Post) {
     this.selectedPost.set(post);
+    // Inicializar el índice del carrusel si no existe
+    if (post.id && !this.postImageIndices().has(post.id)) {
+      this.setCurrentImageIndex(post.id, 0);
+    }
     this.showPostModal.set(true);
+  }
+
+  getCurrentImageIndex(postId: string): number {
+    return this.postImageIndices().get(postId) || 0;
+  }
+
+  setCurrentImageIndex(postId: string, index: number) {
+    const currentMap = new Map(this.postImageIndices());
+    currentMap.set(postId, index);
+    this.postImageIndices.set(currentMap);
+  }
+
+  nextImage(post: Post, event: Event) {
+    event.stopPropagation();
+    if (!post.images || post.images.length <= 1) return;
+    const currentIndex = this.getCurrentImageIndex(post.id || '');
+    const nextIndex = (currentIndex + 1) % post.images.length;
+    this.setCurrentImageIndex(post.id || '', nextIndex);
+  }
+
+  prevImage(post: Post, event: Event) {
+    event.stopPropagation();
+    if (!post.images || post.images.length <= 1) return;
+    const currentIndex = this.getCurrentImageIndex(post.id || '');
+    const prevIndex = (currentIndex - 1 + post.images.length) % post.images.length;
+    this.setCurrentImageIndex(post.id || '', prevIndex);
+  }
+
+  goToImage(post: Post, index: number, event: Event) {
+    event.stopPropagation();
+    this.setCurrentImageIndex(post.id || '', index);
   }
 
   closePostModal() {
@@ -303,6 +363,71 @@ export class ProfileComponent implements OnInit {
     this.editPhotoPreview.set(null);
     this.showChampionSelector.set(false);
     this.selectedChampion.set(null);
+    this.showSummonerSearch.set(false);
+    this.summonerGameName.set('');
+    this.summonerTagLine.set('');
+    this.foundSummoner.set(null);
+    this.summonerError.set(null);
+  }
+  
+  toggleSummonerSearch() {
+    this.showSummonerSearch.set(!this.showSummonerSearch());
+    if (this.showSummonerSearch()) {
+      this.showChampionSelector.set(false);
+      this.selectedChampion.set(null);
+      this.editPhotoFile.set(null);
+    }
+  }
+  
+  searchSummoner() {
+    const gameName = this.summonerGameName().trim();
+    const tagLine = this.summonerTagLine().trim();
+    
+    if (!gameName || !tagLine) {
+      this.summonerError.set('Por favor ingresa el nombre del jugador y el tagline');
+      return;
+    }
+    
+    this.searchingSummoner.set(true);
+    this.summonerError.set(null);
+    this.foundSummoner.set(null);
+    
+    this.riotApiService.getSummoner(this.selectedRegion(), gameName, tagLine)
+      .subscribe({
+        next: (data) => {
+          this.foundSummoner.set(data);
+          this.searchingSummoner.set(false);
+          // Mostrar la foto de perfil del invocador
+          const iconUrl = this.getProfileIconUrl(data.profileIconId);
+          this.editPhotoPreview.set(iconUrl);
+          this.editPhotoFile.set(null);
+          this.selectedChampion.set(null);
+        },
+        error: (err) => {
+          this.searchingSummoner.set(false);
+          if (err.status === 404) {
+            this.summonerError.set('Jugador no encontrado. Verifica el nombre y tagline.');
+          } else if (err.error?.error) {
+            this.summonerError.set(err.error.error);
+          } else {
+            this.summonerError.set('Error al buscar el jugador. Intenta nuevamente.');
+          }
+        }
+      });
+  }
+  
+  getProfileIconUrl(iconId: number): string {
+    return `https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/${iconId}.png`;
+  }
+  
+  useSummonerIcon() {
+    const summoner = this.foundSummoner();
+    if (summoner) {
+      const iconUrl = this.getProfileIconUrl(summoner.profileIconId);
+      this.editPhotoPreview.set(iconUrl);
+      this.editPhotoFile.set(null);
+      this.selectedChampion.set(null);
+    }
   }
 
   onPhotoSelected(event: Event) {
@@ -363,6 +488,9 @@ export class ProfileComponent implements OnInit {
       if (this.editPhotoFile()) {
         const file = this.editPhotoFile()!;
         photoURL = await this.firebaseService.uploadImage(file, `profiles/${user.uid}/${Date.now()}_${file.name}`);
+      } else if (this.foundSummoner()) {
+        // Si se buscó un invocador, usar su icono de perfil
+        photoURL = this.editPhotoPreview() || undefined;
       } else if (this.selectedChampion()) {
         // Si se seleccionó un campeón, usar su imagen
         photoURL = this.editPhotoPreview() || undefined;
@@ -386,7 +514,15 @@ export class ProfileComponent implements OnInit {
 
   async createPostFromProfile() {
     const user = this.firebaseService.getCurrentUser();
-    if (!user || !this.newPostContent().trim()) return;
+    if (!user) {
+      alert('Debes iniciar sesión para publicar');
+      return;
+    }
+    
+    if (!this.newPostContent().trim()) {
+      alert('Por favor ingresa contenido para la publicación');
+      return;
+    }
 
     this.uploadingPost.set(true);
     try {

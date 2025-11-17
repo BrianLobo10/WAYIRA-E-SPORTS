@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "tunnel": "node start-with-ngrok.js",
     "pm2:start": "pm2 start ecosystem.config.cjs",
     "pm2:stop": "pm2 stop wayira-api",
     "pm2:restart": "pm2 restart wayira-api",

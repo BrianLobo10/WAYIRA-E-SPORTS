@@ -37,44 +37,69 @@ export class NewsComponent implements OnInit {
 
   categories = ['Torneos', 'Formación', 'Alianzas', 'Comunidad', 'Eventos', 'General'];
 
-  async ngOnInit() {
-    await this.checkAdminStatus();
+  ngOnInit() {
+    // Verificar si es admin primero (puede ser async pero no bloquea)
+    this.checkAdminStatus();
+    // Cargar noticias (se ejecuta en el contexto correcto de Angular)
     this.loadNews();
   }
 
   async checkAdminStatus() {
-    const user = this.firebaseService.getCurrentUser();
-    if (user) {
-      const profile = await this.firebaseService.getUserProfile(user.uid);
-      this.currentUser.set(profile);
-      if (profile) {
-        const admin = await this.firebaseService.isAdmin(user.uid);
-        this.isAdmin.set(admin);
+    try {
+      const user = this.firebaseService.getCurrentUser();
+      if (user) {
+        const profile = await this.firebaseService.getUserProfile(user.uid);
+        this.currentUser.set(profile);
+        if (profile) {
+          const admin = await this.firebaseService.isAdmin(user.uid);
+          this.isAdmin.set(admin);
+          // Si es admin y ya hay noticias cargadas, recargar con todas
+          if (admin && this.news().length > 0) {
+            this.loadAllNews();
+          }
+        }
       }
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      // Si hay error, simplemente no es admin
+      this.isAdmin.set(false);
     }
   }
 
   loadNews() {
     this.loading.set(true);
-    // Si es admin, cargar todas las noticias (publicadas y no publicadas)
-    if (this.isAdmin()) {
-      this.firebaseService.getAllNews(50).subscribe({
-        next: (newsList) => {
-          this.news.set(newsList);
-          this.loading.set(false);
-        },
-        error: () => this.loading.set(false)
-      });
-    } else {
-      // Si no es admin, solo cargar noticias publicadas
-      this.firebaseService.getNews(50).subscribe({
-        next: (newsList) => {
-          this.news.set(newsList);
-          this.loading.set(false);
-        },
-        error: () => this.loading.set(false)
-      });
-    }
+    // Siempre cargar noticias publicadas primero (funciona sin autenticación)
+    // Si después se determina que es admin, se puede recargar con todas las noticias
+    this.firebaseService.getNews(50).subscribe({
+      next: (newsList) => {
+        this.news.set(newsList);
+        this.loading.set(false);
+        // Si es admin, recargar con todas las noticias
+        if (this.isAdmin()) {
+          this.loadAllNews();
+        }
+      },
+      error: (error: any) => {
+        console.error('Error loading news:', error);
+        // Si hay error de permisos o índice, intentar cargar sin filtro si es admin
+        if (error.code === 'permission-denied' || error.message?.includes('index')) {
+          console.warn('Error de permisos o índice, intentando cargar todas las noticias...');
+        }
+        this.loading.set(false);
+      }
+    });
+  }
+
+  private loadAllNews() {
+    this.firebaseService.getAllNews(50).subscribe({
+      next: (newsList) => {
+        this.news.set(newsList);
+      },
+      error: (error) => {
+        console.error('Error loading all news:', error);
+        // Si falla, mantener las noticias publicadas que ya se cargaron
+      }
+    });
   }
 
   openCreateModal() {
@@ -173,6 +198,11 @@ export class NewsComponent implements OnInit {
     const news = this.selectedNews();
     if (!news || !news.id) return;
 
+    if (!this.isAdmin()) {
+      alert('Solo los administradores pueden editar noticias');
+      return;
+    }
+
     if (!this.newsTitle().trim() || !this.newsContent().trim() || !this.newsExcerpt().trim()) {
       alert('Por favor completa todos los campos requeridos');
       return;
@@ -200,6 +230,11 @@ export class NewsComponent implements OnInit {
   }
 
   async deleteNews(newsId: string) {
+    if (!this.isAdmin()) {
+      alert('Solo los administradores pueden eliminar noticias');
+      return;
+    }
+
     if (!confirm('¿Estás seguro de que quieres eliminar esta noticia?')) return;
 
     try {

@@ -31,7 +31,8 @@ export const routes: Routes = [
   },
   {
     path: 'contact',
-    component: ContactComponent
+    component: ContactComponent,
+    canActivate: [authGuard]
   },
   {
     path: 'about',
@@ -47,7 +48,8 @@ export const routes: Routes = [
   },
   {
     path: 'blog',
-    component: BlogComponent
+    component: BlogComponent,
+    canActivate: [authGuard]
   },
   {
     path: 'login',
