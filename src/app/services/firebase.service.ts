@@ -143,7 +143,18 @@ export class FirebaseService {
   }
 
   // Auth Methods
-  async registerWithRiot(email: string, password: string, gameName: string, tagLine: string, region: string, puuid: string) {
+  async registerWithRiot(gameName: string, tagLine: string, region: string, puuid: string) {
+    // Generar email único basado en puuid
+    const email = `${puuid}@riot.wayira.local`;
+    // Generar contraseña determinística basada en puuid (para que funcione el login)
+    const password = this.generatePasswordFromPuuid(puuid);
+    
+    // Verificar si el usuario ya existe por puuid
+    const existingUser = await this.findUserByPuuid(puuid);
+    if (existingUser) {
+      throw new Error('Esta cuenta de Riot Games ya está registrada');
+    }
+
     const userCredential = await createUserWithEmailAndPassword(this.auth, email, password);
     const user = userCredential.user;
     
@@ -165,6 +176,85 @@ export class FirebaseService {
     await updateProfile(user, { displayName: gameName });
     
     return user;
+  }
+
+  async loginWithRiot(gameName: string, tagLine: string, region: string, puuid: string) {
+    // Buscar usuario por puuid en Firestore
+    const userProfile = await this.findUserByPuuid(puuid);
+    
+    if (!userProfile) {
+      throw new Error('Cuenta no registrada. Por favor regístrate primero.');
+    }
+
+    // Verificar que el gameName y tagLine coincidan
+    if (!userProfile.gameName || !userProfile.tagLine) {
+      throw new Error('Datos de usuario incompletos. Por favor regístrate nuevamente.');
+    }
+
+    if (userProfile.gameName.toLowerCase() !== gameName.toLowerCase() || 
+        userProfile.tagLine.toLowerCase() !== tagLine.toLowerCase()) {
+      throw new Error('Los datos de invocador no coinciden con la cuenta registrada');
+    }
+
+    // El email está en el formato puuid@riot.wayira.local
+    const email = `${puuid}@riot.wayira.local`;
+    
+    // Intentar iniciar sesión (si falla, el usuario necesita re-registrarse)
+    try {
+      // Nota: Esto requiere que la contraseña se guarde o se use autenticación anónima
+      // Por ahora, usaremos una contraseña generada determinísticamente
+      const password = this.generatePasswordFromPuuid(puuid);
+      return await signInWithEmailAndPassword(this.auth, email, password);
+    } catch (error: any) {
+      // Si falla, el usuario necesita re-registrarse
+      throw new Error('Error al iniciar sesión. Por favor regístrate nuevamente.');
+    }
+  }
+
+  private async findUserByPuuid(puuid: string): Promise<UserProfile | null> {
+    const usersRef = collection(this.firestore, 'users');
+    const q = query(usersRef, where('puuid', '==', puuid), limit(1));
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      return null;
+    }
+    
+    const docSnap = querySnapshot.docs[0];
+    const data: any = docSnap.data();
+    return {
+      id: docSnap.id,
+      uid: data['uid'] || docSnap.id,
+      email: data['email'] || '',
+      displayName: data['displayName'] || '',
+      role: data['role'] || 'user',
+      gameName: data['gameName'],
+      tagLine: data['tagLine'],
+      region: data['region'],
+      puuid: data['puuid'],
+      photoURL: data['photoURL'],
+      bio: data['bio'],
+      followers: data['followers'] || [],
+      following: data['following'] || [],
+      createdAt: data['createdAt'] || Timestamp.now()
+    } as UserProfile;
+  }
+
+  private generateSecurePassword(): string {
+    // Generar contraseña aleatoria de 16 caracteres
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < 16; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  }
+
+  private generatePasswordFromPuuid(puuid: string): string {
+    // Generar contraseña determinística basada en puuid (para login)
+    // Esto permite que el usuario pueda iniciar sesión sin recordar contraseña
+    // En producción, considera usar un método más seguro
+    return btoa(puuid).substring(0, 16) + '!@#$';
   }
 
   async login(email: string, password: string) {

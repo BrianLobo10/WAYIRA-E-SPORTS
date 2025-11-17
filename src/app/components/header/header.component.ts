@@ -1,8 +1,8 @@
 import { Component, HostListener, ElementRef, ViewChild, inject, signal, OnInit } from '@angular/core';
 import { RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { FirebaseService, UserProfile } from '../services/firebase.service';
 import { User } from '@angular/fire/auth';
+import { FirebaseService, UserProfile } from '@/app/services/firebase.service';
 
 @Component({
   selector: 'app-header',

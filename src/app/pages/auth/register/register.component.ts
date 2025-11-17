@@ -14,8 +14,6 @@ import { FirebaseService } from '../../../services/firebase.service';
 export class RegisterComponent {
   gameName = signal('');
   tagLine = signal('');
-  email = signal('');
-  password = signal('');
   region = signal('la1');
   loading = signal(false);
   error = signal('');
@@ -35,18 +33,8 @@ export class RegisterComponent {
   private router = inject(Router);
 
   async onRegister() {
-    if (!this.gameName().trim() || !this.tagLine().trim() || !this.email().trim() || !this.password().trim()) {
+    if (!this.gameName().trim() || !this.tagLine().trim()) {
       this.error.set('Por favor completa todos los campos');
-      return;
-    }
-
-    if (!this.isValidEmail(this.email())) {
-      this.error.set('Por favor ingresa un email válido');
-      return;
-    }
-
-    if (this.password().length < 6) {
-      this.error.set('La contraseña debe tener al menos 6 caracteres');
       return;
     }
 
@@ -54,19 +42,17 @@ export class RegisterComponent {
     this.error.set('');
 
     try {
-      // Verificar que el invocador existe
+      // Verificar que el invocador existe en Riot Games
       const response = await fetch(`/api/summoner/${this.region()}/${this.gameName()}/${this.tagLine()}`);
       
       if (!response.ok) {
-        throw new Error('Invocador no encontrado. Verifica tu nombre y región.');
+        throw new Error('Invocador no encontrado. Verifica tu nombre de invocador, tagline y región.');
       }
 
       const summonerData = await response.json();
 
-      // Registrar en Firebase
+      // Registrar en Firebase usando Riot Games
       await this.firebaseService.registerWithRiot(
-        this.email(),
-        this.password(),
         this.gameName(),
         this.tagLine(),
         this.region(),
@@ -75,15 +61,10 @@ export class RegisterComponent {
 
       this.router.navigate(['/']);
     } catch (err: any) {
-      this.error.set(err.message || 'Error al registrarse');
+      this.error.set(err.message || 'Error al registrarse. Verifica que tu cuenta de Riot Games sea válida.');
     } finally {
       this.loading.set(false);
     }
-  }
-
-  private isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
   }
 }
 
