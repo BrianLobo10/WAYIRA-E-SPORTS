@@ -85,20 +85,35 @@
 }
 
 .card-icon {
-  font-size: 3rem;
   margin-bottom: 1.5rem;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6366f1;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
   flex-shrink: 0;
 }
 
+.card-icon svg {
+  width: 3rem;
+  height: 3rem;
+}
+
+.card-small .card-icon svg {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
 .card-small .card-icon {
-  font-size: 2.5rem;
   margin-bottom: 1rem;
 }
 
+.card-large .card-icon svg {
+  width: 3.5rem;
+  height: 3.5rem;
+}
+
 .card-large .card-icon {
-  font-size: 3.5rem;
   margin-bottom: 2rem;
 }
 
@@ -155,8 +170,9 @@
     padding: 1.75rem;
   }
   
-  .card-icon {
-    font-size: 2.75rem;
+  .card-icon svg {
+    width: 2.75rem;
+    height: 2.75rem;
   }
   
   .card-title {
@@ -170,8 +186,12 @@
     min-height: 220px;
   }
   
+  .card-icon svg {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  
   .card-icon {
-    font-size: 2.5rem;
     margin-bottom: 1rem;
   }
   
@@ -202,8 +222,12 @@
     min-height: 200px;
   }
   
+  .card-icon svg {
+    width: 2rem;
+    height: 2rem;
+  }
+  
   .card-icon {
-    font-size: 2rem;
     margin-bottom: 0.75rem;
   }
   

@@ -1,5 +1,7 @@
 <div class="universal-card" [class]="'card-' + type + ' card-' + size">
-  <div class="card-icon">{{ icon }}</div>
+  <div class="card-icon">
+    <svg-icon [name]="icon"></svg-icon>
+  </div>
   <h3 class="card-title">{{ title }}</h3>
   <p class="card-description">{{ description }}</p>
 </div>

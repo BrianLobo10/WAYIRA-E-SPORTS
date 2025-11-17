@@ -1,0 +1,42 @@
+<div class="projects-page">
+  <section class="projects-hero">
+    <div class="container">
+      <div class="hero-content">
+        <h1>Nuestros Proyectos</h1>
+        <p>Iniciativas y programas que impulsan el crecimiento de los e-Sports en Colombia</p>
+      </div>
+    </div>
+    <div class="hero-wave">
+      <svg viewBox="0 0 1200 120" preserveAspectRatio="none">
+        <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"></path>
+      </svg>
+    </div>
+  </section>
+
+  <section class="projects-content">
+    <div class="container">
+      <app-section-header title="Proyectos Activos"></app-section-header>
+      
+      <app-cards-grid [columns]="2" gap="large" [responsive]="true" class="projects-grid">
+        @for (project of projects; track project.title) {
+          <div class="project-card">
+            <app-universal-card 
+              [icon]="project.icon" 
+              [title]="project.title" 
+              [description]="project.description"
+              type="service"
+              size="large">
+            </app-universal-card>
+            <div class="project-meta">
+              <span class="project-status" [class.active]="project.status === 'Activo' || project.status === 'En curso'">
+                {{ project.status }}
+              </span>
+              <span class="project-date">{{ project.date }}</span>
+            </div>
+          </div>
+        }
+      </app-cards-grid>
+    </div>
+  </section>
+</div>
+

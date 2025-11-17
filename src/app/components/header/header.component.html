@@ -26,9 +26,13 @@
         } @else {
           <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Inicio</a>
         }
+        <a routerLink="/about" routerLinkActive="active">Sobre Nosotros</a>
+        <a routerLink="/projects" routerLinkActive="active">Proyectos</a>
+        <a routerLink="/news" routerLinkActive="active">Noticias</a>
         <a routerLink="/search" routerLinkActive="active">Buscar Jugador</a>
         <a routerLink="/roulette" routerLinkActive="active" class="roulette-link">Ruleta Wayira</a>
         <a routerLink="/contact" routerLinkActive="active">Contacto</a>
+        <a routerLink="/login" routerLinkActive="active" class="login-link">Iniciar Sesión</a>
       </nav>
       
       <button class="menu-toggle" (click)="toggleMenu()" [class.active]="menuOpen">

@@ -1,0 +1,52 @@
+<div class="about-page">
+  <section class="about-hero">
+    <div class="container">
+      <div class="hero-content">
+        <h1>Sobre Nosotros</h1>
+        <p>Conoce más sobre WAYIRA E-SPORTS y nuestra misión de profesionalizar los deportes electrónicos en Colombia</p>
+      </div>
+    </div>
+    <div class="hero-wave">
+      <svg viewBox="0 0 1200 120" preserveAspectRatio="none">
+        <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"></path>
+      </svg>
+    </div>
+  </section>
+
+  <section class="about-content">
+    <div class="container">
+      <div class="about-intro">
+        <h2>Nuestra Historia</h2>
+        <p>WAYIRA E-SPORTS S.A.S. nació con la visión de transformar el panorama de los deportes electrónicos en La Guajira y Colombia. Fundada con el propósito de profesionalizar y dar visibilidad al talento local, hemos crecido hasta convertirnos en una organización referente en el ecosistema gaming nacional.</p>
+        <p>Desde nuestros inicios, nos hemos enfocado en crear oportunidades reales para jugadores, organizar eventos de calidad y construir una comunidad sólida alrededor de los e-Sports.</p>
+      </div>
+
+      <app-section-header title="Nuestros Logros"></app-section-header>
+      <app-cards-grid [columns]="4" gap="medium" [responsive]="true" class="achievements-grid">
+        @for (achievement of achievements; track achievement.title) {
+          <app-universal-card 
+            [icon]="achievement.icon" 
+            [title]="achievement.title" 
+            [description]="achievement.value + ' - ' + achievement.description"
+            type="service"
+            size="small">
+          </app-universal-card>
+        }
+      </app-cards-grid>
+
+      <app-section-header title="Nuestro Equipo"></app-section-header>
+      <app-cards-grid [columns]="3" gap="medium" [responsive]="true" class="team-grid">
+        @for (member of team; track member.name) {
+          <app-universal-card 
+            icon="users" 
+            [title]="member.name" 
+            [description]="member.role + ' - ' + member.description"
+            type="valor"
+            size="medium">
+          </app-universal-card>
+        }
+      </app-cards-grid>
+    </div>
+  </section>
+</div>
+
