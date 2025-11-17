@@ -12,6 +12,19 @@
     <div class="container">
       <div class="tournaments-header">
         <h2 class="section-title">Torneos Disponibles</h2>
+        @if (isAdmin()) {
+          <button class="btn-create-test-tournament" (click)="createPracticeTournament()" [disabled]="creating()">
+            @if (creating()) {
+              <span class="spinner-small"></span>
+              <span>Creando...</span>
+            } @else {
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+              </svg>
+              <span>Crear Torneo de Prueba</span>
+            }
+          </button>
+        }
       </div>
       
       @if (loading()) {
@@ -66,6 +79,29 @@
                     Iniciar Torneo
                   </button>
                 }
+                @if (isAdmin()) {
+                  <button class="btn-edit-tournament" (click)="editTournament(tournament)" title="Editar Torneo">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Editar
+                  </button>
+                  <button 
+                    class="btn-delete-tournament" 
+                    (click)="deleteTournament(tournament)" 
+                    [disabled]="deletingTournamentId() === tournament.id"
+                    title="Eliminar Torneo">
+                    @if (deletingTournamentId() === tournament.id) {
+                      <span class="spinner-small"></span>
+                      <span>Eliminando...</span>
+                    } @else {
+                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      <span>Eliminar</span>
+                    }
+                  </button>
+                }
               </div>
             </article>
           }
@@ -80,7 +116,7 @@
   <div class="modal-overlay" (click)="closeModal()">
     <div class="tournament-modal" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h3>Crear Nuevo Torneo</h3>
+        <h3>{{ selectedTournament() ? 'Editar Torneo' : 'Crear Nuevo Torneo' }}</h3>
         <button class="close-btn" (click)="closeModal()">
           <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -183,9 +219,9 @@
               [disabled]="creating() || !tournamentName().trim() || !tournamentDescription().trim() || !tournamentStartDate() || !tournamentEndDate()">
               @if (creating()) {
                 <span class="spinner-small"></span>
-                <span>Creando...</span>
+                <span>{{ selectedTournament() ? 'Actualizando...' : 'Creando...' }}</span>
               } @else {
-                <span>Crear Torneo</span>
+                <span>{{ selectedTournament() ? 'Actualizar Torneo' : 'Crear Torneo' }}</span>
               }
             </button>
           </div>
@@ -353,37 +389,68 @@
       
       <div class="bracket-content">
         @if (selectedTournamentForBracket()!.bracket && selectedTournamentForBracket()!.bracket!.length > 0) {
-          <div class="bracket-container">
-            @for (match of selectedTournamentForBracket()!.bracket; track match.id) {
-              <div class="bracket-match" [class.completed]="match.winnerId">
-                <div class="match-round">{{ getRoundName(match.round) }}</div>
-                <div class="match-teams">
-                  <div class="match-team" [class.winner]="match.winnerId === match.team1Id">
-                    <span class="team-name">{{ match.team1Name || 'TBD' }}</span>
-                    @if (match.score1 !== undefined) {
-                      <span class="team-score">{{ match.score1 }}</span>
-                    }
-                  </div>
-                  <div class="match-vs">VS</div>
-                  <div class="match-team" [class.winner]="match.winnerId === match.team2Id">
-                    <span class="team-name">{{ match.team2Name || 'TBD' }}</span>
-                    @if (match.score2 !== undefined) {
-                      <span class="team-score">{{ match.score2 }}</span>
+          <div class="bracket-tree-container">
+            <svg class="bracket-connections" #bracketSvg>
+              <!-- Las líneas se dibujarán dinámicamente -->
+            </svg>
+            <div class="bracket-tree">
+              @for (round of getBracketRounds(); track round; let roundIndex = $index) {
+                <div class="bracket-column" [attr.data-round]="round" [attr.data-index]="roundIndex">
+                  <h4 class="round-title">{{ getRoundDisplayName(round) }}</h4>
+                  <div class="bracket-matches-column">
+                    @for (match of getRoundMatches(round); track match.id; let matchIndex = $index) {
+                      <div 
+                        class="bracket-match-wrapper" 
+                        [attr.data-match-id]="match.id"
+                        [attr.data-round]="round"
+                        [attr.data-match-index]="matchIndex">
+                        @if (roundIndex > 0) {
+                          <div class="bracket-line-left"></div>
+                        }
+                        <div class="bracket-match" 
+                             [class.completed]="match.winnerId"
+                             [class.final-match]="round === 'final'">
+                          <div class="match-team" [class.winner]="match.winnerId === match.team1Id">
+                            <span class="team-name">{{ match.team1Name || 'TBD' }}</span>
+                            @if (match.score1 !== undefined) {
+                              <span class="team-score">{{ match.score1 }}</span>
+                            }
+                          </div>
+                          <div class="match-divider"></div>
+                          <div class="match-team" [class.winner]="match.winnerId === match.team2Id">
+                            <span class="team-name">{{ match.team2Name || 'TBD' }}</span>
+                            @if (match.score2 !== undefined) {
+                              <span class="team-score">{{ match.score2 }}</span>
+                            }
+                          </div>
+                          @if (match.winnerId && round === 'final') {
+                            <div class="match-winner">
+                              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                              </svg>
+                              <span>🏆 {{ match.winnerId === match.team1Id ? match.team1Name : match.team2Name }}</span>
+                            </div>
+                          }
+                          @if (isAdmin() && selectedTournamentForBracket()!.status === 'ongoing' && !match.winnerId) {
+                            <div class="match-actions">
+                              <button class="btn-winner" (click)="updateMatchWinner(match.id, match.team1Id!)">
+                                {{ match.team1Name || 'TBD' }} Gana
+                              </button>
+                              <button class="btn-winner" (click)="updateMatchWinner(match.id, match.team2Id!)">
+                                {{ match.team2Name || 'TBD' }} Gana
+                              </button>
+                            </div>
+                          }
+                        </div>
+                        @if (roundIndex < getBracketRounds().length - 1) {
+                          <div class="bracket-line-right"></div>
+                        }
+                      </div>
                     }
                   </div>
                 </div>
-                @if (isAdmin() && selectedTournamentForBracket()!.status === 'ongoing' && !match.winnerId) {
-                  <div class="match-actions">
-                    <button class="btn-winner" (click)="updateMatchWinner(match.id, match.team1Id!)">
-                      {{ match.team1Name }} Gana
-                    </button>
-                    <button class="btn-winner" (click)="updateMatchWinner(match.id, match.team2Id!)">
-                      {{ match.team2Name }} Gana
-                    </button>
-                  </div>
-                }
-              </div>
-            }
+              }
+            </div>
           </div>
         } @else {
           <div class="empty-bracket">

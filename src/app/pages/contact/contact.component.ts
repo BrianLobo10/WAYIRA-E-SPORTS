@@ -1,7 +1,7 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { FirebaseService } from '../../services/firebase.service';
+import { FirebaseService, UserProfile } from '../../services/firebase.service';
 
 @Component({
   selector: 'app-contact',
@@ -10,7 +10,7 @@ import { FirebaseService } from '../../services/firebase.service';
   templateUrl: './contact.component.html',
   styleUrls: ['./contact.component.css']
 })
-export class ContactComponent {
+export class ContactComponent implements OnInit {
   private firebaseService = inject(FirebaseService);
 
   name = signal('');
@@ -22,6 +22,7 @@ export class ContactComponent {
   isSubmitting = signal(false);
   submitSuccess = signal(false);
   submitError = signal('');
+  currentUser = signal<UserProfile | null>(null);
 
   contactTypes = [
     { value: 'suggestion', label: 'Sugerencia', icon: 'lightbulb' },
@@ -38,6 +39,23 @@ export class ContactComponent {
     facebook: 'https://www.facebook.com/share/1TtgfPoLSL/',
     instagram: 'https://www.instagram.com/wayiraesports'
   };
+
+  ngOnInit() {
+    // Cargar datos del usuario autenticado
+    const user = this.firebaseService.getCurrentUser();
+    if (user) {
+      this.firebaseService.getUserProfile(user.uid).then(profile => {
+        if (profile) {
+          this.currentUser.set(profile);
+          // Autocompletar nombre y email desde el perfil
+          this.name.set(profile.displayName || '');
+          this.email.set(profile.email || '');
+        }
+      }).catch(error => {
+        console.error('Error al cargar perfil:', error);
+      });
+    }
+  }
 
   async onSubmit() {
     if (!this.validateForm()) return;
@@ -71,20 +89,14 @@ export class ContactComponent {
   }
 
   private validateForm(): boolean {
-    if (!this.name().trim()) {
-      this.submitError.set('El nombre es requerido');
-      return false;
-    }
-    if (!this.email().trim()) {
-      this.submitError.set('El email es requerido');
-      return false;
-    }
-    if (!this.isValidEmail(this.email())) {
-      this.submitError.set('El email no es válido');
-      return false;
-    }
+    // Validación simplificada ya que nombre y email vienen del perfil
     if (!this.message().trim()) {
       this.submitError.set('El mensaje es requerido');
+      return false;
+    }
+    // Verificar que tenemos los datos del usuario
+    if (!this.name().trim() || !this.email().trim()) {
+      this.submitError.set('Error al cargar tu información. Por favor recarga la página.');
       return false;
     }
     return true;

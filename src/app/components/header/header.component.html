@@ -48,8 +48,10 @@
             <a routerLink="/about" routerLinkActive="active" class="dropdown-item">Sobre Nosotros</a>
             <a routerLink="/projects" routerLinkActive="active" class="dropdown-item">Proyectos</a>
             <a routerLink="/news" routerLinkActive="active" class="dropdown-item">Noticias</a>
-            <a routerLink="/blog" routerLinkActive="active" class="dropdown-item">Blog</a>
-            <a routerLink="/contact" routerLinkActive="active" class="dropdown-item">Contacto</a>
+            @if (isAuthenticated()) {
+              <a routerLink="/blog" routerLinkActive="active" class="dropdown-item">Blog</a>
+              <a routerLink="/contact" routerLinkActive="active" class="dropdown-item">Contacto</a>
+            }
           </div>
         </div>
         @if (isAuthenticated()) {

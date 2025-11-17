@@ -231,7 +231,7 @@ app-notifications {
   background: linear-gradient(135deg, #00363D 0%, #014C4A 100%);
   border: 1px solid rgba(1, 108, 108, 0.3);
   border-radius: 10px;
-  padding: 0.5rem 0;
+  padding: 0.5rem;
   min-width: 160px;
   opacity: 0;
   visibility: hidden;
@@ -239,6 +239,7 @@ app-notifications {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   z-index: 1001;
   text-align: left;
+  overflow: hidden;
 }
 
 .more-menu {
@@ -262,7 +263,8 @@ app-notifications {
   transition: all 0.3s ease;
   cursor: pointer;
   border-radius: 8px;
-  margin: 0.2rem 0.8rem;
+  margin: 0.2rem 0;
+  box-sizing: border-box;
 }
 
 .dropdown-item:hover {
@@ -507,6 +509,9 @@ app-notifications {
   cursor: pointer;
   transition: all 0.3s ease;
   font-size: 0.95rem;
+  border-radius: 8px;
+  margin: 0.2rem 0;
+  box-sizing: border-box;
 }
 
 .profile-menu .dropdown-item:hover {

@@ -122,12 +122,46 @@ export class RegisterComponent implements OnInit {
               this.region(),
               summonerData.puuid,
               this.password(),
-              this.email()
+              this.email().trim() // Email es obligatorio
             );
 
             this.router.navigate(['/']);
           } catch (err: any) {
-            this.error.set(err.message || 'Error al registrarse. Por favor intenta nuevamente.');
+            console.error('Error en registro:', err);
+            let errorMessage = err.message || err.error?.message || 'Error al registrarse. Por favor intenta nuevamente.';
+            
+            // Si es un usuario huérfano, ofrecer intentar recrear el perfil
+            if (errorMessage.includes('no tiene perfil')) {
+              // Intentar recrear el perfil si el usuario puede iniciar sesión
+              try {
+                const orphanedUser = await this.firebaseService.recreateProfileIfOrphaned(
+                  this.email().trim(),
+                  this.password()
+                );
+                
+                if (orphanedUser) {
+                  // Recrear el perfil con los datos del registro
+                  await this.firebaseService.recreateUserProfile(
+                    orphanedUser.uid,
+                    this.gameName().trim(),
+                    this.tagLine().trim(),
+                    this.region(),
+                    summonerData.puuid,
+                    this.email().trim()
+                  );
+                  
+                  // Perfil recreado exitosamente
+                  this.error.set('');
+                  this.router.navigate(['/']);
+                  return;
+                }
+              } catch (recreateError: any) {
+                // Si no puede recrear, mostrar el mensaje original
+                console.error('Error recreando perfil:', recreateError);
+              }
+            }
+            
+            this.error.set(errorMessage);
             this.loading.set(false);
           }
         },
