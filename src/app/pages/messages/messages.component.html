@@ -21,10 +21,14 @@
               (click)="selectConversation(conv.userId)">
               <div class="conversation-avatar">
                 @if (conv.profile?.photoURL) {
-                  <img [src]="conv.profile.photoURL" [alt]="conv.profile.displayName">
+                  <img [src]="conv.profile!.photoURL" [alt]="conv.profile!.displayName">
                 } @else {
                   <div class="avatar-placeholder">
-                    {{ conv.profile?.displayName?.charAt(0).toUpperCase() || '?' }}
+                    @if (conv.profile && conv.profile.displayName) {
+                      {{ conv.profile.displayName.charAt(0).toUpperCase() }}
+                    } @else {
+                      ?
+                    }
                   </div>
                 }
                 @if (conv.unread > 0) {
@@ -114,10 +118,14 @@
       @for (chat of getMinimizedChats(); track chat.userId) {
         <div class="minimized-chat-bubble" (click)="maximizeChat(chat.userId)">
           @if (chat.profile?.photoURL) {
-            <img [src]="chat.profile.photoURL" [alt]="chat.profile.displayName">
+            <img [src]="chat.profile!.photoURL" [alt]="chat.profile!.displayName">
           } @else {
             <div class="bubble-placeholder">
-              {{ chat.profile?.displayName?.charAt(0).toUpperCase() || '?' }}
+              @if (chat.profile && chat.profile.displayName) {
+                {{ chat.profile.displayName.charAt(0).toUpperCase() }}
+              } @else {
+                ?
+              }
             </div>
           }
           <button class="close-bubble" (click)="closeChat(chat.userId); $event.stopPropagation()">

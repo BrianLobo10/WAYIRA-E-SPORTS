@@ -2,6 +2,7 @@ import { Component, HostListener, ElementRef, ViewChild, inject, signal, OnInit 
 import { RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FirebaseService, UserProfile } from '../services/firebase.service';
+import { User } from '@angular/fire/auth';
 
 @Component({
   selector: 'app-header',
@@ -12,8 +13,8 @@ import { FirebaseService, UserProfile } from '../services/firebase.service';
 export class HeaderComponent implements OnInit {
   @ViewChild('navElement') navElement!: ElementRef;
   
-  private firebaseService = inject(FirebaseService);
-  private router = inject(Router);
+  private firebaseService: FirebaseService = inject(FirebaseService);
+  private router: Router = inject(Router);
   
   menuOpen = false;
   dropdownOpen = false;
@@ -21,7 +22,7 @@ export class HeaderComponent implements OnInit {
   isAuthenticated = signal(false);
 
   ngOnInit() {
-    this.firebaseService.currentUser.subscribe(user => {
+    this.firebaseService.currentUser.subscribe((user: User | null) => {
       this.isAuthenticated.set(!!user);
       if (user) {
         this.loadUserProfile(user.uid);
