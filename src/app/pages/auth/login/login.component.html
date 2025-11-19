@@ -1,20 +1,6 @@
 <div class="login-page">
-  <section class="login-hero">
-    <div class="container">
-      <div class="hero-content">
-        <h1>Iniciar Sesión</h1>
-        <p>Accede con tu cuenta de Riot Games</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="login-content">
-    <div class="container">
-      <div class="login-card">
-        <h2>Iniciar Sesión con Riot Games</h2>
-        <p class="login-subtitle">Ingresa tu nombre de invocador y tagline para acceder</p>
-
-        <form (ngSubmit)="onLogin()" class="login-form">
+  <div class="login-card">
+    <form (ngSubmit)="onLogin()" class="login-form">
           <div class="form-group">
             <label for="gameName">Nombre de Invocador</label>
             <input
@@ -120,13 +106,11 @@
               <span>Iniciar Sesión</span>
             }
           </button>
-        </form>
+    </form>
 
-        <div class="login-footer">
-          <p>¿No tienes cuenta? <a routerLink="/register">Regístrate aquí</a></p>
-        </div>
-      </div>
+    <div class="login-footer">
+      <p>¿No tienes cuenta? <a routerLink="/register">Regístrate aquí</a></p>
     </div>
-  </section>
+  </div>
 </div>
 

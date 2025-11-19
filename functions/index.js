@@ -1,23 +1,105 @@
-import express from 'express';
-import fetch from 'node-fetch';
-import cors from 'cors';
-import dotenv from 'dotenv';
+const functions = require('firebase-functions');
+const admin = require('firebase-admin');
+const express = require('express');
+const cors = require('cors');
 
-dotenv.config();
+// Usar fetch nativo de Node.js 20 (disponible globalmente desde Node 18+)
+// Si no está disponible, usar https nativo como fallback
+let fetch;
+if (typeof globalThis.fetch !== 'undefined') {
+  // Node.js 20 tiene fetch nativo
+  fetch = globalThis.fetch;
+  console.log('Usando fetch nativo de Node.js');
+} else {
+  // Fallback usando https nativo
+  const https = require('https');
+  const http = require('http');
+  const { URL } = require('url');
+  
+  console.log('Usando fallback fetch con https/http nativo');
+  
+  fetch = async (url, options = {}) => {
+    return new Promise((resolve, reject) => {
+      try {
+        const urlObj = typeof url === 'string' ? new URL(url) : url;
+        const protocol = urlObj.protocol === 'https:' ? https : http;
+        
+        const requestOptions = {
+          hostname: urlObj.hostname,
+          port: urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80),
+          path: urlObj.pathname + urlObj.search,
+          method: options.method || 'GET',
+          headers: options.headers || {}
+        };
+        
+        const req = protocol.request(requestOptions, (res) => {
+          let data = '';
+          
+          res.on('data', (chunk) => {
+            data += chunk;
+          });
+          
+          res.on('end', () => {
+            try {
+              const response = {
+                ok: res.statusCode >= 200 && res.statusCode < 300,
+                status: res.statusCode,
+                statusText: res.statusMessage || '',
+                headers: res.headers,
+                json: async () => {
+                  try {
+                    return JSON.parse(data);
+                  } catch (e) {
+                    throw new Error(`Failed to parse JSON: ${e.message}`);
+                  }
+                },
+                text: async () => data
+              };
+              resolve(response);
+            } catch (error) {
+              reject(error);
+            }
+          });
+        });
+        
+        req.on('error', (error) => {
+          reject(error);
+        });
+        
+        req.setTimeout(options.timeout || 30000, () => {
+          req.destroy();
+          reject(new Error('Request timeout'));
+        });
+        
+        if (options.body) {
+          if (typeof options.body === 'string') {
+            req.write(options.body);
+          } else {
+            req.write(JSON.stringify(options.body));
+          }
+        }
+        
+        req.end();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  };
+}
+
+// Inicializar Firebase Admin
+admin.initializeApp();
 
 const app = express();
-// Cloud Run usa PORT automáticamente, local usa 3001
-const PORT = process.env.PORT || 3001;
-const RIOT_API_KEY = process.env.RIOT_API_KEY;
 
 // Middleware
 app.use(cors({
-  origin: true, // Permitir todos los orígenes
+  origin: true,
   credentials: true
 }));
 app.use(express.json());
 
-// Headers para evitar problemas con ngrok banner
+// Headers para evitar problemas
 app.use((req, res, next) => {
   res.setHeader('ngrok-skip-browser-warning', 'true');
   next();
@@ -53,6 +135,95 @@ const regionalRouting = {
   'jp1': 'asia'
 };
 
+// Función para obtener RIOT_API_KEY
+// Usa secrets/variables de entorno (método moderno recomendado por Firebase)
+// Para configurar: firebase functions:secrets:set RIOT_API_KEY
+// Y declarar en la función: functions.runWith({ secrets: ['RIOT_API_KEY'] })
+function getRiotApiKey() {
+  // Variables de entorno/secrets se cargan automáticamente cuando usas:
+  // firebase functions:secrets:set RIOT_API_KEY
+  // Y declaras en la función: functions.runWith({ secrets: ['RIOT_API_KEY'] })
+  if (process.env.RIOT_API_KEY) {
+    return process.env.RIOT_API_KEY;
+  }
+  
+  // Si no está configurado, retornar null
+  console.warn('RIOT_API_KEY no configurado. Configura el secret con: firebase functions:secrets:set RIOT_API_KEY');
+  return null;
+}
+
+// Función para limpiar nombres de invocadores
+function cleanSummonerName(name) {
+  return name
+    .replace(/[\u2066\u2067\u2068\u2069]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Función helper para obtener ranking de campeones
+async function getChampionRanking(region, championId, type, riotApiKey) {
+  try {
+    const routing = regionalRouting[region] || 'americas';
+    const rankingUrl = `https://${routing}.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-champion/${championId}/top?count=1`;
+    
+    const response = await fetch(rankingUrl, {
+      headers: { 'X-Riot-Token': riotApiKey }
+    });
+    
+    if (!response.ok) {
+      return null;
+    }
+    
+    const data = await response.json();
+    
+    if (type === 'world') {
+      return Math.floor(Math.random() * 10000) + 1;
+    } else if (type === 'server') {
+      return data.length > 0 ? Math.floor(Math.random() * 1000) + 1 : null;
+    }
+    
+    return null;
+  } catch (error) {
+    console.log(`Error obteniendo ranking ${type} para campeón ${championId}:`, error.message);
+    return null;
+  }
+}
+
+// Función helper para obtener datos del summoner desde PUUID
+async function getSummonerDataFromPuuid(region, puuid, riotApiKey) {
+  const summonerUrl = `https://${region}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${puuid}`;
+  const summonerResponse = await fetch(summonerUrl, {
+    headers: { 'X-Riot-Token': riotApiKey }
+  });
+  
+  if (!summonerResponse.ok) {
+    throw new Error(`Error obteniendo summoner: ${summonerResponse.status}`);
+  }
+  
+  const summoner = await summonerResponse.json();
+  
+  // Obtener estadísticas rankeadas
+  let leagueData = [];
+  try {
+    const leagueUrl = `https://${region}.api.riotgames.com/lol/league/v4/entries/by-summoner/${summoner.id}`;
+    const leagueResponse = await fetch(leagueUrl, {
+      headers: { 'X-Riot-Token': riotApiKey }
+    });
+    
+    if (leagueResponse.ok) {
+      leagueData = await leagueResponse.json();
+    }
+  } catch (error) {
+    console.log('Error obteniendo estadísticas rankeadas:', error.message);
+  }
+  
+  return {
+    ...summoner,
+    leagues: leagueData,
+    actualRegion: region
+  };
+}
+
 // Endpoint para buscar summoner por nombre y tagline
 app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
   try {
@@ -62,9 +233,11 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
     gameName = decodeURIComponent(gameName);
     tagLine = decodeURIComponent(tagLine);
     
+    const RIOT_API_KEY = getRiotApiKey();
+    
     if (!RIOT_API_KEY) {
       return res.status(500).json({ 
-        error: 'API Key no configurada' 
+        error: 'API Key no configurada. Configura riot.api_key en Firebase Functions config.' 
       });
     }
     
@@ -88,7 +261,6 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
       
       if (!accountResponse.ok) {
         if (accountResponse.status === 404) {
-          // Intentar con el nombre original si el limpio falla
           if (cleanGameName !== gameName || cleanTagLine !== tagLine) {
             console.log(`Intentando con nombre original: ${gameName}#${tagLine}`);
             const originalAccountUrl = `https://${routing}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`;
@@ -100,7 +272,12 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
             if (originalAccountResponse.ok) {
               const originalAccount = await originalAccountResponse.json();
               console.log(`Jugador encontrado con nombre original`);
-              return await getSummonerDataFromPuuid(region, originalAccount.puuid, RIOT_API_KEY);
+              const summonerData = await getSummonerDataFromPuuid(region, originalAccount.puuid, RIOT_API_KEY);
+              return {
+                ...summonerData,
+                gameName: originalAccount.gameName,
+                tagLine: originalAccount.tagLine
+              };
             }
           }
           throw new Error('Jugador no encontrado');
@@ -124,7 +301,6 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
         const errorText = await summonerResponse.text();
         console.error(`Error obteniendo summoner (${summonerResponse.status}):`, errorText);
         
-        // Si el summoner no existe en esta región, intentar con otras regiones de LATAM
         if (summonerResponse.status === 404) {
           const latamRegions = ['la1', 'la2', 'br1'];
           for (const altRegion of latamRegions) {
@@ -140,7 +316,6 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
               console.log(`Summoner encontrado en región ${altRegion}`);
               const summoner = await altSummonerResponse.json();
               
-              // Obtener estadísticas rankeadas de la región donde se encontró
               let leagueData = [];
               try {
                 const leagueUrl = `https://${altRegion}.api.riotgames.com/lol/league/v4/entries/by-summoner/${summoner.id}`;
@@ -210,6 +385,8 @@ app.get('/api/matches/:region/:puuid', async (req, res) => {
     const { region, puuid } = req.params;
     const count = req.query.count || 20;
     
+    const RIOT_API_KEY = getRiotApiKey();
+    
     if (!RIOT_API_KEY) {
       return res.status(500).json({ 
         error: 'API Key no configurada' 
@@ -268,6 +445,8 @@ app.get('/api/mastery/:region/:puuid', async (req, res) => {
     const { region, puuid } = req.params;
     const count = req.query.count || 5;
     
+    const RIOT_API_KEY = getRiotApiKey();
+    
     if (!RIOT_API_KEY) {
       return res.status(500).json({ 
         error: 'API Key no configurada' 
@@ -292,8 +471,8 @@ app.get('/api/mastery/:region/:puuid', async (req, res) => {
       const masteryWithRanking = await Promise.all(mastery.map(async (champ) => {
         try {
           const [worldRank, serverRank] = await Promise.all([
-            getChampionRanking(region, champ.championId, 'world'),
-            getChampionRanking(region, champ.championId, 'server')
+            getChampionRanking(region, champ.championId, 'world', RIOT_API_KEY),
+            getChampionRanking(region, champ.championId, 'server', RIOT_API_KEY)
           ]);
           
           return {
@@ -321,48 +500,9 @@ app.get('/api/mastery/:region/:puuid', async (req, res) => {
   }
 });
 
-// Función para limpiar nombres de invocadores
-function cleanSummonerName(name) {
-  return name
-    .replace(/[\u2066\u2067\u2068\u2069]/g, '') // Remover caracteres de control Unicode
-    .replace(/\s+/g, ' ') // Normalizar espacios múltiples a uno solo
-    .trim(); // Remover espacios al inicio y final
-}
-
-// Función helper para obtener ranking de campeones
-async function getChampionRanking(region, championId, type) {
-  try {
-    const routing = regionalRouting[region] || 'americas';
-    const rankingUrl = `https://${routing}.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-champion/${championId}/top?count=1`;
-    
-    const response = await fetch(rankingUrl, {
-      headers: { 'X-Riot-Token': RIOT_API_KEY }
-    });
-    
-    if (!response.ok) {
-      return null;
-    }
-    
-    const data = await response.json();
-    
-    if (type === 'world') {
-      // Para ranking mundial, necesitaríamos una API externa o base de datos
-      // Por ahora simulamos un ranking basado en puntos de maestría
-      return Math.floor(Math.random() * 10000) + 1;
-    } else if (type === 'server') {
-      // Para ranking del servidor, usamos los datos de la API
-      return data.length > 0 ? Math.floor(Math.random() * 1000) + 1 : null;
-    }
-    
-    return null;
-  } catch (error) {
-    console.log(`Error obteniendo ranking ${type} para campeón ${championId}:`, error.message);
-    return null;
-  }
-}
-
 // Health check
 app.get('/health', (req, res) => {
+  const RIOT_API_KEY = getRiotApiKey();
   res.json({ 
     status: 'ok', 
     apiKeyConfigured: !!RIOT_API_KEY,
@@ -386,7 +526,7 @@ app.post('/api/chatbot', async (req, res) => {
     if (GEMINI_API_KEY) {
       try {
         console.log('Intentando usar Gemini API...');
-        const { GoogleGenerativeAI } = await import('@google/generative-ai');
+        const { GoogleGenerativeAI } = require('@google/generative-ai');
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
         // Usar gemini-1.5-pro que es el modelo más estable y disponible
         // Si falla, intentar con gemini-pro
@@ -545,17 +685,10 @@ function analyzeContext(message, history) {
   return { intent: 'general' };
 }
 
-// Iniciar servidor
-app.listen(PORT, () => {
-  console.log(`Servidor API corriendo en http://localhost:${PORT}`);
-  console.log(`API Key ${RIOT_API_KEY ? 'configurada' : 'NO configurada'}`);
-  if (!RIOT_API_KEY) {
-    console.log('Configura RIOT_API_KEY en el archivo .env');
-  }
-  if (process.env.GEMINI_API_KEY) {
-    console.log('Gemini API configurada - POTATO tiene IA real 🥔✨');
-  } else {
-    console.log('Gemini API no configurada - POTATO usará respuestas inteligentes locales');
-    console.log('Para habilitar IA real, configura GEMINI_API_KEY en .env');
-  }
-});
+// Exportar la app Express como Cloud Function HTTP con secretos
+// Usando secrets (método moderno recomendado por Firebase)
+// Para configurar los secrets:
+// firebase functions:secrets:set RIOT_API_KEY
+// firebase functions:secrets:set GEMINI_API_KEY
+exports.api = functions.runWith({ secrets: ['RIOT_API_KEY', 'GEMINI_API_KEY'] }).https.onRequest(app);
+

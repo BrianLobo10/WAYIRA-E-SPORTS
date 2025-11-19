@@ -41,6 +41,9 @@ export class BlogComponent implements OnInit, OnDestroy {
   selectedPost = signal<Post | null>(null);
   showPostModal = signal(false);
   newComment = signal('');
+  replyingToComment = signal<number | null>(null); // Índice del comentario al que se está respondiendo
+  replyCommentText = signal<Map<number, string>>(new Map()); // Texto de respuesta por índice de comentario
+  private postSubscription?: Subscription; // Suscripción para actualizaciones en tiempo real
   
   // Edit post
   showEditModal = signal(false);
@@ -71,6 +74,7 @@ export class BlogComponent implements OnInit, OnDestroy {
         this.loading.set(false);
       }
     });
+
   }
 
   private async loadUserProfile(user: User) {
@@ -335,35 +339,33 @@ export class BlogComponent implements OnInit, OnDestroy {
     this.videoPreviewCache.clear();
   }
 
-  async likePost(post: Post) {
+  async likePost(post: Post, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
     const user = this.firebaseService.getCurrentUser();
     if (!user || !post.id) return;
-    await this.firebaseService.likePost(post.id, user.uid);
-    // Actualizar el post seleccionado en tiempo real
-    if (this.selectedPost()?.id === post.id) {
-      this.firebaseService.getPostById(post.id).subscribe({
-        next: (updatedPost) => {
-          if (updatedPost) {
-            this.selectedPost.set(updatedPost);
-          }
-        }
-      });
+    try {
+      await this.firebaseService.likePost(post.id, user.uid);
+      // La actualización en tiempo real se maneja automáticamente por la suscripción onSnapshot
+    } catch (error) {
+      console.error('Error dando like al post:', error);
     }
   }
 
-  async dislikePost(post: Post) {
+  async dislikePost(post: Post, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
     const user = this.firebaseService.getCurrentUser();
     if (!user || !post.id) return;
-    await this.firebaseService.dislikePost(post.id, user.uid);
-    // Actualizar el post seleccionado en tiempo real
-    if (this.selectedPost()?.id === post.id) {
-      this.firebaseService.getPostById(post.id).subscribe({
-        next: (updatedPost) => {
-          if (updatedPost) {
-            this.selectedPost.set(updatedPost);
-          }
-        }
-      });
+    try {
+      await this.firebaseService.dislikePost(post.id, user.uid);
+      // La actualización en tiempo real se maneja automáticamente por la suscripción onSnapshot
+    } catch (error) {
+      console.error('Error dando dislike al post:', error);
     }
   }
 
@@ -380,12 +382,38 @@ export class BlogComponent implements OnInit, OnDestroy {
       this.setCurrentImageIndex(post.id, 0);
     }
     this.showPostModal.set(true);
+    
+    // Suscribirse a actualizaciones en tiempo real del post
+    if (post.id) {
+      this.postSubscription?.unsubscribe(); // Limpiar suscripción anterior
+      this.postSubscription = this.firebaseService.getPostById(post.id).subscribe({
+        next: (updatedPost) => {
+          if (updatedPost) {
+            this.selectedPost.set(updatedPost);
+            // Actualizar también en la lista de posts si existe
+            const posts = this.posts();
+            const postIndex = posts.findIndex(p => p.id === post.id);
+            if (postIndex !== -1) {
+              const updatedPosts = [...posts];
+              updatedPosts[postIndex] = updatedPost;
+              this.posts.set(updatedPosts);
+            }
+          }
+        },
+        error: (error) => {
+          console.error('Error actualizando post en tiempo real:', error);
+        }
+      });
+    }
   }
 
   closePostModal() {
     this.showPostModal.set(false);
     this.selectedPost.set(null);
     this.newComment.set('');
+    this.replyingToComment.set(null);
+    this.replyCommentText.set(new Map());
+    this.postSubscription?.unsubscribe(); // Limpiar suscripción
   }
 
   closeCreateModal() {
@@ -396,45 +424,95 @@ export class BlogComponent implements OnInit, OnDestroy {
     this.newPostVideo.set(null);
   }
 
-  async addComment() {
+  async addComment(commentIndex?: number) {
     const user = this.firebaseService.getCurrentUser();
-    if (!user || !this.selectedPost()?.id || !this.newComment().trim()) return;
+    if (!user || !this.selectedPost()?.id) return;
 
-    await this.firebaseService.addComment(this.selectedPost()!.id!, {
-      authorId: user.uid,
-      authorName: this.currentUser()!.displayName,
-      authorPhoto: this.currentUser()!.photoURL,
-      content: this.newComment()
-    });
+    const commentText = commentIndex !== undefined 
+      ? this.replyCommentText().get(commentIndex)?.trim() 
+      : this.newComment().trim();
 
-    this.newComment.set('');
-    this.loadPosts();
-    const updatedPost = this.posts().find(p => p.id === this.selectedPost()?.id);
-    if (updatedPost) {
-      this.selectedPost.set(updatedPost);
+    if (!commentText) return;
+
+    // Guardar el texto del comentario antes de limpiar
+    const savedCommentText = commentText;
+    
+    // Limpiar inputs primero para mejor UX
+    if (commentIndex !== undefined) {
+      const replyMap = new Map(this.replyCommentText());
+      replyMap.delete(commentIndex);
+      this.replyCommentText.set(replyMap);
+      this.replyingToComment.set(null);
+    } else {
+      this.newComment.set('');
+    }
+
+    try {
+      await this.firebaseService.addComment(this.selectedPost()!.id!, {
+        authorId: user.uid,
+        authorName: this.currentUser()!.displayName || user.displayName || 'Usuario',
+        authorPhoto: this.currentUser()!.photoURL || user.photoURL || null,
+        content: savedCommentText
+      }, commentIndex);
+    } catch (error: any) {
+      console.error('Error agregando comentario:', error);
+      // Solo mostrar error si no es un error de notificación (el comentario se agregó pero falló la notificación)
+      if (error?.message && !error.message.includes('notification') && !error.message.includes('notificación')) {
+        // Restaurar el texto del comentario si falló
+        if (commentIndex !== undefined) {
+          const replyMap = new Map(this.replyCommentText());
+          replyMap.set(commentIndex, savedCommentText);
+          this.replyCommentText.set(replyMap);
+          this.replyingToComment.set(commentIndex);
+        } else {
+          this.newComment.set(savedCommentText);
+        }
+        alert('Error al agregar el comentario. Por favor intenta nuevamente.');
+      }
+      // Si el error es solo de notificación, no mostrar alerta ya que el comentario se agregó correctamente
     }
   }
 
-  async likeComment(commentIndex: number) {
+  async likeComment(commentIndex: number, replyIndex?: number) {
     const user = this.firebaseService.getCurrentUser();
     if (!user || !this.selectedPost()?.id) return;
-    await this.firebaseService.likeComment(this.selectedPost()!.id!, commentIndex, user.uid);
-    this.loadPosts();
-    const updatedPost = this.posts().find(p => p.id === this.selectedPost()?.id);
-    if (updatedPost) {
-      this.selectedPost.set(updatedPost);
+    try {
+      await this.firebaseService.likeComment(this.selectedPost()!.id!, commentIndex, user.uid, replyIndex);
+    } catch (error) {
+      console.error('Error dando like al comentario:', error);
     }
   }
 
-  async dislikeComment(commentIndex: number) {
+  async dislikeComment(commentIndex: number, replyIndex?: number) {
     const user = this.firebaseService.getCurrentUser();
     if (!user || !this.selectedPost()?.id) return;
-    await this.firebaseService.dislikeComment(this.selectedPost()!.id!, commentIndex, user.uid);
-    this.loadPosts();
-    const updatedPost = this.posts().find(p => p.id === this.selectedPost()?.id);
-    if (updatedPost) {
-      this.selectedPost.set(updatedPost);
+    try {
+      await this.firebaseService.dislikeComment(this.selectedPost()!.id!, commentIndex, user.uid, replyIndex);
+    } catch (error) {
+      console.error('Error dando dislike al comentario:', error);
     }
+  }
+
+  toggleReply(commentIndex: number) {
+    if (this.replyingToComment() === commentIndex) {
+      this.replyingToComment.set(null);
+      const replyMap = new Map(this.replyCommentText());
+      replyMap.delete(commentIndex);
+      this.replyCommentText.set(replyMap);
+    } else {
+      this.replyingToComment.set(commentIndex);
+      const replyMap = new Map(this.replyCommentText());
+      if (!replyMap.has(commentIndex)) {
+        replyMap.set(commentIndex, '');
+      }
+      this.replyCommentText.set(replyMap);
+    }
+  }
+
+  setReplyText(commentIndex: number, text: string) {
+    const replyMap = new Map(this.replyCommentText());
+    replyMap.set(commentIndex, text);
+    this.replyCommentText.set(replyMap);
   }
 
   async deletePost(post: Post) {
@@ -568,6 +646,19 @@ export class BlogComponent implements OnInit, OnDestroy {
   goToImage(post: Post, index: number, event: Event) {
     event.stopPropagation();
     this.setCurrentImageIndex(post.id || '', index);
+  }
+
+  getTextSizeClass(content: string): string {
+    const length = content.length;
+    if (length <= 30) {
+      return 'text-short';
+    } else if (length <= 100) {
+      return 'text-medium';
+    } else if (length <= 300) {
+      return 'text-long';
+    } else {
+      return 'text-very-long';
+    }
   }
 
   formatDate(timestamp: any): string {

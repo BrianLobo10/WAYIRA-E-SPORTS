@@ -10,7 +10,11 @@
         <div class="profile-info">
           <div class="profile-avatar">
             @if (profile()!.photoURL) {
-              <img [src]="profile()!.photoURL" [alt]="profile()!.displayName">
+              <img 
+                [src]="profile()!.photoURL" 
+                [alt]="profile()!.displayName"
+                (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
+                onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png';">
             } @else {
               <div class="avatar-placeholder">
                 {{ profile()!.displayName.charAt(0).toUpperCase() }}
@@ -46,11 +50,11 @@
                 <span class="stat-number">{{ getPostsCount() }}</span>
                 <span class="stat-label">publicaciones</span>
               </div>
-              <div class="stat-item">
+              <div class="stat-item clickable" (click)="openFollowersModal()">
                 <span class="stat-number">{{ getFollowersCount() }}</span>
                 <span class="stat-label">seguidores</span>
               </div>
-              <div class="stat-item">
+              <div class="stat-item clickable" (click)="openFollowingModal()">
                 <span class="stat-number">{{ getFollowingCount() }}</span>
                 <span class="stat-label">siguiendo</span>
               </div>
@@ -216,7 +220,12 @@
           <div class="post-modal-sidebar">
             <div class="post-modal-author">
               @if (selectedPost()!.authorPhoto) {
-                <img [src]="selectedPost()!.authorPhoto" [alt]="selectedPost()!.authorName" class="author-avatar">
+                <img 
+                  [src]="selectedPost()!.authorPhoto" 
+                  [alt]="selectedPost()!.authorName" 
+                  class="author-avatar"
+                  (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
+                  onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png';">
               } @else {
                 <div class="author-avatar-placeholder">
                   {{ selectedPost()!.authorName.charAt(0).toUpperCase() }}
@@ -235,36 +244,47 @@
                   <h4>Comentarios</h4>
                 </div>
                 <div class="comments-list">
-                  @for (comment of selectedPost()!.comments || []; track $index) {
-                    <div class="comment-item">
-                      <div class="comment-header">
-                        @if (comment.authorPhoto) {
-                          <img [src]="comment.authorPhoto" [alt]="comment.authorName" class="comment-avatar">
-                        } @else {
-                          <div class="comment-avatar-placeholder">
-                            {{ comment.authorName.charAt(0).toUpperCase() }}
-                          </div>
-                        }
-                        <a [routerLink]="['/profile', comment.authorId]" class="comment-author-link" (click)="closePostModal()">
-                          {{ comment.authorName }}
-                        </a>
-                      </div>
-                      <p class="comment-content">{{ comment.content }}</p>
-                      <div class="comment-actions">
-                        <button class="comment-btn" (click)="likeComment($index)">
-                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                          </svg>
-                          <span>{{ (comment.likes || []).length }}</span>
-                        </button>
-                        <button class="comment-btn" (click)="dislikeComment($index)">
-                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
-                          </svg>
-                          <span>{{ (comment.dislikes || []).length }}</span>
-                        </button>
-                      </div>
+                  @if ((selectedPost()!.comments || []).length === 0) {
+                    <div class="empty-comments">
+                      <p>No hay comentarios aún. ¡Sé el primero en comentar!</p>
                     </div>
+                  } @else {
+                    @for (comment of selectedPost()!.comments || []; track $index) {
+                      <div class="comment-item">
+                        <div class="comment-header">
+                          @if (comment.authorPhoto) {
+                            <img 
+                              [src]="comment.authorPhoto" 
+                              [alt]="comment.authorName" 
+                              class="comment-avatar"
+                              (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
+                              onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png';">
+                          } @else {
+                            <div class="comment-avatar-placeholder">
+                              {{ comment.authorName.charAt(0).toUpperCase() }}
+                            </div>
+                          }
+                          <a [routerLink]="['/profile', comment.authorId]" class="comment-author-link" (click)="closePostModal()">
+                            {{ comment.authorName }}
+                          </a>
+                        </div>
+                        <p class="comment-content">{{ comment.content }}</p>
+                        <div class="comment-actions">
+                          <button class="comment-btn" (click)="likeComment($index)">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                            </svg>
+                            <span>{{ (comment.likes || []).length }}</span>
+                          </button>
+                          <button class="comment-btn" (click)="dislikeComment($index)">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
+                            </svg>
+                            <span>{{ (comment.dislikes || []).length }}</span>
+                          </button>
+                        </div>
+                      </div>
+                    }
                   }
                 </div>
               </div>
@@ -320,9 +340,19 @@
           <div class="edit-photo-section">
             <div class="photo-preview">
               @if (editPhotoPreview()) {
-                <img [src]="editPhotoPreview()!" alt="Preview" class="preview-photo">
+                <img 
+                  [src]="editPhotoPreview()!" 
+                  alt="Preview" 
+                  class="preview-photo"
+                  (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
+                  onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png';">
               } @else if (profile()?.photoURL) {
-                <img [src]="profile()!.photoURL!" alt="Current photo" class="preview-photo">
+                <img 
+                  [src]="profile()!.photoURL!" 
+                  alt="Current photo" 
+                  class="preview-photo"
+                  (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
+                  onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png';">
               } @else {
                 <div class="photo-placeholder">
                   {{ (profile()?.displayName && profile()!.displayName.charAt(0).toUpperCase()) || 'U' }}
@@ -343,11 +373,16 @@
                 </svg>
                 <span>Personaje LoL</span>
               </button>
-              <button class="summoner-btn" (click)="toggleSummonerSearch()" [class.active]="showSummonerSearch()" [disabled]="uploadingPhoto()">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                <span>Foto Invocador</span>
+              <button class="summoner-btn" (click)="loadSummonerIcon()" [disabled]="uploadingPhoto() || searchingSummoner()">
+                @if (searchingSummoner()) {
+                  <span class="spinner-small"></span>
+                  <span>Cargando...</span>
+                } @else {
+                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span>Foto Invocador</span>
+                }
               </button>
             </div>
             @if (showChampionSelector()) {
@@ -364,66 +399,27 @@
                 </div>
               </div>
             }
-            @if (showSummonerSearch()) {
-              <div class="summoner-search-section">
-                <div class="summoner-search-form">
-                  <div class="form-row">
-                    <div class="form-group-small">
-                      <label>Región</label>
-                      <select [(ngModel)]="selectedRegion" [disabled]="searchingSummoner()" class="form-select">
-                        @for (region of regions; track region.code) {
-                          <option [value]="region.code">{{ region.name }}</option>
-                        }
-                      </select>
-                    </div>
-                    <div class="form-group-small">
-                      <label>Nombre de Invocador</label>
-                      <input type="text" [(ngModel)]="summonerGameName" placeholder="Ej: Wayira" [disabled]="searchingSummoner()" class="form-input">
-                    </div>
-                    <div class="form-group-small">
-                      <label>Tagline</label>
-                      <input type="text" [(ngModel)]="summonerTagLine" placeholder="Ej: WAY" [disabled]="searchingSummoner()" class="form-input">
-                    </div>
-                    <div class="form-group-small">
-                      <label>&nbsp;</label>
-                      <button class="btn-search-summoner" (click)="searchSummoner()" [disabled]="searchingSummoner()">
-                        @if (searchingSummoner()) {
-                          <span class="spinner-small"></span>
-                          <span>Buscando...</span>
-                        } @else {
-                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                          </svg>
-                          <span>Buscar</span>
-                        }
-                      </button>
-                    </div>
+            @if (summonerError()) {
+              <div class="error-message-small">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+                <span>{{ summonerError() }}</span>
+              </div>
+            }
+            @if (foundSummoner()) {
+              <div class="summoner-result">
+                <div class="summoner-preview">
+                  <img 
+                    [src]="getProfileIconUrl(foundSummoner()!.profileIconId)" 
+                    [alt]="foundSummoner()!.gameName" 
+                    class="summoner-icon-preview"
+                    (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
+                    onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png';">
+                  <div class="summoner-info">
+                    <h4>{{ foundSummoner()!.gameName }}#{{ foundSummoner()!.tagLine }}</h4>
+                    <p>Nivel {{ foundSummoner()!.summonerLevel }}</p>
                   </div>
-                  @if (summonerError()) {
-                    <div class="error-message-small">
-                      <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                      </svg>
-                      <span>{{ summonerError() }}</span>
-                    </div>
-                  }
-                  @if (foundSummoner()) {
-                    <div class="summoner-result">
-                      <div class="summoner-preview">
-                        <img [src]="getProfileIconUrl(foundSummoner()!.profileIconId)" [alt]="foundSummoner()!.gameName" class="summoner-icon-preview">
-                        <div class="summoner-info">
-                          <h4>{{ foundSummoner()!.gameName }}#{{ foundSummoner()!.tagLine }}</h4>
-                          <p>Nivel {{ foundSummoner()!.summonerLevel }}</p>
-                        </div>
-                      </div>
-                      <button class="btn-use-icon" (click)="useSummonerIcon()">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                        </svg>
-                        <span>Usar esta foto</span>
-                      </button>
-                    </div>
-                  }
                 </div>
               </div>
             }
@@ -547,6 +543,102 @@
               }
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Followers Modal -->
+  @if (showFollowersModal()) {
+    <div class="modal-overlay" (click)="closeFollowersModal()">
+      <div class="modal-content followers-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Seguidores</h3>
+          <button class="close-btn" (click)="closeFollowersModal()">
+            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          @if (loadingFollowers()) {
+            <div class="loading-container">
+              <span class="spinner"></span>
+              <span>Cargando...</span>
+            </div>
+          } @else if (followersList().length === 0) {
+            <div class="empty-list">
+              <p>No hay seguidores</p>
+            </div>
+          } @else {
+            <div class="users-list">
+              @for (user of followersList(); track user.uid) {
+                <a [routerLink]="['/profile', user.uid]" class="user-item" (click)="closeFollowersModal()">
+                  @if (user.photoURL) {
+                    <img 
+                      [src]="user.photoURL" 
+                      [alt]="user.displayName" 
+                      class="user-avatar"
+                      (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
+                      onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
+                  } @else {
+                    <div class="user-avatar-placeholder">
+                      {{ user.displayName.charAt(0).toUpperCase() }}
+                    </div>
+                  }
+                  <span class="user-name">{{ user.displayName }}</span>
+                </a>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Following Modal -->
+  @if (showFollowingModal()) {
+    <div class="modal-overlay" (click)="closeFollowingModal()">
+      <div class="modal-content followers-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Siguiendo</h3>
+          <button class="close-btn" (click)="closeFollowingModal()">
+            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          @if (loadingFollowing()) {
+            <div class="loading-container">
+              <span class="spinner"></span>
+              <span>Cargando...</span>
+            </div>
+          } @else if (followingList().length === 0) {
+            <div class="empty-list">
+              <p>No está siguiendo a nadie</p>
+            </div>
+          } @else {
+            <div class="users-list">
+              @for (user of followingList(); track user.uid) {
+                <a [routerLink]="['/profile', user.uid]" class="user-item" (click)="closeFollowingModal()">
+                  @if (user.photoURL) {
+                    <img 
+                      [src]="user.photoURL" 
+                      [alt]="user.displayName" 
+                      class="user-avatar"
+                      (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
+                      onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
+                  } @else {
+                    <div class="user-avatar-placeholder">
+                      {{ user.displayName.charAt(0).toUpperCase() }}
+                    </div>
+                  }
+                  <span class="user-name">{{ user.displayName }}</span>
+                </a>
+              }
+            </div>
+          }
         </div>
       </div>
     </div>

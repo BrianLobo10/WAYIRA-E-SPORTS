@@ -157,6 +157,15 @@
   gap: 0.5rem;
 }
 
+.stat-item.clickable {
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.stat-item.clickable:hover {
+  opacity: 0.8;
+}
+
 .stat-number {
   font-weight: 600;
   color: #ffffff;
@@ -707,6 +716,18 @@
   gap: 1.25rem;
 }
 
+.empty-comments {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.empty-comments p {
+  margin: 0;
+}
+
 .comment-item {
   padding-bottom: 1.25rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
@@ -957,6 +978,7 @@
   font-weight: 500;
   font-size: 0.875rem;
   font-family: inherit;
+  min-width: 0;
 }
 
 .champion-btn:hover:not(:disabled) {
@@ -1299,6 +1321,10 @@
   color: rgba(255, 255, 255, 0.8);
   cursor: pointer;
   transition: all 0.3s ease;
+  font-weight: 500;
+  font-size: 0.875rem;
+  font-family: inherit;
+  min-width: 0;
 }
 
 .file-label:hover:not(.disabled) {
@@ -1313,6 +1339,197 @@
 
 .file-label input {
   display: none;
+}
+
+/* Summoner Search Styles */
+.summoner-search-section {
+  width: 100%;
+  max-width: 500px;
+  margin-top: 1rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  align-items: end;
+}
+
+.form-group-small {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group-small label {
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.form-select {
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: #6366f1;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.form-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-search-summoner {
+  padding: 0.75rem 1rem;
+  background: #6366f1;
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.btn-search-summoner:hover:not(:disabled) {
+  background: #818cf8;
+}
+
+.btn-search-summoner:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error-message-small {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.summoner-result {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  margin-top: 1rem;
+}
+
+.summoner-preview {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.summoner-icon-preview {
+  width: 80px;
+  height: 80px;
+  border-radius: 12px;
+  border: 3px solid #016C6C;
+  box-shadow: 0 4px 12px rgba(1, 108, 108, 0.4);
+  object-fit: cover;
+  background: rgba(1, 108, 108, 0.1);
+  flex-shrink: 0;
+}
+
+.summoner-info {
+  flex: 1;
+}
+
+.summoner-info h4 {
+  color: #ffffff;
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem 0;
+}
+
+.summoner-info p {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.btn-use-icon {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #016C6C, #008080);
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+}
+
+.btn-use-icon:hover {
+  background: linear-gradient(135deg, #008080, #00A0A0);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(1, 108, 108, 0.4);
+}
+
+.summoner-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  font-size: 0.875rem;
+  font-family: inherit;
+  min-width: 0;
+}
+
+.summoner-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #6366f1;
+  color: #ffffff;
+}
+
+.summoner-btn.active {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: #6366f1;
+  color: #818cf8;
+}
+
+.summoner-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {
@@ -1342,5 +1559,87 @@
   .post-modal-image {
     height: 300px;
   }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .photo-options {
+    flex-direction: column;
+  }
+
+  .summoner-search-section {
+    max-width: 100%;
+  }
+}
+
+/* Followers/Following Modal */
+.followers-modal {
+  max-width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.followers-modal .modal-body {
+  overflow-y: auto;
+  max-height: calc(80vh - 100px);
+  padding: 1.5rem;
+}
+
+.empty-list {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.users-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.user-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  transition: background 0.2s ease;
+  text-decoration: none;
+  color: inherit;
+}
+
+.user-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.user-avatar,
+.user-avatar-placeholder {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.user-avatar {
+  object-fit: cover;
+}
+
+.user-avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
+  color: white;
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+.user-name {
+  font-weight: 600;
+  color: #ffffff;
 }
 

@@ -11,7 +11,11 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "deploy": "npm run build:prod && firebase deploy",
-    "deploy:hosting": "npm run build:prod && firebase deploy --only hosting"
+    "deploy:hosting": "npm run build:prod && firebase deploy --only hosting",
+    "deploy:functions": "firebase deploy --only functions",
+    "deploy:all": "npm run build:prod && firebase deploy",
+    "functions:config:set": "firebase functions:config:set",
+    "functions:log": "firebase functions:log"
   },
   "prettier": {
     "overrides": [
@@ -33,6 +37,8 @@
     "@angular/platform-browser": "^20.3.10",
     "@angular/router": "^20.3.10",
     "firebase": "^11.10.0",
+    "firebase-admin": "^13.6.0",
+    "firebase-functions": "^7.0.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.15.0"

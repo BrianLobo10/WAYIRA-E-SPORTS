@@ -23,6 +23,81 @@ export class MessagesComponent implements OnInit {
   currentUser = signal<UserProfile | null>(null);
   newMessage = signal('');
   minimizedChats = signal<Set<string>>(new Set());
+  showEmojiPicker = signal(false);
+  emojiTab = signal<'normal' | 'riot'>('normal');
+  showConversationMenu = signal<Map<string, boolean>>(new Map());
+
+  // Emojis normales
+  normalEmojis = [
+    '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇',
+    '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚',
+    '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩',
+    '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '😣', '😖',
+    '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯',
+    '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔',
+    '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦',
+    '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴',
+    '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿',
+    '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾', '🤖',
+    '👍', '👎', '👊', '✊', '🤛', '🤜', '🤞', '✌️', '🤟', '🤘',
+    '👌', '🤌', '🤏', '👈', '👉', '👆', '👇', '☝️', '👋', '🤚',
+    '🖐', '✋', '🖖', '👏', '🙌', '🤲', '🤝', '🙏', '✍️', '💪',
+    '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🫀', '🫁',
+    '🦷', '🦴', '👀', '👁', '👅', '👄', '💋', '🩸', '❤️', '🧡',
+    '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕',
+    '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️',
+    '🕉', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈',
+    '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒',
+    '♓', '🆔', '⚛️', '🉑', '☢️', '☣️', '📴', '📳', '🈶', '🈚',
+    '🈸', '🈺', '🈷️', '✴️', '🆚', '💮', '🉐', '㊙️', '㊗️', '🈴',
+    '🈵', '🈹', '🈲', '🅰️', '🅱️', '🆎', '🆑', '🅾️', '🆘', '❌',
+    '⭕', '🛑', '⛔', '📛', '🚫', '💯', '💢', '♨️', '🚷', '🚯',
+    '🚳', '🚱', '🔞', '📵', '🚭', '❗', '❕', '❓', '❔', '‼️',
+    '⁉️', '🔅', '🔆', '〽️', '⚠️', '🚸', '🔱', '⚜️', '🔰', '♻️',
+    '✅', '🈯', '💹', '❇️', '✳️', '❎', '🌐', '💠', 'Ⓜ️', '🌀',
+    '💤', '🏧', '🚾', '♿', '🅿️', '🈳', '🈂️', '🛂', '🛃', '🛄',
+    '🛅', '🚹', '🚺', '🚼', '🚻', '🚮', '🎦', '📶', '🈁', '🔣',
+    'ℹ️', '🔤', '🔡', '🔠', '🔢', '🔟', '▶️', '⏸', '⏯', '⏹',
+    '⏺', '⏭', '⏮', '⏩', '⏪', '⏫', '⏬', '◀️', '🔼', '🔽',
+    '➡️', '⬅️', '⬆️', '⬇️', '↗️', '↘️', '↙️', '↖️', '↕️', '↔️',
+    '↪', '↩', '⤴️', '⤵️', '🔀', '🔁', '🔂', '🔄', '🔃', '🎵',
+    '🎶', '➕', '➖', '➗', '✖️', '♾', '💲', '💱', '™️', '©️',
+    '®️', '〰️', '➰', '➿', '🔚', '🔙', '🔛', '🔝', '🔜', '✔️',
+    '☑️', '🔘', '⚪', '⚫', '🔴', '🔵', '🟠', '🟡', '🟢', '🟣',
+    '⚫', '🔶', '🔷', '🔸', '🔹', '🔺', '🔻', '💠', '🔘', '🔳',
+    '🔲', '▪️', '▫️', '◾', '◽', '◼️', '◻️', '🟥', '🟧', '🟨',
+    '🟩', '🟦', '🟪', '⬛', '⬜', '🟫', '🔈', '🔇', '🔉', '🔊',
+    '🔔', '🔕', '📣', '📢', '💬', '💭', '🗯', '♠️', '♣️', '♥️',
+    '♦️', '🃏', '🎴', '🀄', '🕐', '🕑', '🕒', '🕓', '🕔', '🕕',
+    '🕖', '🕗', '🕘', '🕙', '🕚', '🕛', '🕜', '🕝', '🕞', '🕟',
+    '🕠', '🕡', '🕢', '🕣', '🕤', '🕥', '🕦', '🕧'
+  ];
+
+  // Emojis de Riot Games / League of Legends
+  riotEmojis = [
+    // Armas y combate
+    '⚔️', '🗡️', '🛡️', '🏹', '🔪', '🪓', '⚡', '🔥', '💧', '❄️',
+    '🌪️', '💨', '💥', '⚡', '🔥', '💧', '❄️', '🌊', '🌋', '🌀',
+    // Elementos mágicos
+    '✨', '⭐', '🌟', '💫', '☄️', '🌠', '🔮', '💎', '⚗️', '🧪',
+    '🔭', '🔬', '⚛️', '💠', '🕯️', '🔦', '💡', '⚡', '🔥', '💧',
+    // Símbolos y signos
+    '⚡', '🔥', '💧', '❄️', '🌪️', '💫', '⭐', '✨', '💥', '💢',
+    '💨', '🌟', '☄️', '🌠', '🔮', '⚔️', '🛡️', '🗡️', '🏹', '🪃',
+    // Objetos del juego
+    '💰', '🪙', '💎', '🔮', '⚗️', '🧪', '💊', '💉', '🩸', '⚙️',
+    '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🔩', '🧱', '⛓️', '🧲', '🔫',
+    '💣', '🧨', '🗝️', '🔑', '⚱️', '⚰️', '🏺', '🛡️', '⚔️', '🗡️',
+    // Símbolos de poder
+    '⚡', '🔥', '💧', '❄️', '🌪️', '💫', '⭐', '✨', '💥', '💢',
+    '🌟', '☄️', '🌠', '🔮', '💎', '⚗️', '🧪', '🔭', '🔬', '⚛️',
+    // Iconos especiales
+    '⚔️', '🛡️', '🗡️', '🏹', '🔪', '🪓', '⚡', '🔥', '💧', '❄️',
+    '🌪️', '💨', '💥', '💫', '⭐', '✨', '🌟', '☄️', '🌠', '🔮',
+    '💎', '⚗️', '🧪', '🔭', '🔬', '⚛️', '💠', '🕯️', '🔦', '💡',
+    '💰', '🪙', '⚙️', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🔩', '🧱',
+    '⛓️', '🧲', '🔫', '💣', '🧨', '🗝️', '🔑', '⚱️', '⚰️', '🏺'
+  ];
   
   selectedUserProfile = computed(() => {
     const selectedId = this.selectedConversation();
@@ -53,20 +128,69 @@ export class MessagesComponent implements OnInit {
 
   loadConversations() {
     const user = this.firebaseService.getCurrentUser();
-    if (!user) return;
+    if (!user) {
+      console.warn('No hay usuario autenticado para cargar conversaciones');
+      return;
+    }
+
+    console.log('Cargando conversaciones para usuario:', user.uid);
 
     this.firebaseService.getConversations(user.uid).subscribe({
       next: async (conversationIds) => {
+        console.log('IDs de conversaciones recibidos:', conversationIds);
+        
+        if (!conversationIds || conversationIds.length === 0) {
+          console.log('No hay conversaciones');
+          this.conversations.set([]);
+          return;
+        }
+
         const conversations = await Promise.all(
           conversationIds.map(async (otherUserId) => {
-            const profile = await this.firebaseService.getUserProfile(otherUserId);
-            const messages = await this.firebaseService.getMessages(user.uid, otherUserId).toPromise();
-            const lastMessage = messages && messages.length > 0 ? messages[messages.length - 1] : null;
-            const unread = messages ? messages.filter(m => !m.read && m.toId === user.uid).length : 0;
-            return { userId: otherUserId, profile, lastMessage, unread };
+            try {
+              const profile = await this.firebaseService.getUserProfile(otherUserId);
+              
+              // Obtener mensajes usando firstValueFrom para obtener el primer valor del Observable
+              let messages: any[] = [];
+              try {
+                const { firstValueFrom } = await import('rxjs');
+                messages = await firstValueFrom(this.firebaseService.getMessages(user.uid, otherUserId));
+              } catch (rxjsError) {
+                // Fallback: usar el Observable directamente con timeout
+                messages = await new Promise((resolve) => {
+                  const subscription = this.firebaseService.getMessages(user.uid, otherUserId).subscribe({
+                    next: (msgs) => {
+                      subscription.unsubscribe();
+                      resolve(msgs);
+                    },
+                    error: () => {
+                      subscription.unsubscribe();
+                      resolve([]);
+                    }
+                  });
+                  // Timeout de seguridad
+                  setTimeout(() => {
+                    subscription.unsubscribe();
+                    resolve([]);
+                  }, 5000);
+                });
+              }
+              
+              const lastMessage = messages && messages.length > 0 ? messages[messages.length - 1] : null;
+              const unread = messages ? messages.filter(m => !m.read && m.toId === user.uid).length : 0;
+              return { userId: otherUserId, profile, lastMessage, unread };
+            } catch (error) {
+              console.error(`Error cargando conversación con ${otherUserId}:`, error);
+              return null;
+            }
           })
         );
-        conversations.sort((a, b) => {
+
+        // Filtrar conversaciones nulas
+        const validConversations = conversations.filter(c => c !== null) as Array<{ userId: string; profile: UserProfile | null; lastMessage: Message | null; unread: number }>;
+        
+        // Ordenar por fecha del último mensaje (más reciente primero)
+        validConversations.sort((a, b) => {
           if (!a.lastMessage && !b.lastMessage) return 0;
           if (!a.lastMessage) return 1;
           if (!b.lastMessage) return -1;
@@ -74,7 +198,13 @@ export class MessagesComponent implements OnInit {
           const bTime = b.lastMessage.timestamp?.toDate?.() || new Date(0);
           return bTime.getTime() - aTime.getTime();
         });
-        this.conversations.set(conversations);
+        
+        console.log('Conversaciones cargadas:', validConversations.length);
+        this.conversations.set(validConversations);
+      },
+      error: (error) => {
+        console.error('Error cargando conversaciones:', error);
+        this.conversations.set([]);
       }
     });
   }
@@ -121,15 +251,33 @@ export class MessagesComponent implements OnInit {
     const otherUserId = this.selectedConversation();
     if (!user || !otherUserId || !this.newMessage().trim()) return;
 
-    await this.firebaseService.sendMessage({
-      fromId: user.uid,
-      toId: otherUserId,
-      content: this.newMessage()
-    });
+    // Guardar el ID de la conversación para mantenerla seleccionada
+    const currentConversationId = otherUserId;
+    const messageContent = this.newMessage().trim();
 
-    this.newMessage.set('');
-    this.loadMessages(otherUserId);
-    this.loadConversations();
+    try {
+      await this.firebaseService.sendMessage({
+        fromId: user.uid,
+        toId: otherUserId,
+        content: messageContent
+      });
+
+      this.newMessage.set('');
+      // Asegurar que la conversación sigue seleccionada
+      this.selectedConversation.set(currentConversationId);
+      
+      // Recargar mensajes y conversaciones
+      this.loadMessages(currentConversationId);
+      
+      // Esperar un momento antes de recargar conversaciones para que Firestore actualice
+      setTimeout(() => {
+        this.loadConversations();
+        this.scrollToBottom();
+      }, 300);
+    } catch (error) {
+      console.error('Error enviando mensaje:', error);
+      alert('Error al enviar el mensaje. Por favor intenta nuevamente.');
+    }
   }
 
   async markAsRead(otherUserId: string) {
@@ -137,10 +285,15 @@ export class MessagesComponent implements OnInit {
     if (!user) return;
 
     const messages = this.messages();
-    const unreadMessages = messages.filter(m => !m.read && m.toId === user.uid);
-    for (const msg of unreadMessages) {
-      if (msg.id) {
-        await this.firebaseService.markAsRead(msg.id);
+    // Marcar todos los mensajes no leídos como leídos
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      if (!msg.read && msg.toId === user.uid) {
+        try {
+          await this.firebaseService.markAsRead(user.uid, otherUserId, i);
+        } catch (error) {
+          console.error('Error marcando mensaje como leído:', error);
+        }
       }
     }
     this.loadConversations();
@@ -210,6 +363,69 @@ export class MessagesComponent implements OnInit {
     return this.conversations()
       .filter(c => this.minimizedChats().has(c.userId))
       .map(c => ({ userId: c.userId, profile: c.profile }));
+  }
+
+  toggleEmojiPicker() {
+    this.showEmojiPicker.set(!this.showEmojiPicker());
+  }
+
+  selectEmojiTab(tab: 'normal' | 'riot') {
+    this.emojiTab.set(tab);
+  }
+
+  insertEmoji(emoji: string) {
+    this.newMessage.update(msg => msg + emoji);
+    this.showEmojiPicker.set(false);
+  }
+
+  closeEmojiPicker() {
+    this.showEmojiPicker.set(false);
+  }
+
+  toggleConversationMenu(userId: string, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
+    const currentMenu = new Map(this.showConversationMenu());
+    const isOpen = currentMenu.get(userId) || false;
+    currentMenu.set(userId, !isOpen);
+    this.showConversationMenu.set(currentMenu);
+  }
+
+  async deleteConversation(userId: string) {
+    if (!confirm('¿Estás seguro de que quieres eliminar esta conversación?')) {
+      return;
+    }
+
+    const user = this.firebaseService.getCurrentUser();
+    if (!user) return;
+
+    try {
+      // Eliminar toda la conversación (ahora se elimina el documento de conversación completo)
+      await this.firebaseService.deleteMessage(user.uid, userId);
+
+      // Si la conversación seleccionada es la que se elimina, cerrarla
+      if (this.selectedConversation() === userId) {
+        this.selectedConversation.set(null);
+      }
+
+      // Recargar conversaciones
+      this.loadConversations();
+
+      // Cerrar el menú
+      const currentMenu = new Map(this.showConversationMenu());
+      currentMenu.set(userId, false);
+      this.showConversationMenu.set(currentMenu);
+    } catch (error) {
+      console.error('Error eliminando conversación:', error);
+      alert('Error al eliminar la conversación. Por favor intenta nuevamente.');
+    }
+  }
+
+  closeConversationMenu(userId: string) {
+    const currentMenu = new Map(this.showConversationMenu());
+    currentMenu.set(userId, false);
+    this.showConversationMenu.set(currentMenu);
   }
 }
 

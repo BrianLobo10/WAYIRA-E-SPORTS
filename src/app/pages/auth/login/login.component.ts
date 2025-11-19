@@ -1,7 +1,7 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { FirebaseService } from '../../../services/firebase.service';
 import { RiotApiService } from '../../../services/riot-api.service';
 
@@ -36,21 +36,28 @@ export class LoginComponent implements OnInit {
   private firebaseService = inject(FirebaseService);
   private riotApiService = inject(RiotApiService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   ngOnInit() {
     // Verificar si ya está logueado y redirigir
     const user = this.firebaseService.getCurrentUser();
     if (user) {
-      this.router.navigate(['/']);
+      this.redirectAfterLogin();
       return;
     }
     
     // También suscribirse al observable por si el estado cambia
     this.firebaseService.currentUser.subscribe(user => {
       if (user) {
-        this.router.navigate(['/']);
+        this.redirectAfterLogin();
       }
     });
+  }
+
+  private redirectAfterLogin() {
+    // Obtener la URL de retorno de los query params
+    const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/';
+    this.router.navigate([returnUrl], { replaceUrl: true });
   }
 
   async onLogin() {
@@ -81,7 +88,7 @@ export class LoginComponent implements OnInit {
               this.rememberMe()
             );
 
-            this.router.navigate(['/']);
+            this.redirectAfterLogin();
           } catch (err: any) {
             this.error.set(err.message || 'Error al iniciar sesión. Verifica tu contraseña.');
             this.loading.set(false);

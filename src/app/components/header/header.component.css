@@ -475,6 +475,7 @@ app-notifications {
   padding: 0.5rem 1rem;
   border-radius: 8px;
   transition: all 0.3s ease;
+  position: relative;
 }
 
 .profile-link.dropdown-trigger {
@@ -570,6 +571,23 @@ app-notifications {
 .messages-link svg {
   width: 20px;
   height: 20px;
+}
+
+.messages-link .unread-badge {
+  position: absolute;
+  top: -4px;
+  right: 8px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+  line-height: 1.2;
+  border: 2px solid #00363D;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .logout-btn {

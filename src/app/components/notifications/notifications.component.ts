@@ -100,13 +100,20 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
   getNotificationLink(notification: Notification): string[] {
     if (notification.postId) {
-      return ['/blog'];
+      return ['/blog/post', notification.postId];
     } else if (notification.type === 'follow') {
       return ['/profile', notification.fromUserId];
     } else if (notification.type === 'message') {
       return ['/messages'];
     }
     return ['/'];
+  }
+
+  getNotificationQueryParams(notification: Notification): any {
+    if (notification.type === 'message') {
+      return { userId: notification.fromUserId };
+    }
+    return {};
   }
 
   formatDate(timestamp: any): string {

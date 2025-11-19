@@ -1,18 +1,6 @@
 <div class="blog-page">
-  <section class="blog-hero">
-    <div class="container">
-      <div class="hero-content">
-        <h1>Blog y Publicaciones</h1>
-        <p>Comparte contenido, imágenes, videos y conecta con la comunidad</p>
-      </div>
-    </div>
-  </section>
-
   <section class="blog-content">
     <div class="container">
-      <div class="blog-header">
-        <h2>Publicaciones Recientes</h2>
-      </div>
 
       @if (loading()) {
         <div class="loading-container">
@@ -47,7 +35,7 @@
               </article>
             }
             @for (post of posts(); track post.id) {
-              <article class="post-card" (click)="openPost(post)">
+              <article class="post-card" [class.text-only-post]="(!post.images || post.images.length === 0) && !post.video" (click)="openPost(post)">
               @if (post.images && post.images.length > 0) {
                 <div class="post-image-carousel">
                   <div class="carousel-container">
@@ -87,12 +75,21 @@
                 <div class="post-video">
                   <video [src]="post.video" controls></video>
                 </div>
+              } @else {
+                <div class="post-text-only">
+                  <p class="text-content-post" [ngClass]="getTextSizeClass(post.content)">{{ post.content }}</p>
+                </div>
               }
               <div class="post-content">
                 <div class="post-header">
                   <div class="post-author">
                     @if (post.authorPhoto) {
-                      <img [src]="post.authorPhoto" [alt]="post.authorName" class="author-avatar">
+                      <img 
+                        [src]="post.authorPhoto" 
+                        [alt]="post.authorName" 
+                        class="author-avatar"
+                        (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
+                        onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png';">
                     } @else {
                       <div class="author-avatar-placeholder">
                         {{ post.authorName.charAt(0).toUpperCase() }}
@@ -120,13 +117,13 @@
                 </div>
                 <p class="post-text">{{ post.content }}</p>
                 <div class="post-stats">
-                  <button class="stat-btn" (click)="likePost(post); $event.stopPropagation()" [class.liked]="isLiked(post)">
+                  <button class="stat-btn" (click)="likePost(post, $event)" [class.liked]="isLiked(post)">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                     </svg>
                     {{ (post.likes || []).length }}
                   </button>
-                  <button class="stat-btn" (click)="dislikePost(post); $event.stopPropagation()" [class.disliked]="isDisliked(post)">
+                  <button class="stat-btn" (click)="dislikePost(post, $event)" [class.disliked]="isDisliked(post)">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
                     </svg>
@@ -164,7 +161,12 @@
           @if (isAuthenticated()) {
             <div class="post-author-info">
               @if (currentUser()?.photoURL) {
-                <img [src]="currentUser()!.photoURL" [alt]="currentUser()!.displayName" class="author-avatar-small">
+                <img 
+                  [src]="currentUser()!.photoURL" 
+                  [alt]="currentUser()!.displayName" 
+                  class="author-avatar-small"
+                  (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
+                  onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png';">
               } @else {
                 <span class="author-avatar-placeholder-small">
                   {{ (currentUser()?.displayName || 'Usuario').charAt(0).toUpperCase() }}
@@ -258,7 +260,7 @@
           </button>
         </div>
         <div class="post-modal-body">
-          <div class="post-modal-image">
+          <div class="post-modal-image" [class.text-only]="(!selectedPost()!.images || selectedPost()!.images!.length === 0) && !selectedPost()!.video">
             @if (selectedPost()!.images && selectedPost()!.images!.length > 0) {
               <div class="post-image-carousel-modal">
                 <div class="carousel-container">
@@ -296,12 +298,21 @@
               </div>
             } @else if (selectedPost()!.video) {
               <video [src]="selectedPost()!.video" controls></video>
+            } @else {
+              <div class="text-post-large">
+                <p class="text-content-large" [ngClass]="getTextSizeClass(selectedPost()!.content)">{{ selectedPost()!.content }}</p>
+              </div>
             }
           </div>
           <div class="post-modal-sidebar">
             <div class="post-modal-author">
               @if (selectedPost()!.authorPhoto) {
-                <img [src]="selectedPost()!.authorPhoto" [alt]="selectedPost()!.authorName" class="author-avatar">
+                <img 
+                  [src]="selectedPost()!.authorPhoto" 
+                  [alt]="selectedPost()!.authorName" 
+                  class="author-avatar"
+                  (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
+                  onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png';">
               } @else {
                 <div class="author-avatar-placeholder">
                   {{ selectedPost()!.authorName.charAt(0).toUpperCase() }}
@@ -312,19 +323,31 @@
               </a>
             </div>
             <div class="post-modal-comments">
-              <div class="post-content-section">
-                <p class="post-text">{{ selectedPost()!.content }}</p>
-              </div>
+              @if (selectedPost()!.images && selectedPost()!.images!.length > 0 || selectedPost()!.video) {
+                <div class="post-content-section">
+                  <p class="post-text">{{ selectedPost()!.content }}</p>
+                </div>
+              }
               <div class="comments-section">
                 <div class="comments-header">
                   <h4>Comentarios</h4>
                 </div>
                 <div class="comments-list">
-                  @for (comment of selectedPost()!.comments || []; track $index) {
+                  @if ((selectedPost()!.comments || []).length === 0) {
+                    <div class="empty-comments">
+                      <p>No hay comentarios aún. ¡Sé el primero en comentar!</p>
+                    </div>
+                  } @else {
+                  @for (comment of selectedPost()!.comments || []; track $index; let commentIndex = $index) {
                     <div class="comment-item">
                       <div class="comment-header">
                         @if (comment.authorPhoto) {
-                          <img [src]="comment.authorPhoto" [alt]="comment.authorName" class="comment-avatar">
+                          <img 
+                            [src]="comment.authorPhoto" 
+                            [alt]="comment.authorName" 
+                            class="comment-avatar"
+                            (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
+                            onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png';">
                         } @else {
                           <div class="comment-avatar-placeholder">
                             {{ comment.authorName.charAt(0).toUpperCase() }}
@@ -336,33 +359,104 @@
                       </div>
                       <p class="comment-content">{{ comment.content }}</p>
                       <div class="comment-actions">
-                        <button class="comment-btn" (click)="likeComment($index)">
+                        <button class="comment-btn" (click)="likeComment(commentIndex)">
                           <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
                           </svg>
                           <span>{{ (comment.likes || []).length }}</span>
                         </button>
-                        <button class="comment-btn" (click)="dislikeComment($index)">
+                        <button class="comment-btn" (click)="dislikeComment(commentIndex)">
                           <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
                           </svg>
                           <span>{{ (comment.dislikes || []).length }}</span>
                         </button>
+                        <button class="comment-btn reply-btn" (click)="toggleReply(commentIndex)">
+                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                          </svg>
+                          <span>Responder</span>
+                        </button>
+                        @if ((comment.replies || []).length > 0) {
+                          <span class="reply-count">{{ (comment.replies || []).length }} {{ (comment.replies || []).length === 1 ? 'respuesta' : 'respuestas' }}</span>
+                        }
                       </div>
+                      
+                      <!-- Respuestas del comentario -->
+                      @if ((comment.replies || []).length > 0) {
+                        <div class="replies-container">
+                          @for (reply of comment.replies || []; track $index; let replyIndex = $index) {
+                            <div class="reply-item">
+                              <div class="comment-header">
+                                @if (reply.authorPhoto) {
+                                  <img 
+                                    [src]="reply.authorPhoto" 
+                                    [alt]="reply.authorName" 
+                                    class="comment-avatar reply-avatar"
+                                    (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
+                                    onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png';">
+                                } @else {
+                                  <div class="comment-avatar-placeholder reply-avatar">
+                                    {{ reply.authorName.charAt(0).toUpperCase() }}
+                                  </div>
+                                }
+                                <a [routerLink]="['/profile', reply.authorId]" class="comment-author-link" (click)="closePostModal()">
+                                  {{ reply.authorName }}
+                                </a>
+                              </div>
+                              <p class="comment-content reply-content">{{ reply.content }}</p>
+                              <div class="comment-actions reply-actions">
+                                <button class="comment-btn" (click)="likeComment(commentIndex, replyIndex)">
+                                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                                  </svg>
+                                  <span>{{ (reply.likes || []).length }}</span>
+                                </button>
+                                <button class="comment-btn" (click)="dislikeComment(commentIndex, replyIndex)">
+                                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
+                                  </svg>
+                                  <span>{{ (reply.dislikes || []).length }}</span>
+                                </button>
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      }
+                      
+                      <!-- Input para responder -->
+                      @if (replyingToComment() === commentIndex) {
+                        <div class="reply-input-container">
+                          <input 
+                            type="text" 
+                            [value]="replyCommentText().get(commentIndex) || ''"
+                            (input)="setReplyText(commentIndex, $event.target.value)"
+                            placeholder="Escribe una respuesta..."
+                            class="comment-input reply-input"
+                            (keyup.enter)="addComment(commentIndex)">
+                          <button class="send-btn reply-send-btn" (click)="addComment(commentIndex)">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                            </svg>
+                          </button>
+                          <button class="cancel-reply-btn" (click)="toggleReply(commentIndex)">Cancelar</button>
+                        </div>
+                      }
                     </div>
+                  }
                   }
                 </div>
               </div>
             </div>
             <div class="post-modal-actions">
               <div class="post-reactions">
-                <button class="action-btn" (click)="likePost(selectedPost()!)" [class.liked]="isLiked(selectedPost()!)">
+                <button class="action-btn" (click)="likePost(selectedPost()!, $event)" [class.liked]="isLiked(selectedPost()!)">
                   <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" [attr.fill]="isLiked(selectedPost()!) ? 'currentColor' : 'none'">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                   </svg>
                   <span>{{ (selectedPost()!.likes || []).length }}</span>
                 </button>
-                <button class="action-btn" (click)="dislikePost(selectedPost()!)" [class.disliked]="isDisliked(selectedPost()!)">
+                <button class="action-btn" (click)="dislikePost(selectedPost()!, $event)" [class.disliked]="isDisliked(selectedPost()!)">
                   <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" [attr.fill]="isDisliked(selectedPost()!) ? 'currentColor' : 'none'">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
                   </svg>

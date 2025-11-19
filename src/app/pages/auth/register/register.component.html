@@ -1,20 +1,6 @@
 <div class="register-page">
-  <section class="register-hero">
-    <div class="container">
-      <div class="hero-content">
-        <h1>Crear Cuenta</h1>
-        <p>Regístrate con tu cuenta de Riot Games</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="register-content">
-    <div class="container">
-      <div class="register-card">
-        <h2>Crear Cuenta con Riot Games</h2>
-        <p class="register-subtitle">Vincula tu cuenta de Riot Games para acceder a todas las funcionalidades</p>
-
-        <form (ngSubmit)="onRegister()" class="register-form">
+  <div class="register-card">
+    <form (ngSubmit)="onRegister()" class="register-form">
           <div class="form-group">
             <label for="gameName">Nombre de Invocador *</label>
             <input
@@ -179,13 +165,11 @@
               <span>Crear Cuenta</span>
             }
           </button>
-        </form>
+    </form>
 
-        <div class="register-footer">
-          <p>¿Ya tienes cuenta? <a routerLink="/login">Inicia sesión aquí</a></p>
-        </div>
-      </div>
+    <div class="register-footer">
+      <p>¿Ya tienes cuenta? <a routerLink="/login">Inicia sesión aquí</a></p>
     </div>
-  </section>
+  </div>
 </div>
 

@@ -52,6 +52,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'blog/post/:id',
+    loadComponent: () => import('./pages/blog/post-view/post-view.component').then(m => m.PostViewComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'login',
     component: LoginComponent,
     canActivate: [guestGuard]
