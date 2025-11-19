@@ -35,7 +35,7 @@
                   <span class="unread-badge">{{ conv.unread }}</span>
                 }
               </div>
-              <div class="conversation-info">
+              <div class="conversation-info" style="flex: 1; min-width: 0;">
                 <div class="conversation-header">
                   <span class="conversation-name">{{ conv.profile?.displayName || 'Usuario' }}</span>
                   @if (conv.lastMessage) {
@@ -45,6 +45,26 @@
                 <p class="conversation-preview">
                   {{ conv.lastMessage?.content || 'Sin mensajes' }}
                 </p>
+              </div>
+              <div class="conversation-menu">
+                <button 
+                  class="conversation-menu-btn" 
+                  (click)="toggleConversationMenu(conv.userId, $event)"
+                  title="Más opciones">
+                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                  </svg>
+                </button>
+                @if (showConversationMenu().get(conv.userId)) {
+                  <div class="conversation-menu-dropdown">
+                    <button class="menu-item delete" (click)="deleteConversation(conv.userId); closeConversationMenu(conv.userId)">
+                      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Eliminar conversación
+                    </button>
+                  </div>
+                }
               </div>
             </div>
           }
@@ -89,17 +109,67 @@
           }
         </div>
         <div class="chat-input-container">
+          <button class="emoji-button" (click)="toggleEmojiPicker()" type="button">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
           <input 
             type="text" 
             [(ngModel)]="newMessage" 
             placeholder="Escribe un mensaje..."
             class="chat-input"
             (keyup.enter)="sendMessage()">
-          <button class="send-button" (click)="sendMessage()">
+          <button class="send-button" (click)="sendMessage()" [disabled]="!newMessage().trim()">
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
             </svg>
           </button>
+          
+          <!-- Emoji Picker -->
+          @if (showEmojiPicker()) {
+            <div class="emoji-picker">
+              <div class="emoji-picker-header">
+                <button 
+                  class="emoji-tab" 
+                  [class.active]="emojiTab() === 'normal'"
+                  (click)="selectEmojiTab('normal')">
+                  😊 Emojis
+                </button>
+                <button 
+                  class="emoji-tab" 
+                  [class.active]="emojiTab() === 'riot'"
+                  (click)="selectEmojiTab('riot')">
+                  ⚔️ Riot/LoL
+                </button>
+              </div>
+              <div class="emoji-picker-content">
+                @if (emojiTab() === 'normal') {
+                  <div class="emoji-grid">
+                    @for (emoji of normalEmojis; track $index) {
+                      <button 
+                        class="emoji-item" 
+                        (click)="insertEmoji(emoji)"
+                        type="button">
+                        {{ emoji }}
+                      </button>
+                    }
+                  </div>
+                } @else {
+                  <div class="emoji-grid">
+                    @for (emoji of riotEmojis; track $index) {
+                      <button 
+                        class="emoji-item" 
+                        (click)="insertEmoji(emoji)"
+                        type="button">
+                        {{ emoji }}
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
         </div>
       } @else {
         <div class="no-chat-selected">

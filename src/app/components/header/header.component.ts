@@ -29,6 +29,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   isAdmin = signal(false);
   activeTournament = signal<Tournament | null>(null);
   hasAvailableTournaments = signal(false);
+  unreadMessagesCount = signal(0);
 
   ngOnInit() {
     // Cargar perfil inmediatamente si ya hay un usuario autenticado
@@ -48,6 +49,17 @@ export class HeaderComponent implements OnInit, OnDestroy {
           this.loadUserProfile(user.uid);
           // Suscribirse a cambios en tiempo real del perfil
           this.subscribeToUserProfile(user.uid);
+          // Cargar contador de mensajes no leídos
+          this.subscriptions.add(
+            this.firebaseService.getUnreadMessagesCount(user.uid).subscribe({
+              next: (count) => {
+                this.unreadMessagesCount.set(count);
+              },
+              error: (error) => {
+                console.error('Error cargando contador de mensajes no leídos:', error);
+              }
+            })
+          );
         } else {
           // Limpiar suscripción del perfil cuando el usuario cierra sesión
           if (this.profileSubscription) {
@@ -56,6 +68,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
           }
           this.currentUser.set(null);
           this.isAdmin.set(false);
+          this.unreadMessagesCount.set(0);
         }
       })
     );
@@ -85,6 +98,21 @@ export class HeaderComponent implements OnInit, OnDestroy {
           }
         })
       );
+      
+      // Cargar contador de mensajes no leídos
+      const currentUser = this.firebaseService.getCurrentUser();
+      if (currentUser) {
+        this.subscriptions.add(
+          this.firebaseService.getUnreadMessagesCount(currentUser.uid).subscribe({
+            next: (count) => {
+              this.unreadMessagesCount.set(count);
+            },
+            error: (error) => {
+              console.error('Error cargando contador de mensajes no leídos:', error);
+            }
+          })
+        );
+      }
     }, 0);
   }
 

@@ -33,7 +33,7 @@
           @for (notification of notifications(); track notification.id) {
             <a 
               [routerLink]="getNotificationLink(notification)" 
-              [queryParams]="notification.type === 'message' ? { userId: notification.fromUserId } : {}"
+              [queryParams]="getNotificationQueryParams(notification)"
               class="notification-item" 
               [class.unread]="!notification.read"
               (click)="markAsRead(notification); showDropdown.set(false)">

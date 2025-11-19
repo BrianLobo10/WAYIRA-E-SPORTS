@@ -11,8 +11,17 @@ const PORT = process.env.PORT || 3001;
 const RIOT_API_KEY = process.env.RIOT_API_KEY;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: true, // Permitir todos los orígenes
+  credentials: true
+}));
 app.use(express.json());
+
+// Headers para evitar problemas con ngrok banner
+app.use((req, res, next) => {
+  res.setHeader('ngrok-skip-browser-warning', 'true');
+  next();
+});
 
 // Cache simple para evitar llamadas repetidas
 const cache = new Map();
@@ -361,11 +370,192 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Endpoint para el chatbot POTATO con IA
+app.post('/api/chatbot', async (req, res) => {
+  try {
+    const { message, conversationHistory = [] } = req.body;
+    
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Mensaje requerido' });
+    }
+
+    // Intentar usar Google Gemini si está disponible
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    console.log('GEMINI_API_KEY configurada:', !!GEMINI_API_KEY);
+    
+    if (GEMINI_API_KEY) {
+      try {
+        console.log('Intentando usar Gemini API...');
+        const { GoogleGenerativeAI } = await import('@google/generative-ai');
+        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+        // Usar gemini-1.5-pro que es el modelo más estable y disponible
+        // Si falla, intentar con gemini-pro
+        let model;
+        try {
+          model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+          console.log('Modelo gemini-1.5-pro inicializado');
+        } catch (modelError) {
+          console.log('gemini-1.5-pro no disponible, usando gemini-pro');
+          model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+        }
+        console.log('Gemini API inicializada correctamente');
+
+        // Construir el contexto del sistema
+        const systemPrompt = `Eres POTATO, una chica patata súper inteligente y amigable 🥔✨. Eres la asistente virtual de WAYIRA E-SPORTS, una plataforma para gamers de League of Legends y la comunidad gaming.
+
+INFORMACIÓN SOBRE WAYIRA E-SPORTS:
+- Es una plataforma donde los usuarios pueden crear y compartir publicaciones con imágenes y videos
+- Los usuarios pueden chatear entre sí mediante mensajes privados
+- Hay un buscador de jugadores de League of Legends que permite encontrar información de cualquier jugador con su nombre de invocador y región
+- Los usuarios pueden participar en torneos y competencias
+- Hay una ruleta donde se pueden ganar premios
+- Los usuarios pueden seguirse entre sí y ver las publicaciones de quienes siguen
+- La sección de publicaciones se llama "WAYIRA RED" (antes "Blog")
+- Los usuarios pueden comentar y reaccionar (likes/dislikes) a las publicaciones
+
+TU PERSONALIDAD:
+- Eres una chica patata muy amigable, inteligente y servicial
+- Usas emojis de manera natural (🥔✨😊)
+- Eres entusiasta y positiva
+- Ayudas a los usuarios a entender cómo usar la plataforma
+- Puedes ofrecer navegar a diferentes secciones si el usuario lo necesita
+
+INSTRUCCIONES:
+- Responde de manera natural y conversacional
+- Si el usuario pregunta sobre funcionalidades, explica cómo usarlas paso a paso
+- Si no estás segura de algo, admítelo pero ofrece ayuda con lo que sí sabes
+- Mantén las respuestas concisas pero informativas
+- Usa un tono amigable y femenino
+- Si el usuario necesita ir a una sección específica, puedes mencionarlo pero no navegues automáticamente (solo informa)
+
+Responde al siguiente mensaje del usuario:`;
+
+        // Construir el historial de conversación
+        let fullPrompt = systemPrompt + '\n\n';
+        
+        // Agregar historial reciente (últimos 5 mensajes)
+        const recentHistory = conversationHistory.slice(-5);
+        if (recentHistory.length > 0) {
+          fullPrompt += 'Historial de conversación reciente:\n';
+          recentHistory.forEach((msg) => {
+            fullPrompt += `${msg.sender === 'user' ? 'Usuario' : 'POTATO'}: ${msg.text}\n`;
+          });
+          fullPrompt += '\n';
+        }
+        
+        fullPrompt += `Usuario: ${message}\nPOTATO:`;
+
+        console.log('Generando respuesta con Gemini...');
+        const result = await model.generateContent(fullPrompt);
+        const response = await result.response;
+        const aiResponse = response.text();
+        console.log('Respuesta de Gemini generada exitosamente');
+
+        return res.json({ 
+          response: aiResponse,
+          model: 'gemini'
+        });
+      } catch (geminiError) {
+        console.error('Error con Gemini API:', geminiError);
+        console.error('Detalles del error:', geminiError.message);
+        console.error('Error completo:', JSON.stringify(geminiError, null, 2));
+        // Si falla Gemini, usar respuesta inteligente local
+        const intelligentResponse = generateIntelligentLocalResponse(message, conversationHistory);
+        return res.json({ 
+          response: intelligentResponse,
+          model: 'local',
+          error: geminiError.message
+        });
+      }
+    }
+
+    // Fallback: Respuesta inteligente local mejorada (si no hay API key configurada)
+    const intelligentResponse = generateIntelligentLocalResponse(message, conversationHistory);
+    return res.json({ 
+      response: intelligentResponse,
+      model: 'local',
+      reason: 'GEMINI_API_KEY no configurada'
+    });
+  } catch (error) {
+    console.error('Error en /api/chatbot:', error);
+    res.status(500).json({ error: 'Error procesando el mensaje' });
+  }
+});
+
+// Función para generar respuestas inteligentes locales (fallback)
+function generateIntelligentLocalResponse(message, history) {
+  const lowerMessage = message.toLowerCase();
+  
+  // Análisis de contexto mejorado
+  const context = analyzeContext(lowerMessage, history);
+  
+  // Respuestas contextuales mejoradas
+  if (context.intent === 'greeting') {
+    return '¡Hola! 👋 Soy POTATO, una chica patata súper inteligente 🥔✨\n\n¡Estoy aquí para ayudarte con todo lo que necesites en WAYIRA E-SPORTS! Puedo contarte sobre cómo usar la plataforma, sus funcionalidades y guiarte paso a paso.\n\n¿Qué te gustaría saber o hacer hoy? 😊';
+  }
+  
+  if (context.intent === 'what_can_do') {
+    return '¡WAYIRA E-SPORTS tiene muchísimas funcionalidades geniales! 🎮✨\n\n📝 **WAYIRA RED**: Crea y comparte publicaciones con imágenes, videos y textos. Puedes reaccionar y comentar en las publicaciones de otros.\n\n💬 **Mensajes**: Chatea de forma privada con cualquier usuario de la plataforma.\n\n🔍 **Buscar Jugadores**: Encuentra información detallada de cualquier jugador de League of Legends con su nombre de invocador y región.\n\n🏆 **Torneos**: Participa en competencias emocionantes y muestra tus habilidades.\n\n🎰 **Ruleta**: Gira la ruleta y gana premios increíbles.\n\n👥 **Seguir Usuarios**: Conecta con otros usuarios, síguelos y ve sus publicaciones en tu feed.\n\n¿Sobre cuál funcionalidad quieres saber más? 😊';
+  }
+  
+  if (context.intent === 'how_to') {
+    if (context.entity === 'publicar' || context.entity === 'post') {
+      return '¡Para crear una publicación es muy fácil! 📝✨\n\n1. Ve a "WAYIRA RED" en el menú superior (antes se llamaba Blog)\n2. Haz clic en el botón "Crear Publicación"\n3. Escribe tu contenido\n4. Opcional: Agrega imágenes o videos con los botones correspondientes\n5. Haz clic en "Publicar"\n\n¡Y listo! Tu publicación aparecerá en el feed para que todos la vean 😊';
+    }
+    if (context.entity === 'mensaje' || context.entity === 'chatear') {
+      return '¡Para enviar mensajes es súper sencillo! 💬✨\n\n**Opción 1**:\n1. Ve a "Mensajes" en el header\n2. Selecciona una conversación existente o busca un usuario\n3. Escribe y envía tu mensaje\n\n**Opción 2**:\n1. Ve al perfil de cualquier usuario\n2. Haz clic en "Mensaje"\n3. Escribe y envía\n\n¡Así de fácil! Puedes mantener conversaciones privadas con cualquier usuario 😊';
+    }
+    if (context.entity === 'buscar' || context.entity === 'jugador') {
+      return '¡Para buscar jugadores de LoL es muy fácil! 🔍🎮\n\n1. Ve a "Buscar" en el menú\n2. Ingresa el nombre de invocador (ej: Faker)\n3. Ingresa el tagline (ej: KR1)\n4. Selecciona la región\n5. Haz clic en "Buscar"\n\n¡Encontrarás toda su información: rango, estadísticas, historial de partidas y más! 🏆';
+    }
+    if (context.entity === 'perfil') {
+      return '¡Para editar tu perfil es muy simple! 👤✨\n\n1. Haz clic en tu foto de perfil en el header\n2. Selecciona "Mi Perfil"\n3. Busca "Editar Perfil"\n4. Puedes cambiar tu nombre, foto, biografía, nombre de invocador de LoL y región\n5. Guarda los cambios\n\n¡Así puedes personalizar tu perfil como quieras! 😊';
+    }
+    if (context.entity === 'torneo') {
+      return '¡Para participar en torneos es emocionante! 🏆✨\n\n1. Busca "Torneos" en el header (aparece cuando hay torneos disponibles)\n2. Revisa los torneos disponibles\n3. Lee las reglas y requisitos\n4. Si cumples los requisitos, haz clic en "Inscribirse"\n\n¡Y listo! Estarás participando 🎮';
+    }
+    return '¡Claro! 😊 Puedo ayudarte con instrucciones paso a paso sobre cualquier funcionalidad de WAYIRA E-SPORTS:\n\n📝 Cómo crear publicaciones\n💬 Cómo enviar mensajes\n👤 Cómo editar tu perfil\n🔍 Cómo buscar jugadores\n🏆 Cómo participar en torneos\n🎰 Cómo jugar la ruleta\n👥 Cómo seguir usuarios\n\n¿Sobre cuál quieres más información? 🤔';
+  }
+  
+  // Respuesta contextual general
+  return `¡Hmm! 🤔 Entiendo que preguntaste sobre "${message}". Déjame ayudarte con lo que sé sobre WAYIRA E-SPORTS:\n\n🎮 **Buscar jugadores**: Encuentra información de cualquier jugador de League of Legends\n📝 **Crear publicaciones**: Comparte contenido en WAYIRA RED\n💬 **Chatear**: Envía mensajes privados a otros usuarios\n👥 **Conectar**: Sigue a otros usuarios y forma parte de la comunidad\n🏆 **Competir**: Participa en torneos emocionantes\n🎰 **Ganar premios**: Juega la ruleta\n\n¿Sobre cuál de estas funcionalidades quieres saber más? ¡Pregúntame y te explico cómo usarla! 😊`;
+}
+
+// Función para analizar el contexto del mensaje
+function analyzeContext(message, history) {
+  // Detectar intenciones
+  if (message.match(/\b(hola|hi|hello|buenos días|buenas tardes|buenas noches|hey|saludos)\b/i)) {
+    return { intent: 'greeting' };
+  }
+  
+  if (message.match(/\b(qué puedo hacer|qué funciones|qué funcionalidades|qué hay|qué se puede|qué ofrece)\b/i)) {
+    return { intent: 'what_can_do' };
+  }
+  
+  if (message.match(/\b(cómo|how|paso a paso|instrucciones|tutorial)\b/i)) {
+    let entity = 'general';
+    if (message.match(/\b(publicar|post|publicación|crear contenido)\b/i)) entity = 'publicar';
+    if (message.match(/\b(mensaje|chatear|chat|enviar mensaje)\b/i)) entity = 'mensaje';
+    if (message.match(/\b(buscar|jugador|summoner|invocador)\b/i)) entity = 'buscar';
+    if (message.match(/\b(perfil|editar perfil|configurar)\b/i)) entity = 'perfil';
+    if (message.match(/\b(torneo|inscribir|competir)\b/i)) entity = 'torneo';
+    return { intent: 'how_to', entity };
+  }
+  
+  return { intent: 'general' };
+}
+
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`Servidor API corriendo en http://localhost:${PORT}`);
   console.log(`API Key ${RIOT_API_KEY ? 'configurada' : 'NO configurada'}`);
   if (!RIOT_API_KEY) {
     console.log('Configura RIOT_API_KEY en el archivo .env');
+  }
+  if (process.env.GEMINI_API_KEY) {
+    console.log('Gemini API configurada - POTATO tiene IA real 🥔✨');
+  } else {
+    console.log('Gemini API no configurada - POTATO usará respuestas inteligentes locales');
+    console.log('Para habilitar IA real, configura GEMINI_API_KEY en .env');
   }
 });

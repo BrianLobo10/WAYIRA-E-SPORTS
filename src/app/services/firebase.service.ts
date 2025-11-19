@@ -79,6 +79,8 @@ export interface Comment {
   likes: string[];
   dislikes: string[];
   createdAt: Timestamp;
+  replies?: Comment[]; // Respuestas anidadas
+  parentId?: string; // ID del comentario padre (si es una respuesta)
 }
 
 export interface News {
@@ -146,6 +148,17 @@ export interface Message {
   read: boolean;
 }
 
+export interface Conversation {
+  id?: string;
+  user1Id: string; // ID del primer usuario (menor lexicográficamente)
+  user2Id: string; // ID del segundo usuario (mayor lexicográficamente)
+  messages: Message[]; // Array de mensajes en la conversación
+  lastMessage?: Message; // Último mensaje para facilitar consultas
+  lastMessageTime?: Timestamp; // Timestamp del último mensaje
+  createdAt: Timestamp; // Cuando se creó la conversación
+  updatedAt: Timestamp; // Última actualización
+}
+
 export interface ContactMessage {
   id?: string;
   name: string;
@@ -160,7 +173,7 @@ export interface ContactMessage {
 export interface Notification {
   id?: string;
   userId: string; // Usuario que recibe la notificación
-  type: 'like' | 'comment' | 'follow' | 'message';
+  type: 'like' | 'comment' | 'comment_reply' | 'follow' | 'message';
   fromUserId: string; // Usuario que realiza la acción
   fromUserName: string;
   fromUserPhoto?: string | null;
@@ -526,7 +539,18 @@ export class FirebaseService {
 
   async updateUserProfile(uid: string, data: Partial<UserProfile>) {
     const docRef = doc(this.firestore, 'users', uid);
-    await updateDoc(docRef, { ...data, updatedAt: Timestamp.now() });
+    
+    // Preparar los datos a actualizar
+    const updateData: any = { ...data, updatedAt: Timestamp.now() };
+    
+    // Limpiar campos undefined
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
+    
+    await updateDoc(docRef, updateData);
     
     // Si se actualizó la foto de perfil, actualizar también en publicaciones y comentarios
     if (data.photoURL !== undefined) {
@@ -536,6 +560,31 @@ export class FirebaseService {
     // Si se actualizó el nombre, actualizar también en publicaciones y comentarios
     if (data.displayName !== undefined) {
       await this.updateUserNameInPosts(uid, data.displayName);
+    }
+    
+    // Actualizar también Firebase Auth si el usuario actual coincide
+    const currentUser = this.getCurrentUser();
+    if (currentUser && currentUser.uid === uid) {
+      try {
+        const user = this.auth.currentUser;
+        if (user) {
+          const updateObj: any = {};
+          if (data.displayName !== undefined) {
+            updateObj.displayName = data.displayName;
+          }
+          if (data.photoURL !== undefined) {
+            updateObj.photoURL = data.photoURL || null;
+          }
+          
+          if (Object.keys(updateObj).length > 0) {
+            await updateProfile(user, updateObj);
+            console.log('Firebase Auth profile updated:', updateObj);
+          }
+        }
+      } catch (error) {
+        console.error('Error updating Firebase Auth profile:', error);
+        // No fallar si no se puede actualizar Auth, pero continuar con Firestore
+      }
     }
   }
 
@@ -554,22 +603,49 @@ export class FirebaseService {
         updatePromises.push(updateDoc(postRef, { authorPhoto: photoURL || null }));
       });
       
-      // Actualizar foto en comentarios del usuario en todas las publicaciones
+      // Actualizar foto en comentarios del usuario en todas las publicaciones (incluyendo respuestas anidadas)
       const allPostsQuery = query(collection(this.firestore, 'posts'));
       const allPostsSnapshot = await getDocs(allPostsQuery);
       
       allPostsSnapshot.forEach((postDoc) => {
         const postData = postDoc.data() as Post;
         if (postData.comments && postData.comments.length > 0) {
+          let hasChanges = false;
           const updatedComments = postData.comments.map((comment: Comment) => {
+            let commentChanged = false;
+            let updatedComment = { ...comment };
+            
+            // Actualizar foto del comentario principal
             if (comment.authorId === uid) {
-              return { ...comment, authorPhoto: photoURL || null };
+              updatedComment = { ...updatedComment, authorPhoto: photoURL || null };
+              commentChanged = true;
             }
-            return comment;
+            
+            // Actualizar foto en respuestas anidadas
+            if (comment.replies && comment.replies.length > 0) {
+              const updatedReplies = comment.replies.map((reply: Comment) => {
+                if (reply.authorId === uid) {
+                  commentChanged = true;
+                  return { ...reply, authorPhoto: photoURL || null };
+                }
+                return reply;
+              });
+              if (commentChanged || updatedReplies.some((r, i) => r !== comment.replies![i])) {
+                updatedComment = { ...updatedComment, replies: updatedReplies };
+              }
+            }
+            
+            if (commentChanged) {
+              hasChanges = true;
+            }
+            
+            return updatedComment;
           });
           
-          const postRef = doc(this.firestore, 'posts', postDoc.id);
-          updatePromises.push(updateDoc(postRef, { comments: updatedComments }));
+          if (hasChanges) {
+            const postRef = doc(this.firestore, 'posts', postDoc.id);
+            updatePromises.push(updateDoc(postRef, { comments: updatedComments }));
+          }
         }
       });
       
@@ -666,11 +742,20 @@ export class FirebaseService {
   getPostById(postId: string): Observable<Post | null> {
     const postRef = doc(this.firestore, 'posts', postId);
     return new Observable(observer => {
-      const unsubscribe = onSnapshot(postRef, (docSnap: any) => {
-        observer.next(docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as Post : null);
-      }, error => {
-        observer.error(error);
-      });
+      const unsubscribe = onSnapshot(postRef, 
+        (docSnap: any) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            observer.next({ id: docSnap.id, ...data } as Post);
+          } else {
+            observer.next(null);
+          }
+        }, 
+        (error) => {
+          console.error('Error getting post:', error);
+          observer.error(error);
+        }
+      );
       return () => unsubscribe();
     });
   }
@@ -698,17 +783,24 @@ export class FirebaseService {
         }
         
         // Crear notificación solo si no es el propio autor
-        if (post.authorId !== userId) {
-          const currentUser = await this.getUserProfile(userId);
-          await this.createNotification({
-            userId: post.authorId,
-            type: 'like',
-            fromUserId: userId,
-            fromUserName: currentUser?.displayName || 'Usuario',
-            fromUserPhoto: currentUser?.photoURL || null,
-            postId: postId,
-            read: false
-          });
+        // Envolver en try-catch para que si falla la notificación, no afecte el like
+        try {
+          if (post.authorId !== userId) {
+            const currentUser = await this.getUserProfile(userId);
+            await this.createNotification({
+              userId: post.authorId,
+              type: 'like',
+              fromUserId: userId,
+              fromUserName: currentUser?.displayName || 'Usuario',
+              fromUserPhoto: currentUser?.photoURL || null,
+              postId: postId,
+              read: false
+            });
+          }
+        } catch (notificationError) {
+          // Si falla la notificación, solo loguear el error pero no lanzarlo
+          // El like ya se actualizó correctamente
+          console.warn('Error creando notificación de like:', notificationError);
         }
       }
       
@@ -779,76 +871,97 @@ export class FirebaseService {
     }
   }
 
-  async addComment(postId: string, comment: Omit<Comment, 'id' | 'createdAt' | 'likes' | 'dislikes'>) {
+  async addComment(postId: string, comment: Omit<Comment, 'id' | 'createdAt' | 'likes' | 'dislikes'>, parentCommentIndex?: number) {
     const postRef = doc(this.firestore, 'posts', postId);
-    const result = await from(getDoc(postRef)).pipe(
-      map((postSnap: any) => {
-        if (postSnap.exists()) {
-          const post = postSnap.data() as Post;
-          const comments = post.comments || [];
-          const newComment: Comment = {
-            authorId: comment.authorId,
-            authorName: comment.authorName,
-            authorPhoto: comment.authorPhoto || null,
-            content: comment.content,
-            likes: [],
-            dislikes: [],
-            createdAt: Timestamp.now()
-          };
-          return {
-            comments: [...comments, newComment],
-            updatedAt: Timestamp.now()
-          };
-        }
-        return null;
-      })
-    ).toPromise();
+    const postSnap = await getDoc(postRef);
     
-    if (result) {
-      // Filtrar campos undefined y null de manera recursiva
-      const cleanData: any = {};
-      const resultAny = result as any;
-      Object.keys(resultAny).forEach(key => {
-        const value = resultAny[key];
-        if (value !== undefined && value !== null) {
-          if (Array.isArray(value)) {
-            cleanData[key] = value.map((item: any) => {
-              const cleanItem: any = {};
-              Object.keys(item).forEach(itemKey => {
-                if (item[itemKey] !== undefined && item[itemKey] !== null) {
-                  cleanItem[itemKey] = item[itemKey];
+    if (!postSnap.exists()) {
+      throw new Error('Post no encontrado');
+    }
+    
+    const post = postSnap.data() as Post;
+    const comments = [...(post.comments || [])];
+    const newComment: Comment = {
+      authorId: comment.authorId,
+      authorName: comment.authorName,
+      authorPhoto: comment.authorPhoto || null,
+      content: comment.content,
+      likes: [],
+      dislikes: [],
+      createdAt: Timestamp.now(),
+      replies: [],
+      parentId: parentCommentIndex !== undefined ? comments[parentCommentIndex]?.id : undefined
+    };
+    
+    // Si es una respuesta, agregarla al comentario padre
+    if (parentCommentIndex !== undefined && comments[parentCommentIndex]) {
+      const parentComment = { ...comments[parentCommentIndex] };
+      if (!parentComment.replies) {
+        parentComment.replies = [];
+      }
+      parentComment.replies = [...parentComment.replies, newComment];
+      comments[parentCommentIndex] = parentComment;
+    } else {
+      // Si es un comentario principal, agregarlo a la lista
+      comments.push(newComment);
+    }
+    
+    // Limpiar campos undefined y null
+    const cleanComments = comments.map((item: any) => {
+      const cleanItem: any = {};
+      Object.keys(item).forEach(key => {
+        if (item[key] !== undefined && item[key] !== null) {
+          if (key === 'replies' && Array.isArray(item[key])) {
+            cleanItem[key] = item[key].map((reply: any) => {
+              const cleanReply: any = {};
+              Object.keys(reply).forEach(replyKey => {
+                if (reply[replyKey] !== undefined && reply[replyKey] !== null) {
+                  cleanReply[replyKey] = reply[replyKey];
                 }
               });
-              return cleanItem;
+              return cleanReply;
             });
           } else {
-            cleanData[key] = value;
+            cleanItem[key] = item[key];
           }
         }
       });
-      await updateDoc(postRef, cleanData);
-      
-      // Obtener el post actualizado para crear la notificación
-      const updatedPostSnap = await from(getDoc(postRef)).pipe(
-        map((snap: any) => snap.exists() ? snap.data() as Post : null)
-      ).toPromise();
-      
-      // Crear notificación solo si no es el propio autor
-      if (updatedPostSnap && updatedPostSnap.authorId !== comment.authorId) {
-        await this.createNotification({
-          userId: updatedPostSnap.authorId,
-          type: 'comment',
-          fromUserId: comment.authorId,
-          fromUserName: comment.authorName,
-          fromUserPhoto: comment.authorPhoto || null,
-          postId: postId,
-          read: false
-        });
+      return cleanItem;
+    });
+    
+    await updateDoc(postRef, {
+      comments: cleanComments,
+      updatedAt: Timestamp.now()
+    });
+    
+    // Crear notificación solo si no es el propio autor
+    // Envolver en try-catch para que si falla la notificación, no afecte la creación del comentario
+    try {
+      if (post.authorId !== comment.authorId) {
+        const notificationUserId = parentCommentIndex !== undefined 
+          ? comments[parentCommentIndex]?.authorId 
+          : post.authorId;
+        
+        if (notificationUserId && notificationUserId !== comment.authorId) {
+          await this.createNotification({
+            userId: notificationUserId,
+            type: parentCommentIndex !== undefined ? 'comment_reply' : 'comment',
+            fromUserId: comment.authorId,
+            fromUserName: comment.authorName,
+            fromUserPhoto: comment.authorPhoto || null,
+            postId: postId,
+            read: false
+          });
+        }
       }
+    } catch (notificationError) {
+      // Si falla la notificación, solo loguear el error pero no lanzarlo
+      // El comentario ya se agregó correctamente
+      console.warn('Error creando notificación para comentario:', notificationError);
     }
   }
 
-  async likeComment(postId: string, commentIndex: number, userId: string) {
+  async likeComment(postId: string, commentIndex: number, userId: string, replyIndex?: number) {
     const postRef = doc(this.firestore, 'posts', postId);
     const postSnap = await getDoc(postRef);
     if (postSnap.exists()) {
@@ -856,13 +969,28 @@ export class FirebaseService {
       const comments = [...(post.comments || [])];
       const comment = comments[commentIndex];
       if (comment) {
-        const likes = comment.likes || [];
-        const dislikes = comment.dislikes || [];
-        if (likes.includes(userId)) {
-          comment.likes = likes.filter(id => id !== userId);
+        // Si es una respuesta, modificar la respuesta específica
+        if (replyIndex !== undefined && comment.replies && comment.replies[replyIndex]) {
+          const reply = { ...comment.replies[replyIndex] };
+          const likes = reply.likes || [];
+          const dislikes = reply.dislikes || [];
+          if (likes.includes(userId)) {
+            reply.likes = likes.filter(id => id !== userId);
+          } else {
+            reply.likes = [...likes, userId];
+            reply.dislikes = dislikes.filter(id => id !== userId);
+          }
+          comment.replies[replyIndex] = reply;
         } else {
-          comment.likes = [...likes, userId];
-          comment.dislikes = dislikes.filter(id => id !== userId);
+          // Si es un comentario principal
+          const likes = comment.likes || [];
+          const dislikes = comment.dislikes || [];
+          if (likes.includes(userId)) {
+            comment.likes = likes.filter(id => id !== userId);
+          } else {
+            comment.likes = [...likes, userId];
+            comment.dislikes = dislikes.filter(id => id !== userId);
+          }
         }
         comments[commentIndex] = comment;
         await updateDoc(postRef, { comments, updatedAt: Timestamp.now() });
@@ -870,7 +998,7 @@ export class FirebaseService {
     }
   }
 
-  async dislikeComment(postId: string, commentIndex: number, userId: string) {
+  async dislikeComment(postId: string, commentIndex: number, userId: string, replyIndex?: number) {
     const postRef = doc(this.firestore, 'posts', postId);
     const postSnap = await getDoc(postRef);
     if (postSnap.exists()) {
@@ -878,13 +1006,28 @@ export class FirebaseService {
       const comments = [...(post.comments || [])];
       const comment = comments[commentIndex];
       if (comment) {
-        const likes = comment.likes || [];
-        const dislikes = comment.dislikes || [];
-        if (dislikes.includes(userId)) {
-          comment.dislikes = dislikes.filter(id => id !== userId);
+        // Si es una respuesta, modificar la respuesta específica
+        if (replyIndex !== undefined && comment.replies && comment.replies[replyIndex]) {
+          const reply = { ...comment.replies[replyIndex] };
+          const likes = reply.likes || [];
+          const dislikes = reply.dislikes || [];
+          if (dislikes.includes(userId)) {
+            reply.dislikes = dislikes.filter(id => id !== userId);
+          } else {
+            reply.dislikes = [...dislikes, userId];
+            reply.likes = likes.filter(id => id !== userId);
+          }
+          comment.replies[replyIndex] = reply;
         } else {
-          comment.dislikes = [...dislikes, userId];
-          comment.likes = likes.filter(id => id !== userId);
+          // Si es un comentario principal
+          const likes = comment.likes || [];
+          const dislikes = comment.dislikes || [];
+          if (dislikes.includes(userId)) {
+            comment.dislikes = dislikes.filter(id => id !== userId);
+          } else {
+            comment.dislikes = [...dislikes, userId];
+            comment.likes = likes.filter(id => id !== userId);
+          }
         }
         comments[commentIndex] = comment;
         await updateDoc(postRef, { comments, updatedAt: Timestamp.now() });
@@ -1126,81 +1269,258 @@ export class FirebaseService {
     return 'round16';
   }
 
-  // Messages Methods
+  // Helper function para obtener los IDs de usuario ordenados para una conversación
+  private getConversationUserIds(userId1: string, userId2: string): { user1Id: string; user2Id: string } {
+    const ids = [userId1, userId2].sort();
+    return { user1Id: ids[0], user2Id: ids[1] };
+  }
+
+  // Helper function para obtener el ID del documento de conversación
+  private getConversationId(userId1: string, userId2: string): string {
+    const { user1Id, user2Id } = this.getConversationUserIds(userId1, userId2);
+    return `${user1Id}_${user2Id}`;
+  }
+
+  // Messages Methods - Reestructurado para usar conversaciones
   async sendMessage(message: Omit<Message, 'id' | 'timestamp' | 'read' | 'fromName' | 'fromPhoto'>) {
-    const messagesRef = collection(this.firestore, 'messages');
     const user = this.getCurrentUser();
     if (!user) throw new Error('User not authenticated');
     
+    // Validar que fromId y toId estén presentes
+    if (!message.fromId || !message.toId) {
+      throw new Error('fromId y toId son requeridos');
+    }
+    
+    // Validar que no se envíe un mensaje a sí mismo
+    if (message.fromId === message.toId) {
+      throw new Error('No puedes enviarte un mensaje a ti mismo');
+    }
+    
     const profile = await this.getUserProfile(user.uid);
+    
+    // Asegurar que fromId sea el ID del usuario autenticado
+    const fromId = user.uid;
+    
     const newMessage: Omit<Message, 'id'> = {
-      ...message,
+      fromId: fromId,
+      toId: message.toId,
+      content: message.content,
       fromName: profile?.displayName || 'Usuario',
-      fromPhoto: profile?.photoURL,
+      fromPhoto: profile?.photoURL || undefined,
       timestamp: Timestamp.now(),
       read: false
     };
-    await addDoc(messagesRef, newMessage);
+    
+    console.log('Enviando mensaje:', newMessage);
+    
+    // Obtener IDs ordenados para la conversación
+    const { user1Id, user2Id } = this.getConversationUserIds(fromId, message.toId);
+    const conversationId = this.getConversationId(fromId, message.toId);
+    const conversationRef = doc(this.firestore, 'conversations', conversationId);
+    
+    // Verificar si la conversación ya existe
+    const conversationSnap = await getDoc(conversationRef);
+    const now = Timestamp.now();
+    
+    if (conversationSnap.exists()) {
+      // Actualizar conversación existente
+      const conversation = conversationSnap.data() as Conversation;
+      const updatedMessages = [...(conversation.messages || []), newMessage];
+      
+      await updateDoc(conversationRef, {
+        messages: updatedMessages,
+        lastMessage: newMessage,
+        lastMessageTime: newMessage.timestamp,
+        updatedAt: now
+      });
+    } else {
+      // Crear nueva conversación
+      const newConversation: Conversation = {
+        user1Id,
+        user2Id,
+        messages: [newMessage],
+        lastMessage: newMessage,
+        lastMessageTime: newMessage.timestamp,
+        createdAt: now,
+        updatedAt: now
+      };
+      
+      await setDoc(conversationRef, newConversation);
+    }
     
     // Crear notificación de mensaje
-    await this.createNotification({
-      userId: message.toId,
-      type: 'message',
-      fromUserId: user.uid,
-      fromUserName: profile?.displayName || 'Usuario',
-      fromUserPhoto: profile?.photoURL || null,
-      message: message.content,
-      read: false
-    });
+    try {
+      await this.createNotification({
+        userId: message.toId,
+        type: 'message',
+        fromUserId: fromId,
+        fromUserName: profile?.displayName || 'Usuario',
+        fromUserPhoto: profile?.photoURL || undefined,
+        message: message.content,
+        read: false
+      });
+    } catch (error) {
+      console.error('Error creando notificación de mensaje:', error);
+      // No lanzar error si falla la notificación, el mensaje ya se envió
+    }
   }
 
   getMessages(userId1: string, userId2: string): Observable<Message[]> {
-    const messagesRef = collection(this.firestore, 'messages');
-    const q = query(
-      messagesRef,
-      where('fromId', 'in', [userId1, userId2]),
-      where('toId', 'in', [userId1, userId2]),
-      orderBy('timestamp', 'asc')
-    );
-    return from(getDocs(q)).pipe(
-      map((snapshot: QuerySnapshot<DocumentData>) => snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as Message)))
-    );
+    const conversationId = this.getConversationId(userId1, userId2);
+    const conversationRef = doc(this.firestore, 'conversations', conversationId);
+    
+    return new Observable(observer => {
+      const unsubscribe = onSnapshot(
+        conversationRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const conversation = snapshot.data() as Conversation;
+            // Ordenar mensajes por timestamp ascendente (cascada)
+            const sortedMessages = (conversation.messages || []).sort((a, b) => {
+              const aTime = a.timestamp?.toMillis() || 0;
+              const bTime = b.timestamp?.toMillis() || 0;
+              return aTime - bTime; // Ascendente: más antiguo primero
+            });
+            observer.next(sortedMessages);
+          } else {
+            // Si no existe la conversación, devolver array vacío
+            observer.next([]);
+          }
+        },
+        (error) => {
+          console.error('Error obteniendo mensajes:', error);
+          observer.next([]);
+        }
+      );
+      
+      return () => {
+        unsubscribe();
+      };
+    });
   }
 
   getConversations(userId: string): Observable<string[]> {
-    const messagesRef = collection(this.firestore, 'messages');
-    const q1 = query(
-      messagesRef,
-      where('toId', '==', userId),
-      orderBy('timestamp', 'desc')
-    );
-    const q2 = query(
-      messagesRef,
-      where('fromId', '==', userId),
-      orderBy('timestamp', 'desc')
-    );
+    const conversationsRef = collection(this.firestore, 'conversations');
     
-    return from(Promise.all([getDocs(q1), getDocs(q2)])).pipe(
-      map(([snapshot1, snapshot2]: [QuerySnapshot<DocumentData>, QuerySnapshot<DocumentData>]) => {
-        const messages1 = snapshot1.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as Message));
-        const messages2 = snapshot2.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as Message));
-        const allMessages = [...messages1, ...messages2];
+    return new Observable(observer => {
+      let unsubscribe1: (() => void) | undefined;
+      let unsubscribe2: (() => void) | undefined;
+      let conversations1: Conversation[] = [];
+      let conversations2: Conversation[] = [];
+      
+      const updateConversations = () => {
+        const allConversations = [...conversations1, ...conversations2];
         const uniqueUserIds = new Set<string>();
-        allMessages.forEach((m: Message) => {
-          if (m.fromId === userId) {
-            uniqueUserIds.add(m.toId);
-          } else {
-            uniqueUserIds.add(m.fromId);
+        
+        allConversations.forEach((conv: Conversation) => {
+          // Determinar cuál es el otro usuario en la conversación
+          if (conv.user1Id === userId) {
+            uniqueUserIds.add(conv.user2Id);
+          } else if (conv.user2Id === userId) {
+            uniqueUserIds.add(conv.user1Id);
           }
         });
-        return Array.from(uniqueUserIds);
-      })
-    );
+        
+        // Ordenar por último mensaje (más reciente primero)
+        const sortedUserIds = Array.from(uniqueUserIds).sort((a, b) => {
+          const convA = allConversations.find(c => 
+            (c.user1Id === userId && c.user2Id === a) || (c.user2Id === userId && c.user1Id === a)
+          );
+          const convB = allConversations.find(c => 
+            (c.user1Id === userId && c.user2Id === b) || (c.user2Id === userId && c.user1Id === b)
+          );
+          
+          const timeA = convA?.lastMessageTime?.toMillis() || 0;
+          const timeB = convB?.lastMessageTime?.toMillis() || 0;
+          return timeB - timeA; // Descendente: más reciente primero
+        });
+        
+        console.log('Conversaciones únicas encontradas:', sortedUserIds);
+        observer.next(sortedUserIds);
+      };
+      
+      // Query para conversaciones donde el usuario es user1Id
+      try {
+        const q1 = query(
+          conversationsRef,
+          where('user1Id', '==', userId)
+        );
+        
+        unsubscribe1 = onSnapshot(q1, 
+          (snapshot: QuerySnapshot<DocumentData>) => {
+            conversations1 = snapshot.docs.map((doc: any) => ({ 
+              id: doc.id, 
+              ...doc.data() 
+            } as Conversation));
+            updateConversations();
+          },
+          error => {
+            console.error('Error en query de conversaciones user1Id:', error);
+          }
+        );
+      } catch (error) {
+        console.error('Error creando query de conversaciones user1Id:', error);
+      }
+      
+      // Query para conversaciones donde el usuario es user2Id
+      try {
+        const q2 = query(
+          conversationsRef,
+          where('user2Id', '==', userId)
+        );
+        
+        unsubscribe2 = onSnapshot(q2, 
+          (snapshot: QuerySnapshot<DocumentData>) => {
+            conversations2 = snapshot.docs.map((doc: any) => ({ 
+              id: doc.id,
+              ...doc.data() 
+            } as Conversation));
+            updateConversations();
+          },
+          error => {
+            console.error('Error en query de conversaciones user2Id:', error);
+          }
+        );
+      } catch (error) {
+        console.error('Error creando query de conversaciones user2Id:', error);
+      }
+      
+      return () => {
+        if (unsubscribe1) unsubscribe1();
+        if (unsubscribe2) unsubscribe2();
+      };
+    });
   }
 
-  async markAsRead(messageId: string) {
-    const messageRef = doc(this.firestore, 'messages', messageId);
-    await updateDoc(messageRef, { read: true });
+  async markAsRead(userId1: string, userId2: string, messageIndex: number): Promise<void> {
+    const conversationId = this.getConversationId(userId1, userId2);
+    const conversationRef = doc(this.firestore, 'conversations', conversationId);
+    
+    const conversationSnap = await getDoc(conversationRef);
+    if (!conversationSnap.exists()) {
+      throw new Error('Conversación no encontrada');
+    }
+    
+    const conversation = conversationSnap.data() as Conversation;
+    const messages = [...(conversation.messages || [])];
+    
+    // Buscar el mensaje que necesita ser marcado como leído (debe ser para el usuario actual)
+    if (messages[messageIndex] && messages[messageIndex].toId === userId1) {
+      messages[messageIndex] = { ...messages[messageIndex], read: true };
+      
+      await updateDoc(conversationRef, {
+        messages: messages,
+        updatedAt: Timestamp.now()
+      });
+    }
+  }
+
+  async deleteMessage(userId1: string, userId2: string): Promise<void> {
+    const conversationId = this.getConversationId(userId1, userId2);
+    const conversationRef = doc(this.firestore, 'conversations', conversationId);
+    
+    // Eliminar toda la conversación
+    await deleteDoc(conversationRef);
   }
 
   // Storage Methods
@@ -1230,23 +1550,38 @@ export class FirebaseService {
 
   // Follow/Unfollow
   async followUser(currentUserId: string, targetUserId: string) {
+    if (currentUserId === targetUserId) {
+      throw new Error('No puedes seguirte a ti mismo');
+    }
+
     const currentUserRef = doc(this.firestore, 'users', currentUserId);
     const targetUserRef = doc(this.firestore, 'users', targetUserId);
     
     const currentUser = await this.getUserProfile(currentUserId);
     const targetUser = await this.getUserProfile(targetUserId);
     
-    if (currentUser && targetUser) {
-      const following = currentUser.following || [];
-      const followers = targetUser.followers || [];
+    if (!currentUser) {
+      throw new Error('Usuario actual no encontrado');
+    }
+    
+    if (!targetUser) {
+      throw new Error('Usuario objetivo no encontrado');
+    }
+    
+    const following = currentUser.following || [];
+    const followers = targetUser.followers || [];
+    
+    if (!following.includes(targetUserId)) {
+      // Actualizar following del usuario actual
+      await updateDoc(currentUserRef, { following: [...following, targetUserId] });
       
-      if (!following.includes(targetUserId)) {
-        await updateDoc(currentUserRef, { following: [...following, targetUserId] });
-        if (!followers.includes(currentUserId)) {
-          await updateDoc(targetUserRef, { followers: [...followers, currentUserId] });
-        }
-        
-        // Crear notificación de seguimiento
+      // Actualizar followers del usuario objetivo
+      if (!followers.includes(currentUserId)) {
+        await updateDoc(targetUserRef, { followers: [...followers, currentUserId] });
+      }
+      
+      // Crear notificación de seguimiento (envolver en try-catch para que no falle si hay error)
+      try {
         await this.createNotification({
           userId: targetUserId,
           type: 'follow',
@@ -1255,24 +1590,38 @@ export class FirebaseService {
           fromUserPhoto: currentUser.photoURL || null,
           read: false
         });
+      } catch (notificationError) {
+        // Si falla la notificación, solo loguear el error pero no lanzarlo
+        // El seguimiento ya se actualizó correctamente
+        console.warn('Error creando notificación de seguimiento:', notificationError);
       }
     }
   }
 
   async unfollowUser(currentUserId: string, targetUserId: string) {
+    if (currentUserId === targetUserId) {
+      throw new Error('No puedes dejar de seguirte a ti mismo');
+    }
+
     const currentUserRef = doc(this.firestore, 'users', currentUserId);
     const targetUserRef = doc(this.firestore, 'users', targetUserId);
     
     const currentUser = await this.getUserProfile(currentUserId);
     const targetUser = await this.getUserProfile(targetUserId);
     
-    if (currentUser && targetUser) {
-      const following = (currentUser.following || []).filter(id => id !== targetUserId);
-      const followers = (targetUser.followers || []).filter(id => id !== currentUserId);
-      
-      await updateDoc(currentUserRef, { following });
-      await updateDoc(targetUserRef, { followers });
+    if (!currentUser) {
+      throw new Error('Usuario actual no encontrado');
     }
+    
+    if (!targetUser) {
+      throw new Error('Usuario objetivo no encontrado');
+    }
+    
+    const following = (currentUser.following || []).filter(id => id !== targetUserId);
+    const followers = (targetUser.followers || []).filter(id => id !== currentUserId);
+    
+    await updateDoc(currentUserRef, { following });
+    await updateDoc(targetUserRef, { followers });
   }
 
   getUserPosts(userId: string): Observable<Post[]> {
@@ -1396,18 +1745,25 @@ export class FirebaseService {
     const docRef = await addDoc(notificationsRef, newNotification);
     
     // Mantener solo las últimas 20 notificaciones por usuario
-    const q = query(
-      notificationsRef,
-      where('userId', '==', notification.userId),
-      orderBy('createdAt', 'desc')
-    );
-    const snapshot = await getDocs(q);
-    
-    if (snapshot.size > 20) {
-      // Eliminar las notificaciones más antiguas (después de la 20)
-      const docsToDelete = snapshot.docs.slice(20);
-      const deletePromises = docsToDelete.map(doc => deleteDoc(doc.ref));
-      await Promise.all(deletePromises);
+    // Envolver en try-catch para que no falle si no hay permisos de eliminación
+    try {
+      const q = query(
+        notificationsRef,
+        where('userId', '==', notification.userId),
+        orderBy('createdAt', 'desc')
+      );
+      const snapshot = await getDocs(q);
+      
+      if (snapshot.size > 20) {
+        // Eliminar las notificaciones más antiguas (después de la 20)
+        const docsToDelete = snapshot.docs.slice(20);
+        const deletePromises = docsToDelete.map(doc => deleteDoc(doc.ref));
+        await Promise.all(deletePromises);
+      }
+    } catch (error) {
+      // Si falla la limpieza de notificaciones antiguas, solo loguear
+      // La notificación ya se creó correctamente
+      console.warn('Error limpiando notificaciones antiguas:', error);
     }
     
     return docRef.id;
@@ -1457,6 +1813,84 @@ export class FirebaseService {
       updateDoc(doc.ref, { read: true })
     );
     await Promise.all(updatePromises);
+  }
+
+  // Obtener el total de mensajes no leídos para un usuario
+  getUnreadMessagesCount(userId: string): Observable<number> {
+    const conversationsRef = collection(this.firestore, 'conversations');
+    
+    return new Observable(observer => {
+      let unsubscribe1: (() => void) | undefined;
+      let unsubscribe2: (() => void) | undefined;
+      let conversations1: Conversation[] = [];
+      let conversations2: Conversation[] = [];
+      
+      const updateCount = () => {
+        const allConversations = [...conversations1, ...conversations2];
+        let totalUnread = 0;
+        
+        allConversations.forEach((conv: Conversation) => {
+          // Contar mensajes no leídos donde el usuario es el destinatario
+          const unreadMessages = (conv.messages || []).filter(m => 
+            !m.read && m.toId === userId
+          );
+          totalUnread += unreadMessages.length;
+        });
+        
+        observer.next(totalUnread);
+      };
+      
+      // Query para conversaciones donde el usuario es user1Id
+      try {
+        const q1 = query(
+          conversationsRef,
+          where('user1Id', '==', userId)
+        );
+        
+        unsubscribe1 = onSnapshot(q1, 
+          (snapshot: QuerySnapshot<DocumentData>) => {
+            conversations1 = snapshot.docs.map((doc: any) => ({ 
+              id: doc.id, 
+              ...doc.data() 
+            } as Conversation));
+            updateCount();
+          },
+          error => {
+            console.error('Error en query de conversaciones user1Id:', error);
+          }
+        );
+      } catch (error) {
+        console.error('Error creando query de conversaciones user1Id:', error);
+      }
+      
+      // Query para conversaciones donde el usuario es user2Id
+      try {
+        const q2 = query(
+          conversationsRef,
+          where('user2Id', '==', userId)
+        );
+        
+        unsubscribe2 = onSnapshot(q2, 
+          (snapshot: QuerySnapshot<DocumentData>) => {
+            conversations2 = snapshot.docs.map((doc: any) => ({ 
+              id: doc.id,
+              ...doc.data() 
+            } as Conversation));
+            updateCount();
+          },
+          error => {
+            console.error('Error en query de conversaciones user2Id:', error);
+          }
+        );
+      } catch (error) {
+        console.error('Error creando query de conversaciones user2Id:', error);
+      }
+      
+      return () => {
+        if (unsubscribe1) unsubscribe1();
+        if (unsubscribe2) unsubscribe2();
+      };
+    });
   }
 
 }

@@ -3,33 +3,83 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Usuarios: permitir lectura para verificar si existe un usuario por puuid durante registro
     // Escritura solo propia o durante creación de cuenta
+    // Permitir actualizar followers/following para que los usuarios puedan seguirse
     match /users/{userId} {
       // Permitir lectura para verificar si un puuid ya está registrado
       allow read: if true;
       // Permitir escritura durante registro (cuando no hay auth) o cuando el usuario escribe su propio perfil
       allow create: if true;
-      allow update, delete: if request.auth != null && request.auth.uid == userId;
+      // Permitir actualizar el propio perfil completo
+      allow update: if request.auth != null && request.auth.uid == userId;
+      // Permitir actualizar solo followers de otros usuarios (para seguir/dejar de seguir)
+      // Solo se pueden modificar los campos followers
+      allow update: if request.auth != null && 
+        request.auth.uid != userId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['followers']) &&
+        request.resource.data.followers is list;
+      // Permitir eliminar solo el propio perfil
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Posts: lectura pública, escritura autenticada
+    // Posts: lectura pública para autenticados, escritura autenticada
+    // Permitir actualizaciones para likes, dislikes y comentarios por cualquier usuario autenticado
     match /posts/{postId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && 
+      // Permitir actualizar para reacciones (likes/dislikes) y comentarios
+      // Cualquier usuario autenticado puede reaccionar o comentar
+      allow update: if request.auth != null;
+      // Solo el autor puede eliminar el post
+      allow delete: if request.auth != null && 
         (resource.data.authorId == request.auth.uid);
     }
     
-    // Mensajes: solo entre usuarios autenticados
+    // Mensajes: solo entre usuarios autenticados (mantener para compatibilidad)
     match /messages/{messageId} {
-      allow read, write: if request.auth != null && 
+      // Permitir lectura si el usuario es el remitente o destinatario
+      allow read: if request.auth != null && 
+        (resource == null || 
+         resource.data.fromId == request.auth.uid || 
+         resource.data.toId == request.auth.uid);
+      // Permitir crear si el usuario es el remitente
+      allow create: if request.auth != null && 
+        request.resource.data.fromId == request.auth.uid;
+      // Permitir actualizar solo el campo 'read' si el usuario es el destinatario
+      allow update: if request.auth != null && 
+        resource.data.toId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      // Permitir eliminar si el usuario es el remitente o destinatario
+      allow delete: if request.auth != null && 
         (resource.data.fromId == request.auth.uid || 
          resource.data.toId == request.auth.uid);
     }
     
-    // Torneos: lectura pública, escritura solo admin
+    // Conversaciones: solo entre usuarios autenticados
+    match /conversations/{conversationId} {
+      // Permitir lectura si el usuario es parte de la conversación
+      allow read: if request.auth != null && 
+        (resource == null || 
+         resource.data.user1Id == request.auth.uid || 
+         resource.data.user2Id == request.auth.uid);
+      // Permitir crear si el usuario es parte de la conversación
+      allow create: if request.auth != null && 
+        (request.resource.data.user1Id == request.auth.uid || 
+         request.resource.data.user2Id == request.auth.uid);
+      // Permitir actualizar si el usuario es parte de la conversación
+      allow update: if request.auth != null && 
+        (resource.data.user1Id == request.auth.uid || 
+         resource.data.user2Id == request.auth.uid);
+      // Permitir eliminar si el usuario es parte de la conversación
+      allow delete: if request.auth != null && 
+        (resource.data.user1Id == request.auth.uid || 
+         resource.data.user2Id == request.auth.uid);
+    }
+    
+    // Torneos: lectura pública para todos, escritura solo admin
     match /tournaments/{tournamentId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow read: if true; // Permitir lectura pública
+      allow create, update, delete: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
     // Noticias: lectura pública para todos (solo publicadas), escritura solo admin
@@ -55,11 +105,21 @@ service cloud.firestore {
     
     // Notificaciones: lectura y escritura solo para el usuario propietario
     match /notifications/{notificationId} {
+      // Permitir lectura si el usuario es el propietario (incluye queries)
       allow read: if request.auth != null && 
         (resource == null || resource.data.userId == request.auth.uid);
+      // Permitir crear notificaciones si el usuario autenticado es el que crea la notificación
+      // o si está creando una notificación para otro usuario (sistema de notificaciones)
       allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && 
-        (resource == null || resource.data.userId == request.auth.uid);
+      // Permitir actualizar solo el campo 'read' si el usuario es el propietario
+      allow update: if request.auth != null && 
+        (resource != null && resource.data.userId == request.auth.uid) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      // Permitir eliminar solo si el usuario es el propietario
+      // También permitir eliminar notificaciones antiguas durante la limpieza (el sistema puede eliminar)
+      allow delete: if request.auth != null && 
+        (resource != null && (resource.data.userId == request.auth.uid || 
+         resource.data.userId == request.resource.data.userId));
     }
   }
 }
