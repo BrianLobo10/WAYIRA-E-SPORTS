@@ -737,5 +737,18 @@ export class ProfileComponent implements OnInit {
     this.videoPreviewCache.forEach((url: string) => URL.revokeObjectURL(url));
     this.videoPreviewCache.clear();
   }
+
+  getTextSizeClass(content: string): string {
+    const length = content.length;
+    if (length <= 30) {
+      return 'text-short';
+    } else if (length <= 100) {
+      return 'text-medium';
+    } else if (length <= 300) {
+      return 'text-long';
+    } else {
+      return 'text-very-long';
+    }
+  }
 }
 
