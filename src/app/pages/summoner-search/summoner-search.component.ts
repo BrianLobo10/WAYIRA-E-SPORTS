@@ -85,6 +85,7 @@ export class SummonerSearchComponent {
       }
     };
     
+    // Obtener partidas recientes (20 para mostrar)
     this.riotApiService.getMatches(this.selectedRegion, puuid, 20).subscribe({
       next: (matches) => {
         this.matches.set(matches);
@@ -200,83 +201,21 @@ export class SummonerSearchComponent {
   }
 
   getQueueName(queueId: number): string {
-    const queueMap: { [key: number]: string } = {
-      0: 'Personalizada',
-      400: 'Normal Draft',
-      420: 'Ranked Solo/Duo',
-      430: 'Normal Blind',
-      440: 'Ranked Flex',
-      450: 'ARAM',
-      460: 'Normal 3v3',
-      470: 'Ranked Flex 3v3',
-      600: 'Blood Hunt Assassin',
-      610: 'Dark Star: Singularity',
-      700: 'Clash',
-      720: 'Clash',
-      800: 'Co-op vs IA Intermedio',
-      810: 'Co-op vs IA Intro',
-      820: 'Co-op vs IA Principiante',
-      830: 'Co-op vs IA Intro',
-      840: 'Co-op vs IA Principiante',
-      850: 'Co-op vs IA Intermedio',
-      900: 'URF',
-      920: 'Legend of the Poro King',
-      1020: 'One For All',
-      1090: 'Teamfight Tactics Normal',
-      1100: 'Teamfight Tactics Ranked',
-      1110: 'Teamfight Tactics Hyper Roll',
-      1111: 'Teamfight Tactics Double Up',
-      1300: 'Nexus Blitz',
-      1400: 'Ultimate Spellbook',
-      1700: 'Arena',
-      1900: 'URF',
-      2000: 'Tutorial 1',
-      2010: 'Tutorial 2',
-      2020: 'Tutorial 3',
-      // Variantes con más dígitos
-      4500: 'ARAM',
-      14000: 'Ultimate Spellbook',
-      17000: 'Arena',
-      19000: 'URF',
-      20000: 'Tutorial'
-    };
-    
-    // Si el queueId está en el mapa, devolverlo
-    if (queueMap[queueId]) {
-      return queueMap[queueId];
+    // Modos principales que tienen nombres específicos
+    if (queueId === 420) {
+      return 'Ranked Solo/Duo';
     }
-    
-    // Detección por rangos para modos no mapeados
-    // ARAM siempre es 450 o variantes
+    if (queueId === 440) {
+      return 'Ranked Flex';
+    }
+    // ARAM y variantes (450, 4500-4599, etc.)
     if (queueId === 450 || (queueId >= 4500 && queueId < 4600)) {
       return 'ARAM';
     }
     
-    // Modos destacados (Ultimate Spellbook, etc.)
-    if (queueId >= 1400 && queueId < 2000) {
-      return 'Modo Destacado';
-    }
-    
-    if (queueId >= 14000 && queueId < 20000) {
-      return 'Modo Destacado';
-    }
-    
-    // Arena
-    if (queueId >= 1700 && queueId < 1800) {
-      return 'Arena';
-    }
-    
-    if (queueId >= 17000 && queueId < 18000) {
-      return 'Arena';
-    }
-    
-    // URF y modos rápidos
-    if (queueId === 900 || queueId === 1900 || queueId === 19000) {
-      return 'URF';
-    }
-    
-    // Por defecto, mostrar el ID del modo para debugging
-    return `Modo ${queueId}`;
+    // Todos los demás modos se muestran como "Destacado"
+    // Esto incluye ARAM Caos y otros modos temporales
+    return 'Destacado';
   }
 
   getCurrentLeague(): LeagueEntry | null {

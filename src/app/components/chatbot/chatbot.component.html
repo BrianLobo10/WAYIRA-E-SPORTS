@@ -1,4 +1,4 @@
-<div class="chatbot-container">
+<div class="chatbot-container" [attr.data-position]="position" [attr.data-chatbot-id]="chatbotId">
   <!-- Botón flotante -->
   <button 
     class="chatbot-toggle" 
@@ -14,7 +14,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
       </svg>
     }
-    <span class="chatbot-badge">POTATO</span>
+    <span class="chatbot-badge">POTATO @if (modelName !== 'Auto') { ({{ modelName }}) }</span>
   </button>
 
   <!-- Ventana de chat -->
@@ -26,7 +26,7 @@
             <span class="potato-emoji">🥔</span>
           </div>
           <div class="chatbot-header-text">
-            <h3>POTATO</h3>
+            <h3>POTATO @if (modelName !== 'Auto') { <span class="model-badge">{{ modelName }}</span> }</h3>
             <p class="chatbot-status">En línea</p>
           </div>
         </div>

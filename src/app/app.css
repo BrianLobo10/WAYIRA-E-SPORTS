@@ -15,3 +15,15 @@
   flex: 1;
 }
 
+@media (max-width: 1200px) {
+  .test-chatbots {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .test-chatbots app-chatbot {
+    max-width: 100%;
+    width: 100%;
+  }
+}
+

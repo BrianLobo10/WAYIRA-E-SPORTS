@@ -116,10 +116,8 @@ service cloud.firestore {
         (resource != null && resource.data.userId == request.auth.uid) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
       // Permitir eliminar solo si el usuario es el propietario
-      // También permitir eliminar notificaciones antiguas durante la limpieza (el sistema puede eliminar)
       allow delete: if request.auth != null && 
-        (resource != null && (resource.data.userId == request.auth.uid || 
-         resource.data.userId == request.resource.data.userId));
+        resource != null && resource.data.userId == request.auth.uid;
     }
   }
 }

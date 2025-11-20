@@ -1,4 +1,4 @@
-import { Component, signal, inject, OnInit, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, signal, inject, OnInit, ViewChild, ElementRef, AfterViewChecked, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -23,6 +23,13 @@ interface ChatMessage {
 export class ChatbotComponent implements OnInit, AfterViewChecked {
   @ViewChild('chatMessages') chatMessages!: ElementRef;
   @ViewChild('chatInput') chatInput!: ElementRef;
+  
+  // Inputs para configurar el chatbot
+  @Input() apiEndpoint: string = '/api/chatbot';
+  @Input() modelName: string = 'Auto';
+  @Input() chatbotId: string = 'default'; // Para identificar cada instancia
+  @Input() position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'bottom-center' = 'bottom-right';
+  @Input() showInTestMode: boolean = false; // Si es true, se muestra en modo prueba
 
   private router = inject(Router);
   private firebaseService = inject(FirebaseService);
@@ -151,7 +158,21 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
     // Verificar autenticación
     this.firebaseService.currentUser.subscribe(user => {
       this.isAuthenticated.set(!!user);
+      
+      // Solo mostrar mensajes proactivos si no es modo prueba
+      if (user && !this.greetingShown && !this.showInTestMode) {
+        setTimeout(() => {
+          this.startProactiveConversation();
+        }, 2000);
+      }
     });
+    
+    // Si es modo prueba, abrir automáticamente
+    if (this.showInTestMode) {
+      setTimeout(() => {
+        this.isOpen.set(true);
+      }, 500);
+    }
   }
 
   ngAfterViewChecked() {
@@ -286,32 +307,37 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
   }
 
   private async findResponse(userMessage: string): Promise<{ text: string; action?: () => void }> {
-    // Primero buscar en la base de conocimiento para acciones específicas
-    for (const item of this.knowledgeBase) {
-      const foundKeyword = item.keywords.some(keyword => 
-        userMessage.includes(keyword.toLowerCase())
-      );
-      
-      if (foundKeyword) {
-        // Si tiene acción (navegación), usar la respuesta predefinida
-        if (item.action) {
+    // Primero verificar si hay una acción de navegación específica
+    // Solo para estas, usar respuesta predefinida + acción
+    const navigationKeywords = ['ir a', 'lleva a', 'navega a', 'abre', 've a'];
+    const hasNavigationIntent = navigationKeywords.some(keyword => 
+      userMessage.includes(keyword.toLowerCase())
+    );
+    
+    if (hasNavigationIntent) {
+      // Buscar en knowledgeBase solo para acciones de navegación
+      for (const item of this.knowledgeBase) {
+        const foundKeyword = item.keywords.some(keyword => 
+          userMessage.includes(keyword.toLowerCase())
+        );
+        
+        if (foundKeyword && item.action) {
+          // Usar respuesta predefinida solo si tiene acción de navegación
           return {
             text: item.response,
             action: item.action
           };
         }
-        // Si no tiene acción, puede usar IA para mejorar la respuesta
-        break;
       }
     }
 
-    // Usar IA para generar respuesta inteligente
+    // Para todo lo demás, SIEMPRE usar IA (Gemini)
     try {
       const aiResponse = await this.getAIResponse(userMessage);
       return { text: aiResponse };
     } catch (error) {
       console.error('Error obteniendo respuesta de IA:', error);
-      // Fallback a respuesta inteligente local
+      // Fallback a respuesta inteligente local solo si falla la IA
       return this.generateIntelligentResponse(userMessage);
     }
   }
@@ -327,8 +353,8 @@ export class ChatbotComponent implements OnInit, AfterViewChecked {
 
     try {
       // Llamar al endpoint de IA en el servidor
-      // Usa el proxy configurado en package.json o la URL del servidor
-      const apiUrl = '/api/chatbot'; // El proxy en package.json redirige a localhost:3001
+      // Usa el endpoint configurado via @Input
+      const apiUrl = this.apiEndpoint;
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {

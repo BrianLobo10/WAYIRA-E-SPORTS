@@ -1,14 +1,15 @@
 .messages-page {
   min-height: 100vh;
   background: #0f1419;
-  padding: 1rem 0;
+  padding: 2rem 1.5rem;
 }
 
 .messages-container {
   max-width: 1200px;
   margin: 0 auto;
   display: flex;
-  height: calc(100vh - 2rem);
+  height: calc(100vh - 4rem - 4rem);
+  max-height: 800px;
   background: #1a2332;
   border-radius: 12px;
   overflow: hidden;
@@ -212,6 +213,8 @@
   display: flex;
   flex-direction: column;
   background: #1a2332;
+  min-height: 0;
+  max-height: 100%;
 }
 
 .chat-header {
@@ -227,6 +230,14 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.chat-user-info:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .chat-avatar,
@@ -270,10 +281,13 @@
 .chat-messages {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 1rem 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  min-height: 0;
+  max-height: 100%;
 }
 
 .empty-messages {
@@ -316,15 +330,18 @@
 }
 
 .message.sent .message-content {
-  background: #6366f1;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: #ffffff;
   border-bottom-right-radius: 4px;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
 .message.received .message-content {
-  background: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.2);
   color: #ffffff;
   border-bottom-left-radius: 4px;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
 }
 
 .message-content p {
@@ -347,6 +364,7 @@
   padding: 0.875rem 1.25rem;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   background: #0f1419;
+  flex-shrink: 0;
 }
 
 .emoji-button {
@@ -586,12 +604,13 @@
 
 @media (max-width: 768px) {
   .messages-page {
-    padding: 0.5rem 0;
+    padding: 1rem 1rem;
   }
 
   .messages-container {
     flex-direction: column;
-    height: calc(100vh - 1rem);
+    height: calc(100vh - 2rem - 2rem);
+    max-height: calc(100vh - 2rem - 2rem);
     border-radius: 8px;
   }
 

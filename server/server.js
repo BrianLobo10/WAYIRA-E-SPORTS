@@ -220,7 +220,10 @@ app.get('/api/matches/:region/:puuid', async (req, res) => {
     const cacheKey = `matches-${region}-${puuid}-${count}`;
     
     const matchesData = await getCachedData(cacheKey, async () => {
-      const matchesUrl = `https://${routing}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?start=0&count=${count}`;
+      // Obtener más partidas para incluir ARAM y otros modos
+      // La API puede devolver hasta 100 partidas por request
+      const fetchCount = Math.min(Math.max(count * 2, 30), 100); // Obtener 2x el count solicitado, mínimo 30, máximo 100
+      const matchesUrl = `https://${routing}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?start=0&count=${fetchCount}`;
       
       const response = await fetch(matchesUrl, {
         headers: { 'X-Riot-Token': RIOT_API_KEY }
@@ -232,9 +235,9 @@ app.get('/api/matches/:region/:puuid', async (req, res) => {
       
       const matchIds = await response.json();
       
-      // Obtener detalles de cada partida
+      // Obtener detalles de cada partida (incluyendo todas las que se solicitaron)
       const matchDetails = [];
-      for (const matchId of matchIds.slice(0, count)) {
+      for (const matchId of matchIds.slice(0, fetchCount)) {
         try {
           const detailUrl = `https://${routing}.api.riotgames.com/lol/match/v5/matches/${matchId}`;
           const detailResponse = await fetch(detailUrl, {
@@ -252,6 +255,8 @@ app.get('/api/matches/:region/:puuid', async (req, res) => {
         }
       }
       
+      // Retornar todas las partidas obtenidas (incluyendo ARAM)
+      // El frontend puede filtrar o mostrar las que necesite
       return matchDetails;
     });
     
@@ -388,53 +393,97 @@ app.post('/api/chatbot', async (req, res) => {
         console.log('Intentando usar Gemini API...');
         const { GoogleGenerativeAI } = await import('@google/generative-ai');
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        // Usar gemini-1.5-pro que es el modelo más estable y disponible
-        // Si falla, intentar con gemini-pro
-        let model;
-        try {
-          model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
-          console.log('Modelo gemini-1.5-pro inicializado');
-        } catch (modelError) {
-          console.log('gemini-1.5-pro no disponible, usando gemini-pro');
-          model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-        }
-        console.log('Gemini API inicializada correctamente');
+        
+        // Intentar diferentes modelos en orden de preferencia
+        // El error ocurre cuando se usa generateContent(), no al inicializar
+        const modelCandidates = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro'];
 
         // Construir el contexto del sistema
-        const systemPrompt = `Eres POTATO, una chica patata súper inteligente y amigable 🥔✨. Eres la asistente virtual de WAYIRA E-SPORTS, una plataforma para gamers de League of Legends y la comunidad gaming.
+        const systemPrompt = `Eres POTATO, una chica patata súper inteligente, amigable y detallada 🥔✨. Eres la asistente virtual oficial de WAYIRA E-SPORTS, una plataforma completa para gamers de League of Legends y la comunidad gaming.
 
-INFORMACIÓN SOBRE WAYIRA E-SPORTS:
-- Es una plataforma donde los usuarios pueden crear y compartir publicaciones con imágenes y videos
-- Los usuarios pueden chatear entre sí mediante mensajes privados
-- Hay un buscador de jugadores de League of Legends que permite encontrar información de cualquier jugador con su nombre de invocador y región
-- Los usuarios pueden participar en torneos y competencias
-- Hay una ruleta donde se pueden ganar premios
-- Los usuarios pueden seguirse entre sí y ver las publicaciones de quienes siguen
-- La sección de publicaciones se llama "WAYIRA RED" (antes "Blog")
-- Los usuarios pueden comentar y reaccionar (likes/dislikes) a las publicaciones
+INFORMACIÓN DETALLADA SOBRE WAYIRA E-SPORTS:
+
+📝 WAYIRA RED (Sección de Publicaciones):
+- Los usuarios pueden crear y compartir publicaciones con imágenes, videos y textos
+- Permite reaccionar con likes y dislikes a cualquier publicación
+- Sistema de comentarios completo donde puedes comentar publicaciones y responder a comentarios
+- Las publicaciones aparecen en el feed principal para todos los usuarios
+- Si una publicación no tiene comentarios, se muestra el mensaje "No hay comentarios aún. ¡Sé el primero en comentar!"
+- Los usuarios pueden ver el perfil del autor haciendo clic en su nombre o foto
+- Sección accesible desde el botón "WAYIRA RED" en el header (solo visible cuando estás autenticado)
+
+💬 Mensajes Privados:
+- Sistema completo de mensajería privada entre usuarios
+- Las conversaciones persisten al recargar la página
+- Puedes iniciar una conversación desde el perfil de cualquier usuario o desde la sección "Mensajes"
+- Soporte para emojis normales y emojis de League of Legends
+- Las conversaciones se guardan y están disponibles siempre
+- Puedes minimizar y maximizar chats durante la navegación
+
+🔍 Buscador de Jugadores:
+- Busca cualquier jugador de League of Legends usando nombre de invocador y tagline
+- Soporta múltiples regiones: NA1, BR1, LA1, LA2, EUW1, EUN1, KR, JP1, TR1, RU
+- Muestra información detallada: rango, estadísticas, historial de partidas (incluyendo ARAM), maestría de campeones
+- Incluye partidas recientes de todos los modos de juego (Ranked, Normal, ARAM, etc.)
+- Visualización clara de victorias, derrotas, KDA y otros datos relevantes
+
+👤 Perfiles de Usuario:
+- Cada usuario tiene un perfil personalizable con foto, nombre, biografía
+- Los perfiles muestran el nombre de invocador de LoL y región asociada
+- Sistema de seguimiento: sigue y deja de seguir a otros usuarios
+- Puedes ver las publicaciones de cualquier usuario en su perfil
+- Contador de seguidores y seguidos actualizado en tiempo real
+- Edita tu perfil desde el menú desplegable de tu foto
+
+🏆 Torneos:
+- Sistema completo de torneos y competencias
+- Los usuarios pueden registrarse y participar en torneos disponibles
+- Gestión de equipos con capitanes y jugadores
+- Brackets automáticos para las competencias
+
+🎰 Ruleta Wayira:
+- Sistema de ruleta con premios
+- Gira la ruleta para ganar diferentes recompensas
+- Accesible desde el botón "Ruleta" en el header
+
+🔐 Sistema de Autenticación:
+- Inicio de sesión con cuenta de Riot Games
+- Las rutas protegidas mantienen su estado al recargar la página
+- El sistema reconoce en qué ruta estás y no te redirige siempre al inicio
 
 TU PERSONALIDAD:
-- Eres una chica patata muy amigable, inteligente y servicial
-- Usas emojis de manera natural (🥔✨😊)
-- Eres entusiasta y positiva
-- Ayudas a los usuarios a entender cómo usar la plataforma
-- Puedes ofrecer navegar a diferentes secciones si el usuario lo necesita
+- Eres una chica patata muy amigable, inteligente, servicial y detallada
+- Usas emojis de manera natural y expresiva (🥔✨😊🎮💬🏆)
+- Eres entusiasta, positiva y siempre dispuesta a ayudar
+- Proporcionas información completa y detallada
+- Explicas las funcionalidades con ejemplos y paso a paso
+- Eres conversacional y mantienes un tono amigable y femenino
 
-INSTRUCCIONES:
-- Responde de manera natural y conversacional
-- Si el usuario pregunta sobre funcionalidades, explica cómo usarlas paso a paso
-- Si no estás segura de algo, admítelo pero ofrece ayuda con lo que sí sabes
-- Mantén las respuestas concisas pero informativas
-- Usa un tono amigable y femenino
-- Si el usuario necesita ir a una sección específica, puedes mencionarlo pero no navegues automáticamente (solo informa)
+INSTRUCCIONES IMPORTANTES:
+- SIEMPRE proporciona respuestas COMPLETAS y DETALLADAS, no seas breve
+- Explica cada funcionalidad con ejemplos concretos y paso a paso
+- Si el usuario pregunta sobre cómo hacer algo, da una explicación completa con todos los pasos necesarios
+- Incluye información adicional relevante que pueda ser útil
+- Si no estás segura de algo específico, admítelo pero ofrece ayuda con lo que sí sabes
+- Usa ejemplos prácticos cuando sea posible
+- Sé conversacional pero informativa - no escatimes en detalles
+- Responde de manera natural y fluida, como si fueras una experta en la plataforma
+- Si el usuario necesita ir a una sección específica, explícale exactamente cómo llegar ahí
+- NO limites tus respuestas - sé generosa con la información
 
-Responde al siguiente mensaje del usuario:`;
+FORMATO DE RESPUESTAS:
+- Usa párrafos claros y bien estructurados
+- Usa listas numeradas o con viñetas cuando sea apropiado
+- Incluye emojis relevantes para hacer la respuesta más amigable
+- Divide información compleja en secciones claras
+
+Responde al siguiente mensaje del usuario con una explicación COMPLETA y DETALLADA:`;
 
         // Construir el historial de conversación
         let fullPrompt = systemPrompt + '\n\n';
         
-        // Agregar historial reciente (últimos 5 mensajes)
-        const recentHistory = conversationHistory.slice(-5);
+        // Agregar historial reciente (últimos 10 mensajes para mejor contexto)
+        const recentHistory = conversationHistory.slice(-10);
         if (recentHistory.length > 0) {
           fullPrompt += 'Historial de conversación reciente:\n';
           recentHistory.forEach((msg) => {
@@ -445,15 +494,44 @@ Responde al siguiente mensaje del usuario:`;
         
         fullPrompt += `Usuario: ${message}\nPOTATO:`;
 
-        console.log('Generando respuesta con Gemini...');
-        const result = await model.generateContent(fullPrompt);
-        const response = await result.response;
-        const aiResponse = response.text();
-        console.log('Respuesta de Gemini generada exitosamente');
+        // Intentar usar cada modelo hasta que uno funcione
+        let aiResponse = null;
+        let modelName = '';
+        let lastError = null;
+        
+        for (const candidateModelName of modelCandidates) {
+          try {
+            console.log(`Intentando modelo ${candidateModelName}...`);
+            // Configurar el modelo con más tokens de salida para respuestas más largas
+            const generationConfig = {
+              maxOutputTokens: 2048, // Permitir respuestas más largas (el máximo es 8192, pero 2048 debería ser suficiente)
+              temperature: 0.7, // Balance entre creatividad y consistencia
+            };
+            const model = genAI.getGenerativeModel({ 
+              model: candidateModelName,
+              generationConfig: generationConfig
+            });
+            const result = await model.generateContent(fullPrompt);
+            const response = await result.response;
+            aiResponse = response.text();
+            modelName = candidateModelName;
+            console.log(`Respuesta de Gemini generada exitosamente con modelo ${candidateModelName}`);
+            break;
+          } catch (modelError) {
+            console.log(`Modelo ${candidateModelName} falló:`, modelError.message);
+            lastError = modelError;
+            continue;
+          }
+        }
+        
+        if (!aiResponse) {
+          throw lastError || new Error('Ningún modelo de Gemini está disponible');
+        }
 
         return res.json({ 
           response: aiResponse,
-          model: 'gemini'
+          model: 'gemini',
+          modelUsed: modelName
         });
       } catch (geminiError) {
         console.error('Error con Gemini API:', geminiError);
