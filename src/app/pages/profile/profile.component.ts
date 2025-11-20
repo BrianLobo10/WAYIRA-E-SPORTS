@@ -143,10 +143,15 @@ export class ProfileComponent implements OnInit {
       
       const currentUser = this.firebaseService.getCurrentUser();
       if (currentUser && profile) {
-        const followers = profile.followers || [];
-        const isFollowingUser = followers.includes(currentUser.uid);
-        this.isFollowing.set(isFollowingUser);
-        console.log('Estado de seguimiento cargado:', isFollowingUser, 'Seguidores:', followers);
+        // Verificar si el usuario actual está siguiendo al perfil objetivo
+        // Debemos verificar el 'following' del usuario actual, no los 'followers' del perfil objetivo
+        const currentUserProfile = await this.firebaseService.getUserProfile(currentUser.uid);
+        if (currentUserProfile) {
+          const following = currentUserProfile.following || [];
+          const isFollowingUser = following.includes(userId);
+          this.isFollowing.set(isFollowingUser);
+          console.log('Estado de seguimiento cargado:', isFollowingUser, 'Siguiendo:', following);
+        }
       }
     } catch (error) {
       console.error('Error cargando perfil:', error);
@@ -184,22 +189,29 @@ export class ProfileComponent implements OnInit {
         await this.firebaseService.followUser(currentUser.uid, profile.uid);
       }
       
-      // Esperar un momento para que Firestore actualice
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Actualizar el estado inmediatamente (optimista)
+      this.isFollowing.set(!wasFollowing);
       
-      // Recargar el perfil para actualizar los contadores
-      const updatedProfile = await this.firebaseService.getUserProfile(profile.uid);
+      // Recargar los perfiles en paralelo para actualizar contadores
+      const [updatedProfile, updatedCurrentUserProfile] = await Promise.all([
+        this.firebaseService.getUserProfile(profile.uid),
+        this.firebaseService.getUserProfile(currentUser.uid)
+      ]);
+      
       if (updatedProfile) {
         this.profile.set(updatedProfile);
-        // Actualizar el estado de seguimiento basado en el perfil actualizado
-        const isNowFollowing = (updatedProfile.followers || []).includes(currentUser.uid);
-        this.isFollowing.set(isNowFollowing);
-        console.log('Estado de seguimiento actualizado:', isNowFollowing);
-        console.log('Seguidores del perfil:', updatedProfile.followers);
       }
       
-      // También actualizar el perfil actual del usuario
-      await this.loadCurrentUserProfile();
+      if (updatedCurrentUserProfile) {
+        this.currentUserProfile.set(updatedCurrentUserProfile);
+        // Verificar el estado de seguimiento basado en el following del usuario actual
+        const following = updatedCurrentUserProfile.following || [];
+        const isNowFollowing = following.includes(profile.uid);
+        this.isFollowing.set(isNowFollowing);
+        console.log('Estado de seguimiento actualizado:', isNowFollowing);
+        console.log('Siguiendo del usuario actual:', following);
+        console.log('Seguidores del perfil objetivo:', updatedProfile?.followers || []);
+      }
     } catch (error) {
       console.error('Error al seguir/dejar de seguir:', error);
       alert('Error al actualizar. Por favor intenta nuevamente.');

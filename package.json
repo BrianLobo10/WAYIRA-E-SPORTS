@@ -14,6 +14,7 @@
     "deploy:hosting": "npm run build:prod && firebase deploy --only hosting",
     "deploy:functions": "firebase deploy --only functions",
     "deploy:all": "npm run build:prod && firebase deploy",
+    "update:riot-key": "node update-riot-api-key.js",
     "functions:config:set": "firebase functions:config:set",
     "functions:log": "firebase functions:log"
   },

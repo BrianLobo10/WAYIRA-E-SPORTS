@@ -76,7 +76,7 @@
     <div class="chat-window">
       @if (selectedConversation() && selectedUserProfile()) {
         <div class="chat-header">
-          <div class="chat-user-info">
+          <div class="chat-user-info" (click)="goToUserProfile(selectedConversation()!)" style="cursor: pointer;">
             @if (selectedUserProfile()!.photoURL) {
               <img [src]="selectedUserProfile()!.photoURL" [alt]="selectedUserProfile()!.displayName" class="chat-avatar">
             } @else {

@@ -1744,27 +1744,11 @@ export class FirebaseService {
     };
     const docRef = await addDoc(notificationsRef, newNotification);
     
-    // Mantener solo las últimas 20 notificaciones por usuario
-    // Envolver en try-catch para que no falle si no hay permisos de eliminación
-    try {
-      const q = query(
-        notificationsRef,
-        where('userId', '==', notification.userId),
-        orderBy('createdAt', 'desc')
-      );
-      const snapshot = await getDocs(q);
-      
-      if (snapshot.size > 20) {
-        // Eliminar las notificaciones más antiguas (después de la 20)
-        const docsToDelete = snapshot.docs.slice(20);
-        const deletePromises = docsToDelete.map(doc => deleteDoc(doc.ref));
-        await Promise.all(deletePromises);
-      }
-    } catch (error) {
-      // Si falla la limpieza de notificaciones antiguas, solo loguear
-      // La notificación ya se creó correctamente
-      console.warn('Error limpiando notificaciones antiguas:', error);
-    }
+    // No intentar limpiar notificaciones antiguas aquí porque:
+    // 1. Solo el usuario propietario puede eliminar sus propias notificaciones (reglas de Firestore)
+    // 2. Si creamos una notificación para otro usuario, no tenemos permisos para eliminar las suyas
+    // La limpieza de notificaciones antiguas debe hacerse desde el lado del cliente cuando el usuario las ve
+    // o mediante una Cloud Function con permisos de administrador
     
     return docRef.id;
   }

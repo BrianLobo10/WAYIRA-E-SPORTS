@@ -73,30 +73,23 @@ export class MessagesComponent implements OnInit {
     '🕠', '🕡', '🕢', '🕣', '🕤', '🕥', '🕦', '🕧'
   ];
 
-  // Emojis de Riot Games / League of Legends
+  // Emojis de Riot Games / League of Legends (incluyendo gestos)
   riotEmojis = [
+    // Gestos de LoL / Emojis de acción
+    '👏', '👍', '👎', '👊', '✊', '🤛', '🤜', '🤞', '✌️', '🤟',
+    '🤘', '👌', '🤌', '🤏', '👋', '🤚', '🖐', '✋', '🖖', '🙌',
+    '🤲', '🤝', '🙏', '✍️', '💪', '🦾', '🦿', '👈', '👉', '👆',
+    '👇', '☝️', '👀', '👁️', '🗣️', '👤', '👥',
     // Armas y combate
     '⚔️', '🗡️', '🛡️', '🏹', '🔪', '🪓', '⚡', '🔥', '💧', '❄️',
-    '🌪️', '💨', '💥', '⚡', '🔥', '💧', '❄️', '🌊', '🌋', '🌀',
+    '🌪️', '💨', '💥', '🌊', '🌋', '🌀',
     // Elementos mágicos
     '✨', '⭐', '🌟', '💫', '☄️', '🌠', '🔮', '💎', '⚗️', '🧪',
-    '🔭', '🔬', '⚛️', '💠', '🕯️', '🔦', '💡', '⚡', '🔥', '💧',
-    // Símbolos y signos
-    '⚡', '🔥', '💧', '❄️', '🌪️', '💫', '⭐', '✨', '💥', '💢',
-    '💨', '🌟', '☄️', '🌠', '🔮', '⚔️', '🛡️', '🗡️', '🏹', '🪃',
+    '🔭', '🔬', '⚛️', '💠', '🕯️', '🔦', '💡',
     // Objetos del juego
-    '💰', '🪙', '💎', '🔮', '⚗️', '🧪', '💊', '💉', '🩸', '⚙️',
-    '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🔩', '🧱', '⛓️', '🧲', '🔫',
-    '💣', '🧨', '🗝️', '🔑', '⚱️', '⚰️', '🏺', '🛡️', '⚔️', '🗡️',
-    // Símbolos de poder
-    '⚡', '🔥', '💧', '❄️', '🌪️', '💫', '⭐', '✨', '💥', '💢',
-    '🌟', '☄️', '🌠', '🔮', '💎', '⚗️', '🧪', '🔭', '🔬', '⚛️',
-    // Iconos especiales
-    '⚔️', '🛡️', '🗡️', '🏹', '🔪', '🪓', '⚡', '🔥', '💧', '❄️',
-    '🌪️', '💨', '💥', '💫', '⭐', '✨', '🌟', '☄️', '🌠', '🔮',
-    '💎', '⚗️', '🧪', '🔭', '🔬', '⚛️', '💠', '🕯️', '🔦', '💡',
-    '💰', '🪙', '⚙️', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🔩', '🧱',
-    '⛓️', '🧲', '🔫', '💣', '🧨', '🗝️', '🔑', '⚱️', '⚰️', '🏺'
+    '💰', '🪙', '💊', '💉', '🩸', '⚙️', '🔧', '🔨', '⚒️', '🛠️',
+    '⛏️', '🔩', '🧱', '⛓️', '🧲', '🔫', '💣', '🧨', '🗝️', '🔑',
+    '⚱️', '⚰️', '🏺'
   ];
   
   selectedUserProfile = computed(() => {
@@ -209,29 +202,47 @@ export class MessagesComponent implements OnInit {
     });
   }
 
-  selectConversation(userId: string) {
+  async selectConversation(userId: string) {
     // Verificar si el usuario existe en las conversaciones
-    const existingConv = this.conversations().find(c => c.userId === userId);
+    let existingConv = this.conversations().find(c => c.userId === userId);
+    
     if (!existingConv) {
-      // Si no existe, cargar el perfil y crear una conversación temporal
-      this.firebaseService.getUserProfile(userId).then(profile => {
+      // Si no existe, cargar el perfil y crear una conversación nueva
+      try {
+        const profile = await this.firebaseService.getUserProfile(userId);
         if (profile) {
-          this.conversations.update(convs => [...convs, { userId, profile, lastMessage: null, unread: 0 }]);
+          // Agregar la conversación a la lista
+          const newConversation = { userId, profile, lastMessage: null, unread: 0 };
+          this.conversations.update(convs => [...convs, newConversation]);
+          existingConv = newConversation;
+          
+          // Recargar conversaciones para asegurar que esté en la lista
+          // Esto también creará la conversación en Firestore si no existe
+          await this.firebaseService.getConversations(this.firebaseService.getCurrentUser()!.uid);
         }
-      });
+      } catch (error) {
+        console.error('Error cargando perfil para conversación:', error);
+        return;
+      }
     }
     
+    // Seleccionar la conversación
     this.selectedConversation.set(userId);
     this.minimizedChats.update(chats => {
       const newChats = new Set(chats);
       newChats.delete(userId);
       return newChats;
     });
+    
+    // Cargar mensajes de esta conversación
     this.loadMessages(userId);
     this.markAsRead(userId);
     
-    // Limpiar queryParams después de seleccionar
-    this.router.navigate([], { queryParams: {} });
+    // Limpiar queryParams después de seleccionar (pero mantener la conversación seleccionada)
+    this.router.navigate([], { 
+      queryParams: {},
+      replaceUrl: true // Reemplazar en lugar de agregar a la historia
+    });
   }
 
   loadMessages(otherUserId: string) {
@@ -374,12 +385,16 @@ export class MessagesComponent implements OnInit {
   }
 
   insertEmoji(emoji: string) {
+    // No cerrar el picker al insertar un emoji
     this.newMessage.update(msg => msg + emoji);
-    this.showEmojiPicker.set(false);
   }
 
   closeEmojiPicker() {
     this.showEmojiPicker.set(false);
+  }
+
+  goToUserProfile(userId: string) {
+    this.router.navigate(['/profile', userId]);
   }
 
   toggleConversationMenu(userId: string, event?: Event) {
