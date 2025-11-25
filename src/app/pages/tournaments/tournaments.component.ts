@@ -1,10 +1,10 @@
-import { Component, signal, inject, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, signal, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { FirebaseService, Tournament, UserProfile, Team, BracketMatch } from '../../services/firebase.service';
+import { FirebaseService, Tournament, UserProfile, Team, BracketMatch, PlayerInfo } from '../../services/firebase.service';
 import { Timestamp } from '@angular/fire/firestore';
-import { Subscription, debounceTime, distinctUntilChanged, Subject } from 'rxjs';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-tournaments',
@@ -27,17 +27,23 @@ export class TournamentsComponent implements OnInit, OnDestroy {
   showCreateModal = signal(false);
   creating = signal(false);
   
-  // Register team modal
-  @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
+  // Register team modal - Step 1: Create team
   showRegisterModal = signal(false);
+  showPlayersStep = signal(false); // Paso 2: Llenar información de jugadores
   registering = signal(false);
   selectedTournament = signal<Tournament | null>(null);
   teamName = signal('');
-  searchTerm = signal('');
-  searchResults = signal<UserProfile[]>([]);
-  selectedPlayers = signal<UserProfile[]>([]);
+  teamLogo = signal<File | null>(null);
+  teamLogoPreview = signal<string | null>(null);
+  uploadingLogo = signal(false);
+  
+  // Register team modal - Step 2: Players info
+  playersInfo = signal<PlayerInfo[]>([]);
+  currentPlayerIndex = signal(0); // Índice de la carta actual
+  editingPlayerIndex = signal<number | null>(null); // Índice del jugador en edición
   maxPlayers = 5; // Para LoL
-  private searchSubject = new Subject<string>();
+  
+  roles = ['Top', 'Jungle', 'Mid', 'ADC', 'Support'];
   
   // Delete tournament
   deletingTournamentId = signal<string | null>(null);
@@ -45,6 +51,11 @@ export class TournamentsComponent implements OnInit, OnDestroy {
   // Bracket view
   selectedTournamentForBracket = signal<Tournament | null>(null);
   showBracket = signal(false);
+  organizingBracket = signal(false); // Si está en modo organización
+  bracketTeams = signal<Team[]>([]); // Equipos organizados para el bracket
+  draggedTeam: Team | null = null;
+  bracketSlots: Array<{ team: Team | null; position: number }> = [];
+  bracketMatches: Array<{ team1: Team | null; team2: Team | null; matchIndex: number }> = []; // Enfrentamientos por parejas
   
   // Form fields
   tournamentName = signal('');
@@ -81,15 +92,6 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       window.history.replaceState({}, '', window.location.pathname);
     }
     
-    // Configurar debounce para la búsqueda
-    this.subscriptions.add(
-      this.searchSubject.pipe(
-        debounceTime(300),
-        distinctUntilChanged()
-      ).subscribe(term => {
-        this.performSearch(term);
-      })
-    );
   }
 
   async checkAdminStatus() {
@@ -243,6 +245,30 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     this.subscriptions.unsubscribe();
   }
 
+  isUserRegistered(tournament: Tournament): boolean {
+    const user = this.firebaseService.getCurrentUser();
+    if (!user) return false;
+    
+    const teams = tournament.teams || [];
+    return teams.some(team => {
+      // Verificar si es el capitán
+      if (team.captainId === user.uid) return true;
+      
+      // Verificar en players (array de IDs)
+      if (team.players && team.players.some((p: string) => p === user.uid || p === user.email)) return true;
+      
+      // Verificar en playerInfo
+      if (team.playerInfo && team.playerInfo.some((p: any) => {
+        if (typeof p === 'object' && p.email) {
+          return p.email === user.email;
+        }
+        return false;
+      })) return true;
+      
+      return false;
+    });
+  }
+
   openRegisterModal(tournament: Tournament) {
     const user = this.firebaseService.getCurrentUser();
     if (!user) {
@@ -251,13 +277,15 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       return;
     }
     
-    // Verificar si el usuario ya está registrado
+    // Verificar si el torneo está lleno
     const teams = tournament.teams || [];
-    const userAlreadyRegistered = teams.some(team => 
-      team.captainId === user.uid || team.players.includes(user.uid)
-    );
+    if (teams.length >= tournament.maxTeams) {
+      alert('El torneo está lleno');
+      return;
+    }
     
-    if (userAlreadyRegistered) {
+    // Verificar si el usuario ya está registrado
+    if (this.isUserRegistered(tournament)) {
       alert('Ya estás registrado en este torneo');
       return;
     }
@@ -265,104 +293,312 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     this.selectedTournament.set(tournament);
     this.resetRegisterForm();
     this.showRegisterModal.set(true);
-    
-    // Enfocar el input de búsqueda después de abrir el modal
-    setTimeout(() => {
-      if (this.searchInput && this.searchInput.nativeElement) {
-        this.searchInput.nativeElement.focus();
-      }
-    }, 300);
+    this.showPlayersStep.set(false);
+    this.initPlayersInfo();
   }
 
   closeRegisterModal() {
     this.showRegisterModal.set(false);
+    this.showPlayersStep.set(false);
     this.resetRegisterForm();
     this.selectedTournament.set(null);
   }
 
   resetRegisterForm() {
     this.teamName.set('');
-    this.searchTerm.set('');
-    this.searchResults.set([]);
-    this.selectedPlayers.set([]);
+    this.teamLogo.set(null);
+    this.teamLogoPreview.set(null);
+    this.playersInfo.set([]);
+    this.currentPlayerIndex.set(0);
+    this.editingPlayerIndex.set(null);
+    this.initPlayersInfo();
   }
 
-  onSearchChange() {
-    const term = this.searchTerm().trim();
-    if (term.length < 2) {
-      this.searchResults.set([]);
-      return;
-    }
-    // Emitir al subject para aplicar debounce
-    this.searchSubject.next(term);
+  // Lista de campeones de LoL
+  champions = [
+    'Aatrox', 'Ahri', 'Akali', 'Akshan', 'Alistar', 'Ambessa', 'Amumu', 'Anivia', 'Annie', 'Aphelios', 'Ashe',
+    'Aurelion Sol', 'Aurora', 'Azir', 'Bard', 'Bel\'Veth', 'Blitzcrank', 'Brand', 'Braum', 'Caitlyn', 'Camille', 'Cassiopeia',
+    'Cho\'Gath', 'Corki', 'Darius', 'Diana', 'Draven', 'Dr. Mundo', 'Ekko', 'Elise', 'Evelynn', 'Ezreal',
+    'Fiddlesticks', 'Fiora', 'Fizz', 'Galio', 'Gangplank', 'Garen', 'Gnar', 'Gragas', 'Graves', 'Gwen',
+    'Hecarim', 'Heimerdinger', 'Hwei', 'Illaoi', 'Irelia', 'Ivern', 'Janna', 'Jarvan IV', 'Jax', 'Jayce',
+    'Jhin', 'Jinx', 'K\'Sante', 'Kai\'Sa', 'Kalista', 'Karma', 'Karthus', 'Kassadin', 'Katarina', 'Kayle',
+    'Kayn', 'Kennen', 'Kha\'Zix', 'Kindred', 'Kled', 'Kog\'Maw', 'LeBlanc', 'Lee Sin', 'Leona', 'Lillia',
+    'Lissandra', 'Lucian', 'Lulu', 'Lux', 'Malphite', 'Malzahar', 'Maokai', 'Master Yi', 'Mel', 'Milio', 'Miss Fortune',
+    'Mordekaiser', 'Morgana', 'Naafiri', 'Nami', 'Nasus', 'Nautilus', 'Neeko', 'Nidalee', 'Nilah', 'Nocturne',
+    'Nunu', 'Olaf', 'Orianna', 'Ornn', 'Pantheon', 'Poppy', 'Pyke', 'Qiyana', 'Quinn', 'Rakan',
+    'Rammus', 'Rek\'Sai', 'Rell', 'Renata Glasc', 'Renekton', 'Rengar', 'Riven', 'Rumble', 'Ryze', 'Samira',
+    'Sejuani', 'Senna', 'Seraphine', 'Sett', 'Shaco', 'Shen', 'Shyvana', 'Singed', 'Sion', 'Sivir',
+    'Skarner', 'Smolder', 'Sona', 'Soraka', 'Swain', 'Sylas', 'Syndra', 'Tahm Kench', 'Taliyah', 'Talon', 'Taric',
+    'Teemo', 'Thresh', 'Tristana', 'Trundle', 'Tryndamere', 'Twisted Fate', 'Twitch', 'Udyr', 'Urgot', 'Varus',
+    'Vayne', 'Veigar', 'Vel\'Koz', 'Vex', 'Vi', 'Viego', 'Viktor', 'Vladimir', 'Volibear', 'Warwick',
+    'Wukong', 'Xayah', 'Xerath', 'Xin Zhao', 'Yasuo', 'Yone', 'Yorick', 'Yuumi', 'Yunara', 'Zaahen', 'Zac', 'Zed', 'Zeri',
+    'Ziggs', 'Zilean', 'Zoe', 'Zyra'
+  ];
+  
+
+  initPlayersInfo() {
+    // Inicializar array de jugadores con datos vacíos
+    const emptyPlayers: PlayerInfo[] = Array(this.maxPlayers).fill(null).map((_, index) => ({
+      name: '',
+      phone: '',
+      email: '',
+      gameName: '',
+      tagLine: '',
+      role: this.roles[index] || '',
+      mainChampion: ''
+    }));
+    this.playersInfo.set(emptyPlayers);
   }
 
-  private performSearch(term: string) {
-    if (term.length < 2) {
-      this.searchResults.set([]);
-      return;
-    }
-    
-    this.firebaseService.searchUsers(term, 10).subscribe({
-      next: (users) => {
-        const currentUserId = this.firebaseService.getCurrentUser()?.uid;
-        // Filtrar el usuario actual y los ya seleccionados
-        const filtered = users.filter(user => 
-          user.uid !== currentUserId && 
-          !this.selectedPlayers().some(p => p.uid === user.uid)
-        );
-        this.searchResults.set(filtered);
-      },
-      error: (error) => {
-        console.error('Error searching users:', error);
-        this.searchResults.set([]);
+  onLogoSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      if (file.size > 5 * 1024 * 1024) { // 5MB max
+        alert('La imagen debe ser menor a 5MB');
+        return;
       }
-    });
-  }
-
-  addPlayer(player: UserProfile) {
-    if (this.selectedPlayers().length >= this.maxPlayers) {
-      alert(`Solo puedes agregar ${this.maxPlayers} jugadores`);
-      return;
+      
+      this.teamLogo.set(file);
+      
+      // Crear preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.teamLogoPreview.set(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
     }
-    
-    if (this.selectedPlayers().some(p => p.uid === player.uid)) {
-      alert('Este jugador ya está en tu equipo');
-      return;
+  }
+
+  async uploadTeamLogo(): Promise<string | null> {
+    const logo = this.teamLogo();
+    if (!logo) return null;
+
+    this.uploadingLogo.set(true);
+    try {
+      const user = this.firebaseService.getCurrentUser();
+      if (!user) return null;
+
+      const timestamp = Date.now();
+      const fileName = `teams/${user.uid}/${timestamp}_${logo.name}`;
+      const logoUrl = await this.firebaseService.uploadTeamLogo(fileName, logo);
+      return logoUrl;
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      return null;
+    } finally {
+      this.uploadingLogo.set(false);
     }
-    
-    this.selectedPlayers.set([...this.selectedPlayers(), player]);
-    this.searchTerm.set('');
-    this.searchResults.set([]);
-    
-    // Mantener el foco en el input para seguir buscando
-    setTimeout(() => {
-      if (this.searchInput && this.searchInput.nativeElement) {
-        this.searchInput.nativeElement.focus();
-      }
-    }, 100);
   }
 
-  removePlayer(player: UserProfile) {
-    this.selectedPlayers.set(this.selectedPlayers().filter(p => p.uid !== player.uid));
-  }
-
-  async registerTeam() {
-    const user = this.firebaseService.getCurrentUser();
-    const tournament = this.selectedTournament();
-    
-    if (!user || !tournament || !this.currentUser()) return;
-    
+  async createTeamAndGoToPlayers() {
     if (!this.teamName().trim()) {
       alert('Por favor ingresa un nombre para tu equipo');
       return;
     }
+
+    // Verificar que el nombre del equipo no esté duplicado en el torneo
+    const tournament = this.selectedTournament();
+    if (tournament) {
+      const teams = tournament.teams || [];
+      const nameExists = teams.some(team => 
+        team.name.toLowerCase().trim() === this.teamName().toLowerCase().trim()
+      );
+      
+      if (nameExists) {
+        alert('Ya existe un equipo con ese nombre en este torneo');
+        return;
+      }
+    }
+
+    // Subir logo si existe
+    let logoUrl: string | null = null;
+    if (this.teamLogo()) {
+      const user = this.firebaseService.getCurrentUser();
+      if (user) {
+        const timestamp = Date.now();
+        const fileName = `teams/${user.uid}/${timestamp}_${this.teamLogo()!.name}`;
+        try {
+          logoUrl = await this.firebaseService.uploadTeamLogo(fileName, this.teamLogo()!);
+        } catch (error) {
+          alert('Error al subir el logo. Intenta nuevamente.');
+          return;
+        }
+      }
+    }
+
+    // Guardar temporalmente el logo URL
+    this.teamLogoPreview.set(logoUrl);
     
-    if (this.selectedPlayers().length < this.maxPlayers) {
-      alert(`Necesitas ${this.maxPlayers} jugadores para completar tu equipo`);
+    // Ir al paso de jugadores
+    this.showPlayersStep.set(true);
+  }
+
+  goBackToTeamCreation() {
+    this.showPlayersStep.set(false);
+  }
+
+  getPlayerCard(index: number): PlayerInfo {
+    return this.playersInfo()[index] || {
+      name: '',
+      phone: '',
+      email: '',
+      gameName: '',
+      tagLine: '',
+      role: this.roles[index] || '',
+      mainChampion: ''
+    };
+  }
+
+  updatePlayerInfo(index: number, field: keyof PlayerInfo, value: any) {
+    const players = [...this.playersInfo()];
+    if (!players[index]) {
+      players[index] = {
+        name: '',
+        phone: '',
+        email: '',
+        gameName: '',
+        tagLine: '',
+        role: this.roles[index] || ''
+      };
+    }
+    (players[index] as any)[field] = value;
+    this.playersInfo.set(players);
+  }
+
+  async validatePlayerUnique(playerInfo: PlayerInfo, currentIndex: number): Promise<{ valid: boolean; message?: string }> {
+    const tournament = this.selectedTournament();
+    if (!tournament) return { valid: false, message: 'Torneo no encontrado' };
+
+    const teams = tournament.teams || [];
+    const currentPlayers = this.playersInfo();
+
+    // Validar que no se repita en otros equipos
+    for (const team of teams) {
+      if (team.playerInfo) {
+        for (const player of team.playerInfo) {
+          // Validar email único
+          if (player.email && player.email.toLowerCase() === playerInfo.email.toLowerCase() && player.email.trim() !== '') {
+            return { valid: false, message: 'Este correo ya está registrado en otro equipo' };
+          }
+          
+          // Validar invocador único (gameName#tagLine)
+          if (player.gameName && player.tagLine && 
+              player.gameName.toLowerCase() === playerInfo.gameName.toLowerCase() &&
+              player.tagLine.toLowerCase() === playerInfo.tagLine.toLowerCase() &&
+              playerInfo.gameName.trim() !== '' && playerInfo.tagLine.trim() !== '') {
+            return { valid: false, message: `El invocador ${playerInfo.gameName}#${playerInfo.tagLine} ya está registrado en otro equipo` };
+          }
+        }
+      }
+    }
+
+    // Validar que no se repita dentro del mismo equipo (excepto el actual)
+    for (let i = 0; i < currentPlayers.length; i++) {
+      if (i === currentIndex) continue;
+      const player = currentPlayers[i];
+      
+      if (player.email && player.email.toLowerCase() === playerInfo.email.toLowerCase() && playerInfo.email.trim() !== '') {
+        return { valid: false, message: 'Este correo ya está usado en otro jugador de tu equipo' };
+      }
+      
+      if (player.gameName && player.tagLine &&
+          player.gameName.toLowerCase() === playerInfo.gameName.toLowerCase() &&
+          player.tagLine.toLowerCase() === playerInfo.tagLine.toLowerCase() &&
+          playerInfo.gameName.trim() !== '' && playerInfo.tagLine.trim() !== '') {
+        return { valid: false, message: `El invocador ${playerInfo.gameName}#${playerInfo.tagLine} ya está usado en otro jugador de tu equipo` };
+      }
+    }
+
+    return { valid: true };
+  }
+
+  async savePlayerCard(index: number) {
+    const playerInfo = this.playersInfo()[index];
+    
+    if (!playerInfo.name.trim() || !playerInfo.phone.trim() || !playerInfo.email.trim() || 
+        !playerInfo.gameName.trim() || !playerInfo.tagLine.trim()) {
+      alert('Por favor completa todos los campos requeridos');
       return;
     }
-    
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(playerInfo.email)) {
+      alert('Por favor ingresa un correo electrónico válido');
+      return;
+    }
+
+    // Validar unicidad
+    const validation = await this.validatePlayerUnique(playerInfo, index);
+    if (!validation.valid) {
+      alert(validation.message);
+      return;
+    }
+
+    // Guardar la carta (ya está en el signal)
+    // Avanzar a la siguiente carta si no es la última
+    if (index < this.maxPlayers - 1) {
+      this.currentPlayerIndex.set(index + 1);
+    } else {
+      // Si es la última, verificar que todas estén completas
+      const allComplete = this.playersInfo().every(p => 
+        p.name.trim() && p.phone.trim() && p.email.trim() && 
+        p.gameName.trim() && p.tagLine.trim()
+      );
+      
+      if (!allComplete) {
+        alert('Por favor completa todas las cartas de jugadores antes de continuar');
+        return;
+      }
+    }
+
+    this.editingPlayerIndex.set(null);
+  }
+
+  editPlayerCard(index: number) {
+    this.editingPlayerIndex.set(index);
+    this.currentPlayerIndex.set(index);
+    // Asegurar que el jugador existe en el array
+    if (!this.playersInfo()[index]) {
+      this.playersInfo.set([...this.playersInfo(), this.getPlayerCard(index)]);
+    }
+  }
+
+  isCardComplete(index: number): boolean {
+    const player = this.playersInfo()[index];
+    if (!player) return false;
+    return !!(player.name.trim() && player.phone.trim() && player.email.trim() && 
+              player.gameName.trim() && player.tagLine.trim());
+  }
+
+  canProceedToNextCard(index: number): boolean {
+    return this.isCardComplete(index);
+  }
+
+  allCardsComplete(): boolean {
+    if (this.playersInfo().length < this.maxPlayers) {
+      return false;
+    }
+    for (let i = 0; i < this.maxPlayers; i++) {
+      if (!this.isCardComplete(i)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  async finalizeTeamRegistration() {
+    const user = this.firebaseService.getCurrentUser();
+    const tournament = this.selectedTournament();
+
+    if (!user || !tournament || !this.currentUser()) return;
+
+    if (!this.allCardsComplete()) {
+      alert(`Necesitas completar la información de los ${this.maxPlayers} jugadores.`);
+      return;
+    }
+
     this.registering.set(true);
     try {
       const team: Team = {
@@ -370,13 +606,15 @@ export class TournamentsComponent implements OnInit, OnDestroy {
         name: this.teamName(),
         captainId: user.uid,
         captainName: this.currentUser()!.displayName,
-        players: [user.uid, ...this.selectedPlayers().map(p => p.uid)],
+        players: this.playersInfo().map(p => p.email), // Using email as a unique identifier for now
+        playerInfo: this.playersInfo(), // Store detailed player info
         substitutes: [],
+        logoUrl: this.teamLogoPreview() || undefined, // Add logo URL
         registeredAt: Timestamp.now()
       };
-      
+
       await this.firebaseService.registerTeam(tournament.id!, team);
-      
+
       // Verificar si todos los equipos están completos
       const updatedTournament = await new Promise<Tournament | null>((resolve) => {
         this.firebaseService.getTournamentById(tournament.id!).subscribe({
@@ -384,23 +622,26 @@ export class TournamentsComponent implements OnInit, OnDestroy {
           error: () => resolve(null)
         });
       });
-      
+
       if (updatedTournament) {
         const teams = updatedTournament.teams || [];
         const allTeamsComplete = teams.length === updatedTournament.maxTeams &&
-          teams.every(t => t.players.length >= this.maxPlayers);
-        
-        if (allTeamsComplete && !updatedTournament.confirmed) {
-          // Generar bracket automáticamente
+          teams.every(t => {
+            if (t.playerInfo && t.playerInfo.length > 0) {
+              return t.playerInfo.length >= this.maxPlayers && t.playerInfo.every(p => p.name.trim() && p.email.trim() && p.gameName.trim() && p.tagLine.trim());
+            }
+            return t.players && t.players.length >= this.maxPlayers;
+          });
+
+        // Generar bracket automáticamente cuando todos los equipos estén completos
+        if (allTeamsComplete && !updatedTournament.confirmed && !updatedTournament.bracket) {
           const bracket = this.firebaseService.generateBracket(updatedTournament.teams);
           await this.firebaseService.updateTournament(tournament.id!, {
-            confirmed: true,
-            confirmedAt: Timestamp.now(),
             bracket: bracket
           });
         }
       }
-      
+
       this.closeRegisterModal();
       this.loadTournaments();
       alert('Equipo registrado exitosamente');
@@ -413,13 +654,308 @@ export class TournamentsComponent implements OnInit, OnDestroy {
   }
 
   viewBracket(tournament: Tournament) {
+    // Siempre abrir el canvas organizador del bracket
     this.selectedTournamentForBracket.set(tournament);
     this.showBracket.set(true);
+    this.organizingBracket.set(true);
+    
+    // Inicializar los slots del bracket
+    this.initializeBracketSlots();
+    
+    // Si hay un bracket confirmado, cargar los equipos en los slots
+    if (tournament.confirmed && tournament.teams) {
+      this.loadTeamsIntoSlots(tournament.teams);
+    }
+  }
+
+  openBracketOrganizer(tournament: Tournament) {
+    // Solo el admin puede organizar el bracket antes del inicio
+    if (!this.isAdmin()) return;
+    
+    this.selectedTournamentForBracket.set(tournament);
+    this.organizingBracket.set(true);
+    this.showBracket.set(true);
+    
+    // Inicializar los slots del bracket
+    this.initializeBracketSlots();
+    
+    // Si hay un bracket confirmado, cargar los equipos en los slots
+    if (tournament.confirmed && tournament.teams) {
+      this.loadTeamsIntoSlots(tournament.teams);
+    }
+  }
+
+  loadTeamsIntoSlots(teams: Team[]) {
+    // Cargar equipos en los slots basándose en su orden en el array
+    teams.forEach((team, index) => {
+      if (index < this.bracketSlots.length) {
+        this.bracketSlots[index].team = team;
+      }
+    });
+    
+    // Cargar equipos en enfrentamientos (parejas)
+    const numMatches = Math.floor(teams.length / 2);
+    for (let i = 0; i < numMatches; i++) {
+      if (i < this.bracketMatches.length) {
+        this.bracketMatches[i].team1 = teams[i * 2] || null;
+        this.bracketMatches[i].team2 = teams[i * 2 + 1] || null;
+      }
+    }
+    
+    this.updateBracketTeams();
+  }
+
+  initializeBracketSlots() {
+    const tournament = this.selectedTournamentForBracket();
+    if (!tournament) return;
+    
+    const maxTeams = tournament.maxTeams;
+    // Inicializar slots individuales (para compatibilidad)
+    this.bracketSlots = Array(maxTeams).fill(null).map((_, i) => ({
+      team: null,
+      position: i
+    }));
+    
+    // Inicializar enfrentamientos (parejas)
+    const numMatches = Math.floor(maxTeams / 2);
+    this.bracketMatches = Array(numMatches).fill(null).map((_, i) => ({
+      team1: null,
+      team2: null,
+      matchIndex: i
+    }));
+  }
+
+  getBracketSlots(): Array<{ team: Team | null; position: number }> {
+    return this.bracketSlots;
+  }
+
+  getBracketMatches(): Array<{ team1: Team | null; team2: Team | null; matchIndex: number }> {
+    return this.bracketMatches;
+  }
+
+  onTeamDragStart(event: DragEvent, team: Team) {
+    this.draggedTeam = team;
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', team.id);
+    }
+  }
+
+  onTeamDragEnd(event: DragEvent) {
+    this.draggedTeam = null;
+  }
+
+  onBracketDragOver(event: DragEvent) {
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+  }
+
+  onBracketDrop(event: DragEvent) {
+    event.preventDefault();
+  }
+
+  onSlotDragOver(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+  }
+
+  onSlotDrop(event: DragEvent, slotIndex: number) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    if (!this.draggedTeam) return;
+    
+    // Verificar si el equipo ya está en otro slot
+    const existingSlotIndex = this.bracketSlots.findIndex(slot => slot.team?.id === this.draggedTeam!.id);
+    
+    if (existingSlotIndex !== -1 && existingSlotIndex !== slotIndex) {
+      // Intercambiar equipos si hay un equipo en el slot destino
+      if (this.bracketSlots[slotIndex].team) {
+        this.bracketSlots[existingSlotIndex].team = this.bracketSlots[slotIndex].team;
+      } else {
+        this.bracketSlots[existingSlotIndex].team = null;
+      }
+    }
+    
+    this.bracketSlots[slotIndex].team = this.draggedTeam;
+    this.updateBracketTeams();
+  }
+
+  removeTeamFromSlot(slotIndex: number) {
+    this.bracketSlots[slotIndex].team = null;
+    this.updateBracketTeams();
+  }
+
+  removeTeamFromBracket(teamIndex: number) {
+    const tournament = this.selectedTournamentForBracket();
+    if (!tournament) return;
+    
+    const removedTeam = tournament.teams?.[teamIndex];
+    if (removedTeam) {
+      const slotIndex = this.bracketSlots.findIndex(slot => slot.team?.id === removedTeam.id);
+      if (slotIndex !== -1) {
+        this.bracketSlots[slotIndex].team = null;
+      }
+    }
+    
+    this.updateBracketTeams();
+  }
+
+  updateBracketTeams() {
+    const teams = this.bracketSlots
+      .filter(slot => slot.team !== null)
+      .map(slot => slot.team!);
+    this.bracketTeams.set(teams);
+  }
+
+  allSlotsFilled(): boolean {
+    // Verificar que todos los enfrentamientos tengan ambos equipos
+    return this.bracketMatches.every(match => match.team1 !== null && match.team2 !== null);
+  }
+
+  // Manejar drop en enfrentamientos (parejas)
+  onMatchTeamDrop(event: DragEvent, matchIndex: number, teamPosition: 'team1' | 'team2') {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    if (!this.draggedTeam) return;
+    
+    // Buscar si el equipo ya está en otro enfrentamiento y removerlo
+    for (let i = 0; i < this.bracketMatches.length; i++) {
+      if (this.bracketMatches[i].team1?.id === this.draggedTeam.id) {
+        if (i !== matchIndex || teamPosition !== 'team1') {
+          this.bracketMatches[i].team1 = null;
+        }
+      }
+      if (this.bracketMatches[i].team2?.id === this.draggedTeam.id) {
+        if (i !== matchIndex || teamPosition !== 'team2') {
+          this.bracketMatches[i].team2 = null;
+        }
+      }
+    }
+    
+    // Si hay un equipo en la posición destino, intercambiar
+    const currentTeam = this.bracketMatches[matchIndex][teamPosition];
+    if (currentTeam && currentTeam.id !== this.draggedTeam.id) {
+      // Buscar un slot vacío para el equipo desplazado
+      for (let i = 0; i < this.bracketMatches.length; i++) {
+        if (i !== matchIndex) {
+          if (teamPosition === 'team1' && !this.bracketMatches[i].team1) {
+            this.bracketMatches[i].team1 = currentTeam;
+            break;
+          } else if (teamPosition === 'team2' && !this.bracketMatches[i].team2) {
+            this.bracketMatches[i].team2 = currentTeam;
+            break;
+          }
+        }
+      }
+    }
+    
+    // Colocar el equipo en la posición
+    this.bracketMatches[matchIndex][teamPosition] = this.draggedTeam;
+    this.syncMatchesToSlots();
+  }
+
+  removeTeamFromMatch(matchIndex: number, teamPosition: 'team1' | 'team2') {
+    this.bracketMatches[matchIndex][teamPosition] = null;
+    this.syncMatchesToSlots();
+  }
+
+  // Sincronizar enfrentamientos con slots para compatibilidad
+  syncMatchesToSlots() {
+    let slotIndex = 0;
+    this.bracketMatches.forEach(match => {
+      if (match.team1 && slotIndex < this.bracketSlots.length) {
+        this.bracketSlots[slotIndex].team = match.team1;
+        slotIndex++;
+      }
+      if (match.team2 && slotIndex < this.bracketSlots.length) {
+        this.bracketSlots[slotIndex].team = match.team2;
+        slotIndex++;
+      }
+    });
+    // Limpiar slots restantes
+    for (let i = slotIndex; i < this.bracketSlots.length; i++) {
+      this.bracketSlots[i].team = null;
+    }
+    this.updateBracketTeams();
   }
 
   closeBracket() {
     this.showBracket.set(false);
     this.selectedTournamentForBracket.set(null);
+    this.organizingBracket.set(false);
+    this.bracketTeams.set([]);
+  }
+
+  async confirmBracket() {
+    const tournament = this.selectedTournamentForBracket();
+    if (!tournament || !this.isAdmin()) {
+      alert('Solo los administradores pueden confirmar el bracket');
+      return;
+    }
+    
+    // Sincronizar antes de confirmar
+    this.syncMatchesToSlots();
+    
+    // Obtener equipos desde los enfrentamientos, en orden de los enfrentamientos
+    const teams: Team[] = [];
+    this.bracketMatches.forEach(match => {
+      if (match.team1) teams.push(match.team1);
+      if (match.team2) teams.push(match.team2);
+    });
+    
+    if (teams.length !== tournament.maxTeams) {
+      alert(`Debes organizar todos los ${tournament.maxTeams} equipos en enfrentamientos`);
+      return;
+    }
+    
+    // Verificar que todos los enfrentamientos estén completos
+    const incompleteMatches = this.bracketMatches.filter(m => !m.team1 || !m.team2);
+    if (incompleteMatches.length > 0) {
+      alert(`Debes completar todos los enfrentamientos. Faltan ${incompleteMatches.length} enfrentamientos.`);
+      return;
+    }
+    
+    try {
+      // Generar bracket con el orden de los equipos (en parejas)
+      const bracket = this.firebaseService.generateBracketWithOrder(teams);
+      
+      // Actualizar el torneo en Firebase
+      await this.firebaseService.updateTournament(tournament.id!, {
+        confirmed: true,
+        confirmedAt: Timestamp.now(),
+        bracket: bracket,
+        teams: teams
+      });
+      
+      // Recargar la lista de torneos
+      this.loadTournaments();
+      
+      // Actualizar directamente el torneo seleccionado con los nuevos datos
+      const updatedTournament: Tournament = {
+        ...tournament,
+        confirmed: true,
+        confirmedAt: Timestamp.now(),
+        bracket: bracket,
+        teams: teams
+      };
+      
+      this.selectedTournamentForBracket.set(updatedTournament);
+      
+      // Cambiar a vista del bracket visual (no organizar)
+      this.organizingBracket.set(false);
+      
+      alert('Bracket confirmado exitosamente. Mostrando tabla de clasificaciones.');
+    } catch (error) {
+      console.error('Error al confirmar bracket:', error);
+      alert('Error al confirmar el bracket. Por favor intenta nuevamente.');
+    }
   }
 
   async startTournament(tournament: Tournament) {
@@ -619,6 +1155,91 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     return this.getRoundName(round);
   }
 
+  // Obtener URL de imagen del campeón desde Data Dragon
+  getChampionImageUrl(championName: string): string {
+    if (!championName) return '';
+    
+    // Normalizar el nombre del campeón para que coincida con el formato de Data Dragon
+    const normalizedName = this.normalizeChampionName(championName);
+    return `https://ddragon.leagueoflegends.com/cdn/14.24.1/img/champion/${normalizedName}.png`;
+  }
+
+  // Manejar error al cargar imagen del campeón
+  onChampionImageError(event: any) {
+    const img = event.target;
+    // Intentar con el nombre original si falló con el normalizado
+    const originalName = img.alt;
+    if (originalName && originalName !== img.src.split('/').pop()?.replace('.png', '')) {
+      // Ya intentamos con el normalizado, usar placeholder
+      img.src = 'https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png';
+    }
+  }
+
+  // Normalizar nombre del campeón para Data Dragon
+  private normalizeChampionName(championName: string): string {
+    if (!championName) return '';
+
+    // Mapeo de nombres que tienen variaciones en Data Dragon
+    const championNameMap: { [key: string]: string } = {
+      'Dr. Mundo': 'DrMundo',
+      'Jarvan IV': 'JarvanIV',
+      'K\'Sante': 'KSante',
+      'Lee Sin': 'LeeSin',
+      'Master Yi': 'MasterYi',
+      'Miss Fortune': 'MissFortune',
+      'Nunu': 'Nunu',
+      'Nunu & Willump': 'Nunu',
+      'Renata Glasc': 'RenataGlasc',
+      'Tahm Kench': 'TahmKench',
+      'Twisted Fate': 'TwistedFate',
+      'Xin Zhao': 'XinZhao',
+      'Aurelion Sol': 'AurelionSol',
+      'Cho\'Gath': 'Chogath',
+      'Kai\'Sa': 'Kaisa',
+      'Kha\'Zix': 'Khazix',
+      'Kog\'Maw': 'KogMaw',
+      'Rek\'Sai': 'RekSai',
+      'Vel\'Koz': 'Velkoz',
+      'Bel\'Veth': 'Belveth',
+      'Wukong': 'MonkeyKing',
+      // Nuevos campeones - intentar nombres exactos primero
+      'Ambessa': 'Ambessa',
+      'Aurora': 'Aurora',
+      'Mel': 'Mel',
+      'Smolder': 'Smolder',
+      'Yunara': 'Yunara',
+      'Zaahen': 'Zaahen'
+    };
+
+    // Si hay un mapeo específico, usarlo
+    if (championNameMap[championName]) {
+      return championNameMap[championName];
+    }
+
+    // Si no, normalizar el nombre
+    // Primero, remover espacios, apostrofes y caracteres especiales
+    let normalized = championName.trim()
+      .replace(/\s+/g, '')
+      .replace(/'/g, '')
+      .replace(/\./g, '')
+      .replace(/&/g, '')
+      .replace(/-/g, '')
+      .replace(/\(/g, '')
+      .replace(/\)/g, '');
+
+    // Si el nombre ya está en formato correcto (primera mayúscula), mantenerlo
+    // Caso especial: nombres completamente en mayúsculas o minúsculas
+    if (normalized && normalized !== normalized.toUpperCase() && normalized !== normalized.toLowerCase()) {
+      // Ya tiene mayúsculas y minúsculas, mantener formato
+      normalized = normalized.charAt(0).toUpperCase() + normalized.slice(1);
+    } else if (normalized) {
+      // Todo mayúsculas o minúsculas, normalizar a primera mayúscula
+      normalized = normalized.charAt(0).toUpperCase() + normalized.slice(1).toLowerCase();
+    }
+
+    return normalized;
+  }
+
   async createPracticeTournament() {
     if (!this.isAdmin()) {
       alert('Solo los administradores pueden crear torneos');
@@ -668,6 +1289,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
         captainId: `bot-captain-${index}`, // IDs ficticios
         captainName: `Bot ${name}`,
         players: [], // Sin jugadores reales, solo para visualización
+        playerInfo: [], // Array vacío para compatibilidad
         substitutes: [], // Array vacío para suplentes
         registeredAt: Timestamp.now()
       }));

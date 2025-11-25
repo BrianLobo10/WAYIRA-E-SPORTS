@@ -107,78 +107,44 @@ export class RegisterComponent implements OnInit {
     this.loading.set(true);
 
     try {
-      // Verificar que el invocador existe en Riot Games usando el mismo servicio que la búsqueda
-      this.riotApiService.getSummoner(
-        this.region(),
-        this.gameName().trim(),
-        this.tagLine().trim()
-      ).subscribe({
-        next: async (summonerData) => {
-          try {
-            // Registrar en Firebase usando Riot Games
-            await this.firebaseService.registerWithRiot(
-              this.gameName().trim(),
-              this.tagLine().trim(),
-              this.region(),
-              summonerData.puuid,
-              this.password(),
-              this.email().trim() // Email es obligatorio
-            );
+      // Intentar verificar el invocador con Riot API (opcional)
+      let puuid: string | null = null;
+      let riotVerified = false;
 
-            this.router.navigate(['/']);
-          } catch (err: any) {
-            console.error('Error en registro:', err);
-            let errorMessage = err.message || err.error?.message || 'Error al registrarse. Por favor intenta nuevamente.';
-            
-            // Si es un usuario huérfano, ofrecer intentar recrear el perfil
-            if (errorMessage.includes('no tiene perfil')) {
-              // Intentar recrear el perfil si el usuario puede iniciar sesión
-              try {
-                const orphanedUser = await this.firebaseService.recreateProfileIfOrphaned(
-                  this.email().trim(),
-                  this.password()
-                );
-                
-                if (orphanedUser) {
-                  // Recrear el perfil con los datos del registro
-                  await this.firebaseService.recreateUserProfile(
-                    orphanedUser.uid,
-                    this.gameName().trim(),
-                    this.tagLine().trim(),
-                    this.region(),
-                    summonerData.puuid,
-                    this.email().trim()
-                  );
-                  
-                  // Perfil recreado exitosamente
-                  this.error.set('');
-                  this.router.navigate(['/']);
-                  return;
-                }
-              } catch (recreateError: any) {
-                // Si no puede recrear, mostrar el mensaje original
-                console.error('Error recreando perfil:', recreateError);
-              }
-            }
-            
-            this.error.set(errorMessage);
-            this.loading.set(false);
-          }
-        },
-        error: (err) => {
-          this.loading.set(false);
-          if (err.status === 404) {
-            this.error.set('Invocador no encontrado. Verifica tu nombre de invocador, tagline y región.');
-          } else if (err.error?.error) {
-            this.error.set(err.error.error);
-          } else {
-            this.error.set('Error al verificar el invocador. Verifica que tu cuenta de Riot Games sea válida.');
-          }
+      try {
+        const summonerData = await this.riotApiService.getSummoner(
+          this.region(),
+          this.gameName().trim(),
+          this.tagLine().trim()
+        ).toPromise();
+        
+        if (summonerData && summonerData.puuid) {
+          puuid = summonerData.puuid;
+          riotVerified = true;
         }
-      });
+      } catch (apiError: any) {
+        // Si falla la API, continuar sin verificación
+        // El usuario puede verificar después desde su perfil
+        puuid = null;
+        riotVerified = false;
+      }
+
+      // Registrar en Firebase (con o sin verificación de Riot)
+      await this.firebaseService.registerWithRiot(
+        this.gameName().trim(),
+        this.tagLine().trim(),
+        this.region(),
+        puuid || '', // PUUID vacío si no se pudo verificar
+        this.password(),
+        this.email().trim(),
+        riotVerified // Indicar si fue verificado
+      );
+
+      this.router.navigate(['/']);
     } catch (err: any) {
       this.loading.set(false);
-      this.error.set(err.message || 'Error al registrarse. Verifica que tu cuenta de Riot Games sea válida.');
+      const errorMessage = err.message || 'Error al registrarse. Por favor intenta nuevamente.';
+      this.error.set(errorMessage);
     }
   }
 

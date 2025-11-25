@@ -49,6 +49,7 @@ export interface UserProfile {
   tagLine?: string;
   region?: string;
   puuid?: string;
+  riotVerified?: boolean; // Indica si el invocador ha sido verificado con Riot API
   followers?: string[];
   following?: string[];
   createdAt: Timestamp;
@@ -114,12 +115,26 @@ export interface Tournament {
   confirmedAt?: Timestamp;
 }
 
+export interface PlayerInfo {
+  userId?: string; // User ID de Firebase (opcional, puede no estar registrado)
+  name: string; // Nombre real del jugador
+  phone: string; // Teléfono de contacto
+  email: string; // Correo electrónico
+  gameName: string; // Nombre de invocador
+  tagLine: string; // Tagline del invocador
+  role?: string; // Rol en el equipo (opcional: Top, Jungle, Mid, ADC, Support)
+  mainChampion?: string; // Campeón principal de LoL
+}
+
 export interface Team {
   id: string;
   name: string;
+  logo?: string; // URL del logo del equipo
+  logoUrl?: string; // URL del logo del equipo (alternativa)
   captainId: string;
   captainName: string;
-  players: string[]; // User IDs
+  players: string[]; // User IDs (para compatibilidad)
+  playerInfo?: PlayerInfo[]; // Información detallada de cada jugador (opcional para compatibilidad)
   substitutes: string[]; // User IDs
   registeredAt: Timestamp;
 }
@@ -202,7 +217,7 @@ export class FirebaseService {
   }
 
   // Auth Methods
-  async registerWithRiot(gameName: string, tagLine: string, region: string, puuid: string, password: string, userEmail: string) {
+  async registerWithRiot(gameName: string, tagLine: string, region: string, puuid: string, password: string, userEmail: string, riotVerified: boolean = false) {
     // Validar que el email sea válido y obligatorio
     if (!userEmail || !userEmail.trim()) {
       throw new Error('El email es requerido');
@@ -220,22 +235,18 @@ export class FirebaseService {
       throw new Error('La contraseña debe tener al menos 6 caracteres');
     }
     
-    // Verificar si el usuario ya existe por puuid (antes de crear la cuenta)
-    // Esto requiere permisos de lectura pública en Firestore
-    try {
-      const existingUser = await this.findUserByPuuid(puuid);
-      if (existingUser) {
-        throw new Error('Esta cuenta de Riot Games ya está registrada');
-      }
-    } catch (error: any) {
-      // Si hay error de contexto de inyección o permisos, continuar con el registro
-      // El usuario se creará y luego verificaremos si ya existe
-      if (error.message?.includes('injection context') || error.message?.includes('permission')) {
-        console.warn('No se pudo verificar usuario existente, continuando con registro:', error.message);
-      } else if (error.message?.includes('ya está registrada')) {
-        throw error;
-      } else {
-        console.warn('Error verificando usuario existente, continuando:', error.message);
+    // Verificar si el usuario ya existe por puuid (solo si hay puuid y está verificado)
+    if (puuid && riotVerified) {
+      try {
+        const existingUser = await this.findUserByPuuid(puuid);
+        if (existingUser) {
+          throw new Error('Esta cuenta de Riot Games ya está registrada');
+        }
+      } catch (error: any) {
+        if (error.message?.includes('ya está registrada')) {
+          throw error;
+        }
+        // Si hay otro error, continuar con el registro
       }
     }
     
@@ -262,7 +273,8 @@ export class FirebaseService {
         gameName,
         tagLine,
         region,
-        puuid,
+        puuid: puuid || undefined,
+        riotVerified,
         followers: [],
         following: [],
         createdAt: Timestamp.now()
@@ -364,9 +376,18 @@ export class FirebaseService {
     await updateProfile(this.auth.currentUser!, { displayName: gameName });
   }
 
-  async loginWithRiot(gameName: string, tagLine: string, region: string, puuid: string, password: string, rememberMe: boolean = false) {
-    // Buscar usuario por puuid en Firestore
-    const userProfile = await this.findUserByPuuid(puuid);
+  async loginWithRiot(gameName: string, tagLine: string, region: string, puuid: string | null, password: string, rememberMe: boolean = false) {
+    // Intentar buscar usuario por puuid primero si está disponible
+    let userProfile: UserProfile | null = null;
+    
+    if (puuid) {
+      userProfile = await this.findUserByPuuid(puuid);
+    }
+    
+    // Si no se encontró por puuid, buscar por gameName y tagLine
+    if (!userProfile) {
+      userProfile = await this.findUserByGameNameTagLine(gameName, tagLine);
+    }
     
     if (!userProfile) {
       throw new Error('Cuenta no registrada. Por favor regístrate primero.');
@@ -383,7 +404,7 @@ export class FirebaseService {
     }
 
     // Verificar que la región coincida
-    if (userProfile.region && userProfile.region.toLowerCase() !== region.toLowerCase()) {
+    if (userProfile.region && region && userProfile.region.toLowerCase() !== region.toLowerCase()) {
       throw new Error(`La región no coincide. Tu cuenta está registrada en la región ${userProfile.region.toUpperCase()}.`);
     }
 
@@ -391,7 +412,7 @@ export class FirebaseService {
     // Pero usamos el email del perfil si existe, o el generado
     const email = userProfile.email && userProfile.email.includes('@') 
       ? userProfile.email 
-      : `${puuid}@riot.wayira.local`;
+      : `${userProfile.puuid || userProfile.uid}@riot.wayira.local`;
     
     // Configurar persistencia de sesión
     const { setPersistence, browserLocalPersistence, browserSessionPersistence } = await import('firebase/auth');
@@ -414,6 +435,45 @@ export class FirebaseService {
         throw new Error('Contraseña incorrecta. Verifica tus credenciales.');
       }
       throw new Error('Error al iniciar sesión. Por favor intenta nuevamente.');
+    }
+  }
+
+  private async findUserByGameNameTagLine(gameName: string, tagLine: string): Promise<UserProfile | null> {
+    try {
+      const usersRef = collection(this.firestore, 'users');
+      const q = query(
+        usersRef,
+        where('gameName', '==', gameName),
+        where('tagLine', '==', tagLine),
+        limit(1)
+      );
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        return null;
+      }
+      
+      const docSnap = querySnapshot.docs[0];
+      const data = docSnap.data() as DocumentData;
+      return {
+        id: docSnap.id,
+        uid: (data['uid'] as string) || docSnap.id,
+        email: (data['email'] as string) || '',
+        displayName: (data['displayName'] as string) || '',
+        role: (data['role'] as 'user' | 'admin') || 'user',
+        gameName: data['gameName'] as string | undefined,
+        tagLine: data['tagLine'] as string | undefined,
+        region: data['region'] as string | undefined,
+        puuid: data['puuid'] as string | undefined,
+        photoURL: data['photoURL'] as string | undefined,
+        bio: data['bio'] as string | undefined,
+        followers: (data['followers'] as string[]) || [],
+        following: (data['following'] as string[]) || [],
+        createdAt: data['createdAt'] || Timestamp.now()
+      } as UserProfile;
+    } catch (error: any) {
+      console.error('Error buscando usuario por gameName/tagLine:', error);
+      return null;
     }
   }
 
@@ -1129,6 +1189,13 @@ export class FirebaseService {
     });
   }
 
+  async uploadTeamLogo(fileName: string, file: File): Promise<string> {
+    const storageRef = ref(this.storage, fileName);
+    await uploadBytes(storageRef, file);
+    const url = await getDownloadURL(storageRef);
+    return url;
+  }
+
   async registerTeam(tournamentId: string, team: Team) {
     const tournamentRef = doc(this.firestore, 'tournaments', tournamentId);
     const tournamentSnap = await getDoc(tournamentRef);
@@ -1201,6 +1268,13 @@ export class FirebaseService {
 
   // Generate bracket structure - Genera todos los partidos desde el inicio
   generateBracket(teams: Team[]): BracketMatch[] {
+    // Shuffle teams for random bracket
+    const shuffled = [...teams].sort(() => Math.random() - 0.5);
+    return this.generateBracketWithOrder(shuffled);
+  }
+
+  // Generate bracket with specific team order
+  generateBracketWithOrder(teams: Team[]): BracketMatch[] {
     const matches: BracketMatch[] = [];
     const numTeams = teams.length;
     
@@ -1209,11 +1283,8 @@ export class FirebaseService {
     // Calcular número de rondas necesarias
     const totalRounds = Math.ceil(Math.log2(numTeams));
     
-    // Shuffle teams for random bracket
-    const shuffled = [...teams].sort(() => Math.random() - 0.5);
-    
     // Generar todos los partidos de todas las rondas desde el inicio
-    let currentRoundTeams = shuffled;
+    let currentRoundTeams = teams;
     let roundNumber = 1;
     
     while (roundNumber <= totalRounds) {
@@ -1246,6 +1317,7 @@ export class FirebaseService {
             captainId: '',
             captainName: '',
             players: [],
+            playerInfo: [],
             substitutes: [],
             registeredAt: Timestamp.now()
           } as Team);

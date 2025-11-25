@@ -70,44 +70,21 @@ export class LoginComponent implements OnInit {
     this.error.set('');
 
     try {
-      // Verificar que el invocador existe en Riot Games usando el mismo servicio que la búsqueda
-      this.riotApiService.getSummoner(
-        this.region(),
+      // Intentar login usando Firebase directamente (sin verificación de API)
+      // Buscar usuario por gameName y tagLine en Firestore
+      await this.firebaseService.loginWithRiot(
         this.gameName().trim(),
-        this.tagLine().trim()
-      ).subscribe({
-        next: async (summonerData) => {
-          try {
-            // Iniciar sesión usando Riot Games
-            await this.firebaseService.loginWithRiot(
-              this.gameName().trim(),
-              this.tagLine().trim(),
-              this.region(),
-              summonerData.puuid,
-              this.password(),
-              this.rememberMe()
-            );
+        this.tagLine().trim(),
+        this.region(),
+        null, // puuid - será buscado en Firebase
+        this.password(),
+        this.rememberMe()
+      );
 
-            this.redirectAfterLogin();
-          } catch (err: any) {
-            this.error.set(err.message || 'Error al iniciar sesión. Verifica tu contraseña.');
-            this.loading.set(false);
-          }
-        },
-        error: (err) => {
-          this.loading.set(false);
-          if (err.status === 404) {
-            this.error.set('Invocador no encontrado. Verifica tu nombre de invocador, tagline y región.');
-          } else if (err.error?.error) {
-            this.error.set(err.error.error);
-          } else {
-            this.error.set('Error al verificar el invocador. Verifica que tu cuenta de Riot Games sea válida.');
-          }
-        }
-      });
+      this.redirectAfterLogin();
     } catch (err: any) {
       this.loading.set(false);
-      this.error.set(err.message || 'Error al iniciar sesión. Verifica que tu cuenta de Riot Games sea válida.');
+      this.error.set(err.message || 'Error al iniciar sesión. Verifica tus credenciales.');
     }
   }
 }

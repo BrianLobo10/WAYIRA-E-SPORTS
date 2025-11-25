@@ -65,14 +65,29 @@
               </div>
               <div class="tournament-actions">
                 @if (tournament.status === 'ongoing' || tournament.status === 'upcoming') {
-                  <button class="btn-register" [disabled]="(tournament.teams || []).length >= tournament.maxTeams" (click)="openRegisterModal(tournament)">
-                    {{ (tournament.teams || []).length >= tournament.maxTeams ? 'Lleno' : 'Registrarse' }}
+                  <button 
+                    class="btn-register" 
+                    [disabled]="(tournament.teams || []).length >= tournament.maxTeams || isUserRegistered(tournament)"
+                    (click)="openRegisterModal(tournament)">
+                    @if (isUserRegistered(tournament)) {
+                      Ya Registrado
+                    } @else if ((tournament.teams || []).length >= tournament.maxTeams) {
+                      Lleno
+                    } @else {
+                      Registrarse
+                    }
                   </button>
                 }
-                @if (tournament.confirmed || tournament.bracket) {
-                  <button class="btn-view-bracket" (click)="viewBracket(tournament)">
-                    Ver Bracket
-                  </button>
+                @if (tournament.confirmed || tournament.bracket || (isAdmin() && (tournament.teams || []).length === tournament.maxTeams)) {
+                  @if (isAdmin() && (tournament.teams || []).length === tournament.maxTeams && !tournament.confirmed) {
+                    <button class="btn-view-bracket" (click)="openBracketOrganizer(tournament)">
+                      Organizar Bracket
+                    </button>
+                  } @else {
+                    <button class="btn-view-bracket" (click)="viewBracket(tournament)">
+                      Ver Bracket
+                    </button>
+                  }
                 }
                 @if (isAdmin() && tournament.confirmed && tournament.status === 'confirmed') {
                   <button class="btn-start-tournament" (click)="startTournament(tournament)">
@@ -234,9 +249,9 @@
 <!-- Register Team Modal -->
 @if (showRegisterModal()) {
   <div class="modal-overlay" (click)="closeRegisterModal()">
-    <div class="register-modal" (click)="$event.stopPropagation()">
+    <div class="register-modal" [class.players-step]="showPlayersStep()" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h3>Registrar Equipo</h3>
+        <h3>{{ showPlayersStep() ? 'Información de Jugadores' : 'Crear Equipo' }}</h3>
         <button class="close-btn" (click)="closeRegisterModal()">
           <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -244,122 +259,241 @@
         </button>
       </div>
       
-      <div class="modal-body">
-        <form class="register-form">
-          <div class="form-group">
-            <label for="teamName">Nombre del Equipo *</label>
-            <input
-              type="text"
-              id="teamName"
-              [(ngModel)]="teamName"
-              name="teamName"
-              placeholder="Ej: Team Wayira"
-              class="form-input"
-              [disabled]="registering()"
-              required>
-          </div>
-
-          <div class="form-group">
-            <label for="searchPlayers">
-              Buscar Jugadores 
-              <span class="player-count-badge">({{ selectedPlayers().length }}/{{ maxPlayers }})</span>
-            </label>
-            <div class="search-input-wrapper">
-              <input
-                #searchInput
-                type="text"
-                id="searchPlayers"
-                [(ngModel)]="searchTerm"
-                (input)="onSearchChange()"
-                name="searchPlayers"
-                placeholder="Escribe el nombre o gameName del jugador..."
-                class="form-input search-input"
-                [disabled]="registering() || selectedPlayers().length >= maxPlayers"
-                autocomplete="off">
-              @if (selectedPlayers().length >= maxPlayers) {
-                <span class="search-hint">Equipo completo</span>
-              } @else {
-                <span class="search-hint">Busca y selecciona {{ maxPlayers - selectedPlayers().length }} jugador(es) más</span>
-              }
-            </div>
-            
-            @if (searchResults().length > 0) {
-              <div class="search-results">
-                @for (player of searchResults(); track player.uid) {
-                  <div class="search-result-item" (click)="addPlayer(player)">
-                    <div class="player-info">
-                      @if (player.photoURL) {
-                        <img [src]="player.photoURL" [alt]="player.displayName" class="player-avatar">
-                      } @else {
-                        <div class="player-avatar-placeholder">
-                          {{ player.displayName.charAt(0).toUpperCase() }}
-                        </div>
-                      }
-                      <div>
-                        <div class="player-name">{{ player.displayName }}</div>
-                        @if (player.gameName) {
-                          <div class="player-game">{{ player.gameName }}#{{ player.tagLine }}</div>
-                        }
-                      </div>
-                    </div>
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                  </div>
-                }
-              </div>
-            } @else if (searchTerm().trim().length >= 2 && searchResults().length === 0) {
-              <div class="no-results">
-                <p>No se encontraron jugadores con ese nombre</p>
-              </div>
-            }
-          </div>
-
-          @if (selectedPlayers().length > 0) {
+      @if (!showPlayersStep()) {
+        <!-- Paso 1: Crear Equipo -->
+        <div class="modal-body">
+          <form class="register-form">
             <div class="form-group">
-              <label>
-                Jugadores Seleccionados 
-                <span class="player-count-badge">({{ selectedPlayers().length }}/{{ maxPlayers }})</span>
-              </label>
-              <div class="selected-players">
-                @for (player of selectedPlayers(); track player.uid; let i = $index) {
-                  <div class="selected-player-item">
-                    <div class="player-position">{{ i + 1 }}</div>
-                    <div class="player-info">
-                      @if (player.photoURL) {
-                        <img [src]="player.photoURL" [alt]="player.displayName" class="player-avatar-small">
-                      } @else {
-                        <div class="player-avatar-placeholder-small">
-                          {{ player.displayName.charAt(0).toUpperCase() }}
-                        </div>
-                      }
-                      <div>
-                        <div class="player-name-small">{{ player.displayName }}</div>
-                        @if (player.gameName) {
-                          <div class="player-game-small">{{ player.gameName }}#{{ player.tagLine }}</div>
-                        }
-                      </div>
-                    </div>
-                    <button type="button" class="remove-player-btn" (click)="removePlayer(player)" title="Remover jugador">
+              <label for="teamName">Nombre del Equipo *</label>
+              <input
+                type="text"
+                id="teamName"
+                [(ngModel)]="teamName"
+                name="teamName"
+                placeholder="Ej: Team Wayira"
+                class="form-input"
+                [disabled]="registering() || uploadingLogo()"
+                required>
+            </div>
+
+            <div class="form-group">
+              <label for="teamLogo">Logo del Equipo (Opcional)</label>
+              <div class="logo-upload-section">
+                @if (teamLogoPreview()) {
+                  <div class="logo-preview">
+                    <img [src]="teamLogoPreview()!" alt="Logo del equipo" class="logo-preview-image">
+                    <button type="button" class="remove-logo-btn" (click)="teamLogo.set(null); teamLogoPreview.set(null)">
                       <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
                   </div>
+                } @else {
+                  <label class="file-upload-label">
+                    <input
+                      type="file"
+                      id="teamLogo"
+                      accept="image/*"
+                      (change)="onLogoSelected($event)"
+                      [disabled]="registering() || uploadingLogo()">
+                    <div class="file-upload-content">
+                      <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span>Subir Logo</span>
+                      <small>Máximo 5MB</small>
+                    </div>
+                  </label>
                 }
               </div>
             </div>
-          }
 
-          <div class="modal-footer">
-            <button type="button" class="btn-cancel" (click)="closeRegisterModal()" [disabled]="registering()">
-              Cancelar
+            <div class="modal-footer">
+              <button type="button" class="btn-cancel" (click)="closeRegisterModal()" [disabled]="registering() || uploadingLogo()">
+                Cancelar
+              </button>
+              <button 
+                type="button"
+                class="btn-submit" 
+                (click)="createTeamAndGoToPlayers()" 
+                [disabled]="registering() || uploadingLogo() || !teamName().trim()">
+                @if (uploadingLogo()) {
+                  <span class="spinner-small"></span>
+                  <span>Subiendo logo...</span>
+                } @else {
+                  <span>Continuar con Jugadores</span>
+                }
+              </button>
+            </div>
+          </form>
+        </div>
+      } @else {
+        <!-- Paso 2: Información de Jugadores -->
+        <div class="players-step-content">
+          @if (editingPlayerIndex() !== null) {
+            <div class="player-card-overlay" (click)="editingPlayerIndex.set(null)"></div>
+          }
+          <div class="players-cards-container">
+            @for (player of playersInfo(); track $index; let i = $index) {
+              <div 
+                class="player-card" 
+                [class.active]="currentPlayerIndex() === i"
+                [class.complete]="isCardComplete(i)"
+                [class.editing]="editingPlayerIndex() === i"
+                (click)="editPlayerCard(i)">
+                @if (editingPlayerIndex() === i) {
+                  <!-- Carta Expandida - Edición -->
+                  <div class="player-card-expanded">
+                    <div class="player-card-header">
+                      <h4>Jugador {{ i + 1 }} - {{ getPlayerCard(i).role || roles[i] }}</h4>
+                      <button type="button" class="close-card-btn" (click)="editingPlayerIndex.set(null); $event.stopPropagation()">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                    <div class="player-card-form">
+                      <div class="form-group">
+                        <label>Nombre Completo *</label>
+                        <input
+                          type="text"
+                          [value]="getPlayerCard(i).name"
+                          (input)="updatePlayerInfo(i, 'name', $any($event.target).value)"
+                          placeholder="Ej: Juan Pérez"
+                          class="form-input">
+                      </div>
+                      <div class="form-group">
+                        <label>Teléfono *</label>
+                        <input
+                          type="tel"
+                          [value]="getPlayerCard(i).phone"
+                          (input)="updatePlayerInfo(i, 'phone', $any($event.target).value)"
+                          placeholder="Ej: +57 300 123 4567"
+                          class="form-input">
+                      </div>
+                      <div class="form-group">
+                        <label>Correo Electrónico *</label>
+                        <input
+                          type="email"
+                          [value]="getPlayerCard(i).email"
+                          (input)="updatePlayerInfo(i, 'email', $any($event.target).value)"
+                          placeholder="Ej: jugador@email.com"
+                          class="form-input">
+                      </div>
+                      <div class="form-row">
+                        <div class="form-group">
+                          <label>Nombre de Invocador *</label>
+                          <input
+                            type="text"
+                            [value]="getPlayerCard(i).gameName"
+                            (input)="updatePlayerInfo(i, 'gameName', $any($event.target).value)"
+                            placeholder="Ej: PlayerOne"
+                            class="form-input">
+                        </div>
+                        <div class="form-group">
+                          <label>Tagline *</label>
+                          <input
+                            type="text"
+                            [value]="getPlayerCard(i).tagLine"
+                            (input)="updatePlayerInfo(i, 'tagLine', $any($event.target).value)"
+                            placeholder="Ej: NA1"
+                            class="form-input"
+                            maxlength="5">
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label>Rol</label>
+                        <select
+                          [value]="getPlayerCard(i).role"
+                          (change)="updatePlayerInfo(i, 'role', $any($event.target).value)"
+                          class="form-select">
+                          @for (role of roles; track role) {
+                            <option [value]="role">{{ role }}</option>
+                          }
+                        </select>
+                      </div>
+                      <div class="form-group">
+                        <label>Campeón Principal (Main) 🎮</label>
+                        <select
+                          [value]="getPlayerCard(i).mainChampion"
+                          (change)="updatePlayerInfo(i, 'mainChampion', $any($event.target).value)"
+                          class="form-select">
+                          <option value="">-- Selecciona un campeón de LoL --</option>
+                          @for (champion of champions; track champion) {
+                            <option [value]="champion">{{ champion }}</option>
+                          }
+                        </select>
+                        <small style="color: rgba(255,255,255,0.5); font-size: 0.75rem; margin-top: 0.25rem; display: block;">
+                          Selecciona tu campeón principal de League of Legends
+                        </small>
+                      </div>
+                      <button 
+                        type="button" 
+                        class="btn-save-card" 
+                        (click)="savePlayerCard(i); $event.stopPropagation()"
+                        [disabled]="!canProceedToNextCard(i)">
+                        Guardar
+                      </button>
+                    </div>
+                  </div>
+                } @else {
+                  <!-- Carta Minimizada -->
+                  <div class="player-card-minimized">
+                    <div class="card-number">{{ i + 1 }}</div>
+                    <div class="card-role">{{ getPlayerCard(i).role || roles[i] }}</div>
+                    @if (isCardComplete(i)) {
+                      @if (getPlayerCard(i).mainChampion) {
+                        <div class="card-champion">
+                          <img 
+                            [src]="getChampionImageUrl(getPlayerCard(i).mainChampion || '')" 
+                            [alt]="getPlayerCard(i).mainChampion || ''"
+                            class="champion-image"
+                            (error)="onChampionImageError($event)"
+                            loading="lazy"
+                          />
+                          <span class="champion-name">{{ getPlayerCard(i).mainChampion }}</span>
+                        </div>
+                      }
+                      <div class="card-summoner-name">
+                        {{ getPlayerCard(i).gameName }}
+                      </div>
+                      <div class="card-complete-indicator">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <button 
+                        type="button" 
+                        class="edit-card-btn" 
+                        (click)="editPlayerCard(i); $event.stopPropagation()"
+                        title="Editar">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                    } @else {
+                      <div class="card-empty-state">
+                        <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span>Click para llenar</span>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="players-step-footer">
+            <button type="button" class="btn-cancel" (click)="goBackToTeamCreation()" [disabled]="registering()">
+              Volver
             </button>
             <button 
               type="button"
               class="btn-submit" 
-              (click)="registerTeam()" 
-              [disabled]="registering() || !teamName().trim() || selectedPlayers().length < maxPlayers">
+              (click)="finalizeTeamRegistration()" 
+              [disabled]="registering() || !allCardsComplete()">
               @if (registering()) {
                 <span class="spinner-small"></span>
                 <span>Registrando...</span>
@@ -368,8 +502,8 @@
               }
             </button>
           </div>
-        </form>
-      </div>
+        </div>
+      }
     </div>
   </div>
 }
@@ -388,7 +522,118 @@
       </div>
       
       <div class="bracket-content">
-        @if (selectedTournamentForBracket()!.bracket && selectedTournamentForBracket()!.bracket!.length > 0) {
+        @if (organizingBracket() || !selectedTournamentForBracket()!.confirmed) {
+          <!-- Canvas Organizador del Bracket -->
+          <div class="bracket-organizer-container">
+            <!-- Lista de Equipos Registrados -->
+            <div class="teams-list-container">
+              <h4>Equipos Registrados</h4>
+              <div class="teams-list" #teamsList>
+                @for (team of selectedTournamentForBracket()!.teams; track team.id; let i = $index) {
+                  <div 
+                    class="team-item" 
+                    [draggable]="true"
+                    (dragstart)="onTeamDragStart($event, team)"
+                    (dragend)="onTeamDragEnd($event)">
+                    @if (team.logoUrl) {
+                      <img [src]="team.logoUrl" [alt]="team.name" class="team-logo-small">
+                    }
+                    <span class="team-name-item">{{ team.name }}</span>
+                    <button 
+                      class="remove-team-btn" 
+                      (click)="removeTeamFromBracket(i)"
+                      title="Eliminar">
+                      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                }
+              </div>
+            </div>
+            
+            <!-- Canvas del Bracket - Organizado por Enfrentamientos -->
+            <div class="bracket-canvas-container">
+              <h4>Organizar Enfrentamientos</h4>
+              <div class="bracket-matches-container" 
+                   (dragover)="onBracketDragOver($event)"
+                   (drop)="onBracketDrop($event)">
+                @for (match of getBracketMatches(); track match.matchIndex; let i = $index) {
+                  <div class="bracket-match-slot">
+                    <div class="match-label">Enfrentamiento {{ i + 1 }}</div>
+                    <div class="match-teams">
+                      <!-- Team 1 -->
+                      <div 
+                        class="match-team-slot"
+                        [class.filled]="match.team1"
+                        [class.empty]="!match.team1"
+                        (drop)="onMatchTeamDrop($event, i, 'team1')"
+                        (dragover)="onSlotDragOver($event)">
+                        @if (match.team1) {
+                          <div class="slot-team">
+                            @if (match.team1.logoUrl) {
+                              <img [src]="match.team1.logoUrl" [alt]="match.team1.name" class="team-logo-small">
+                            }
+                            <span>{{ match.team1.name }}</span>
+                            <button 
+                              class="remove-slot-btn"
+                              (click)="removeTeamFromMatch(i, 'team1')"
+                              title="Eliminar">
+                              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        } @else {
+                          <div class="slot-placeholder">Equipo 1</div>
+                        }
+                      </div>
+                      
+                      <div class="match-vs">VS</div>
+                      
+                      <!-- Team 2 -->
+                      <div 
+                        class="match-team-slot"
+                        [class.filled]="match.team2"
+                        [class.empty]="!match.team2"
+                        (drop)="onMatchTeamDrop($event, i, 'team2')"
+                        (dragover)="onSlotDragOver($event)">
+                        @if (match.team2) {
+                          <div class="slot-team">
+                            @if (match.team2.logoUrl) {
+                              <img [src]="match.team2.logoUrl" [alt]="match.team2.name" class="team-logo-small">
+                            }
+                            <span>{{ match.team2.name }}</span>
+                            <button 
+                              class="remove-slot-btn"
+                              (click)="removeTeamFromMatch(i, 'team2')"
+                              title="Eliminar">
+                              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        } @else {
+                          <div class="slot-placeholder">Equipo 2</div>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+              <div class="organizer-actions">
+                <button class="btn-cancel" (click)="closeBracket()">Cancelar</button>
+                <button 
+                  class="btn-submit" 
+                  (click)="confirmBracket()"
+                  [disabled]="!allSlotsFilled()">
+                  Confirmar Bracket
+                </button>
+              </div>
+            </div>
+          </div>
+        } @else if (selectedTournamentForBracket()!.bracket && selectedTournamentForBracket()!.bracket!.length > 0) {
+          <!-- Vista del Bracket Visual con Enfrentamientos -->
           <div class="bracket-tree-container">
             <svg class="bracket-connections" #bracketSvg>
               <!-- Las líneas se dibujarán dinámicamente -->
@@ -416,7 +661,7 @@
                               <span class="team-score">{{ match.score1 }}</span>
                             }
                           </div>
-                          <div class="match-divider"></div>
+                          <div class="match-divider">VS</div>
                           <div class="match-team" [class.winner]="match.winnerId === match.team2Id">
                             <span class="team-name">{{ match.team2Name || 'TBD' }}</span>
                             @if (match.score2 !== undefined) {
@@ -451,10 +696,22 @@
                 </div>
               }
             </div>
+            @if (isAdmin() && selectedTournamentForBracket()!.confirmed) {
+              <div class="bracket-actions">
+                <button class="btn-edit-bracket" (click)="organizingBracket.set(true)">
+                  Editar Bracket
+                </button>
+              </div>
+            }
           </div>
         } @else {
           <div class="empty-bracket">
             <p>El bracket aún no ha sido generado</p>
+            @if (selectedTournamentForBracket()!.teams && selectedTournamentForBracket()!.teams!.length < selectedTournamentForBracket()!.maxTeams) {
+              <p class="empty-bracket-hint">
+                Esperando a que se registren todos los equipos ({{ selectedTournamentForBracket()!.teams!.length }}/{{ selectedTournamentForBracket()!.maxTeams }})
+              </p>
+            }
           </div>
         }
       </div>

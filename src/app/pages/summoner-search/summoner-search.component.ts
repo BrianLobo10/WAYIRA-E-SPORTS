@@ -65,10 +65,18 @@ export class SummonerSearchComponent {
           this.loading.set(false);
           if (err.status === 404) {
             this.error.set('Jugador no encontrado. Verifica el nombre y tagline.');
+          } else if (err.status === 401 || err.status === 403 || err.status === 503) {
+            this.error.set('El servicio de búsqueda de jugadores no está disponible en este momento. Por favor, intenta más tarde.');
           } else if (err.error?.error) {
-            this.error.set(err.error.error);
+            // Verificar si el mensaje contiene información técnica y reemplazarlo
+            const errorMsg = err.error.error;
+            if (errorMsg.includes('API key') || errorMsg.includes('Forbidden') || errorMsg.includes('portal de desarrolladores')) {
+              this.error.set('El servicio de búsqueda de jugadores no está disponible en este momento. Por favor, intenta más tarde.');
+            } else {
+              this.error.set(errorMsg);
+            }
           } else {
-            this.error.set('Error al buscar el jugador. Intenta nuevamente.');
+            this.error.set('El servicio de búsqueda de jugadores no está disponible en este momento. Por favor, intenta más tarde.');
           }
         }
       });
