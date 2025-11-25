@@ -144,11 +144,11 @@ function getRiotApiKey() {
   // firebase functions:secrets:set RIOT_API_KEY
   // Y declaras en la función: functions.runWith({ secrets: ['RIOT_API_KEY'] })
   if (process.env.RIOT_API_KEY) {
-    return process.env.RIOT_API_KEY;
+    // Eliminar espacios y saltos de línea que puedan haber sido añadidos accidentalmente
+    return process.env.RIOT_API_KEY.trim();
   }
   
   // Si no está configurado, retornar null
-  console.warn('RIOT_API_KEY no configurado. Configura el secret con: firebase functions:secrets:set RIOT_API_KEY');
   return null;
 }
 
@@ -184,7 +184,6 @@ async function getChampionRanking(region, championId, type, riotApiKey) {
     
     return null;
   } catch (error) {
-    console.log(`Error obteniendo ranking ${type} para campeón ${championId}:`, error.message);
     return null;
   }
 }
@@ -236,8 +235,8 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
     const RIOT_API_KEY = getRiotApiKey();
     
     if (!RIOT_API_KEY) {
-      return res.status(500).json({ 
-        error: 'API Key no configurada. Configura riot.api_key en Firebase Functions config.' 
+      return res.status(503).json({ 
+        error: 'El servicio de búsqueda de jugadores no está disponible en este momento. Por favor, intenta más tarde.' 
       });
     }
     
@@ -249,8 +248,6 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
     
     const cacheKey = `summoner-${region}-${cleanGameName}-${cleanTagLine}`;
     
-    console.log(`Buscando jugador: ${cleanGameName}#${cleanTagLine} en región ${region}`);
-    
     const summonerData = await getCachedData(cacheKey, async () => {
       // 1. Obtener PUUID usando Account-V1
       const accountUrl = `https://${routing}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(cleanGameName)}/${encodeURIComponent(cleanTagLine)}`;
@@ -260,9 +257,21 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
       });
       
       if (!accountResponse.ok) {
+        const errorText = await accountResponse.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (e) {
+          errorData = { status: { message: errorText, status_code: accountResponse.status } };
+        }
+        
+        if (accountResponse.status === 401 || accountResponse.status === 403) {
+          // Error de autenticación/autorización - mostrar mensaje amigable al usuario
+          throw new Error('El servicio de búsqueda de jugadores no está disponible en este momento. Por favor, intenta más tarde.');
+        }
+        
         if (accountResponse.status === 404) {
           if (cleanGameName !== gameName || cleanTagLine !== tagLine) {
-            console.log(`Intentando con nombre original: ${gameName}#${tagLine}`);
             const originalAccountUrl = `https://${routing}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`;
             
             const originalAccountResponse = await fetch(originalAccountUrl, {
@@ -271,7 +280,6 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
             
             if (originalAccountResponse.ok) {
               const originalAccount = await originalAccountResponse.json();
-              console.log(`Jugador encontrado con nombre original`);
               const summonerData = await getSummonerDataFromPuuid(region, originalAccount.puuid, RIOT_API_KEY);
               return {
                 ...summonerData,
@@ -282,14 +290,14 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
           }
           throw new Error('Jugador no encontrado');
         }
-        throw new Error(`Error ${accountResponse.status}: ${await accountResponse.text()}`);
+        
+        // Otros errores
+        throw new Error(`Error ${accountResponse.status}: ${errorData.status?.message || errorText}`);
       }
       
       const accountData = await accountResponse.json();
       const puuid = accountData.puuid;
       
-      console.log(`PUUID obtenido: ${puuid}`);
-      console.log(`Buscando summoner en región: ${region}`);
       
       // 2. Obtener datos del summoner
       const summonerUrl = `https://${region}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${puuid}`;
@@ -299,21 +307,17 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
       
       if (!summonerResponse.ok) {
         const errorText = await summonerResponse.text();
-        console.error(`Error obteniendo summoner (${summonerResponse.status}):`, errorText);
-        
         if (summonerResponse.status === 404) {
           const latamRegions = ['la1', 'la2', 'br1'];
           for (const altRegion of latamRegions) {
             if (altRegion === region) continue;
             
-            console.log(`Intentando con región alternativa: ${altRegion}`);
             const altSummonerUrl = `https://${altRegion}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${puuid}`;
             const altSummonerResponse = await fetch(altSummonerUrl, {
               headers: { 'X-Riot-Token': RIOT_API_KEY }
             });
             
             if (altSummonerResponse.ok) {
-              console.log(`Summoner encontrado en región ${altRegion}`);
               const summoner = await altSummonerResponse.json();
               
               let leagueData = [];
@@ -327,7 +331,6 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
                   leagueData = await leagueResponse.json();
                 }
               } catch (error) {
-                console.log('Error obteniendo estadísticas rankeadas:', error.message);
               }
               
               return {
@@ -372,9 +375,18 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
     
     res.json(summonerData);
   } catch (err) {
-    console.error('Error en /api/summoner:', err);
-    res.status(err.message.includes('no encontrado') ? 404 : 500).json({ 
-      error: err.message || 'Error interno del servidor' 
+    
+    // Determinar el código de estado apropiado
+    let statusCode = 500;
+    if (err.message.includes('no encontrado')) {
+      statusCode = 404;
+    } else if (err.message.includes('API key') || err.message.includes('autenticación') || err.message.includes('restringida')) {
+      statusCode = 401;
+    }
+    
+    res.status(statusCode).json({ 
+      error: err.message || 'Error interno del servidor',
+      statusCode: statusCode
     });
   }
 });
@@ -388,8 +400,8 @@ app.get('/api/matches/:region/:puuid', async (req, res) => {
     const RIOT_API_KEY = getRiotApiKey();
     
     if (!RIOT_API_KEY) {
-      return res.status(500).json({ 
-        error: 'API Key no configurada' 
+      return res.status(503).json({ 
+        error: 'El servicio no está disponible en este momento. Por favor, intenta más tarde.' 
       });
     }
     
@@ -407,6 +419,9 @@ app.get('/api/matches/:region/:puuid', async (req, res) => {
       });
       
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('El servicio no está disponible en este momento. Por favor, intenta más tarde.');
+        }
         throw new Error(`Error obteniendo partidas: ${response.status}`);
       }
       
@@ -428,7 +443,6 @@ app.get('/api/matches/:region/:puuid', async (req, res) => {
           // Pequeño delay para no saturar la API
           await new Promise(resolve => setTimeout(resolve, 100));
         } catch (err) {
-          console.log(`Error obteniendo detalles de partida ${matchId}:`, err.message);
         }
       }
       
@@ -439,8 +453,15 @@ app.get('/api/matches/:region/:puuid', async (req, res) => {
     
     res.json(matchesData);
   } catch (err) {
-    console.error('Error en /api/matches:', err);
-    res.status(500).json({ error: err.message || 'Error interno del servidor' });
+    let statusCode = 500;
+    let errorMessage = 'El servicio no está disponible en este momento. Por favor, intenta más tarde.';
+    
+    if (err.message && err.message.includes('no está disponible')) {
+      statusCode = 503;
+      errorMessage = err.message;
+    }
+    
+    res.status(statusCode).json({ error: errorMessage });
   }
 });
 
@@ -467,6 +488,9 @@ app.get('/api/mastery/:region/:puuid', async (req, res) => {
       });
       
       if (!masteryResponse.ok) {
+        if (masteryResponse.status === 401 || masteryResponse.status === 403) {
+          throw new Error('El servicio no está disponible en este momento. Por favor, intenta más tarde.');
+        }
         throw new Error(`Error obteniendo maestría: ${masteryResponse.status}`);
       }
       
@@ -486,7 +510,6 @@ app.get('/api/mastery/:region/:puuid', async (req, res) => {
             serverRank: serverRank || null
           };
         } catch (error) {
-          console.log(`Error obteniendo ranking para campeón ${champ.championId}:`, error.message);
           return {
             ...champ,
             worldRank: null,
@@ -500,8 +523,15 @@ app.get('/api/mastery/:region/:puuid', async (req, res) => {
     
     res.json(masteryData);
   } catch (err) {
-    console.error('Error en /api/mastery:', err);
-    res.status(500).json({ error: err.message || 'Error interno del servidor' });
+    let statusCode = 500;
+    let errorMessage = 'El servicio no está disponible en este momento. Por favor, intenta más tarde.';
+    
+    if (err.message && err.message.includes('no está disponible')) {
+      statusCode = 503;
+      errorMessage = err.message;
+    }
+    
+    res.status(statusCode).json({ error: errorMessage });
   }
 });
 
