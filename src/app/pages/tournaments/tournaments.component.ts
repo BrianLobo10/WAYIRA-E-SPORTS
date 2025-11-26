@@ -78,7 +78,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     'Rainbow Six Siege'
   ];
 
-  teamCounts = [8, 16, 32, 64];
+  teamCounts = [2, 4, 8, 16, 32, 64]; // Incluir 2 para versus
 
   async ngOnInit() {
     await this.checkAdminStatus();
@@ -709,20 +709,61 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     const tournament = this.selectedTournamentForBracket();
     if (!tournament) return;
     
-    const maxTeams = tournament.maxTeams;
+    // Obtener cantidad real de equipos registrados
+    const registeredTeams = tournament.teams || [];
+    const numRegisteredTeams = registeredTeams.length;
+    
+    // Si el bracket ya está confirmado, usar los equipos del bracket confirmado
+    if (tournament.confirmed && tournament.teams && tournament.teams.length > 0) {
+      const confirmedTeams = tournament.teams;
+      const numMatches = Math.floor(confirmedTeams.length / 2);
+      this.bracketMatches = Array(numMatches).fill(null).map((_, i) => ({
+        team1: confirmedTeams[i * 2] || null,
+        team2: confirmedTeams[i * 2 + 1] || null,
+        matchIndex: i
+      }));
+      return;
+    }
+    
+    // Si no está confirmado, inicializar dinámicamente según equipos registrados
+    // Calcular número de enfrentamientos basado en equipos registrados
+    // Si hay equipos registrados, usar esa cantidad; si no, usar maxTeams
+    const teamsForBracket = numRegisteredTeams > 0 ? numRegisteredTeams : tournament.maxTeams;
+    
+    // Asegurar que sea par para los enfrentamientos (redondear hacia arriba si es impar)
+    // Pero mínimo 2 equipos (versus)
+    const actualTeamCount = Math.max(teamsForBracket, 2);
+    
     // Inicializar slots individuales (para compatibilidad)
-    this.bracketSlots = Array(maxTeams).fill(null).map((_, i) => ({
+    this.bracketSlots = Array(actualTeamCount).fill(null).map((_, i) => ({
       team: null,
       position: i
     }));
     
-    // Inicializar enfrentamientos (parejas)
-    const numMatches = Math.floor(maxTeams / 2);
+    // Inicializar enfrentamientos VACÍOS - dinámico e inteligente
+    // Los equipos se arrastrarán desde la lista
+    const numMatches = Math.ceil(actualTeamCount / 2);
     this.bracketMatches = Array(numMatches).fill(null).map((_, i) => ({
       team1: null,
       team2: null,
       matchIndex: i
     }));
+  }
+
+  // Obtener equipos disponibles (que NO están en enfrentamientos)
+  getAvailableTeams(): Team[] {
+    const tournament = this.selectedTournamentForBracket();
+    if (!tournament || !tournament.teams) return [];
+    
+    // Obtener IDs de equipos que están en enfrentamientos
+    const teamsInMatches = new Set<string>();
+    this.bracketMatches.forEach(match => {
+      if (match.team1) teamsInMatches.add(match.team1.id);
+      if (match.team2) teamsInMatches.add(match.team2.id);
+    });
+    
+    // Filtrar equipos que NO están en enfrentamientos
+    return tournament.teams.filter(team => !teamsInMatches.has(team.id));
   }
 
   getBracketSlots(): Array<{ team: Team | null; position: number }> {
@@ -862,8 +903,10 @@ export class TournamentsComponent implements OnInit, OnDestroy {
   }
 
   removeTeamFromMatch(matchIndex: number, teamPosition: 'team1' | 'team2') {
+    // El equipo vuelve a la lista automáticamente al quitarse del enfrentamiento
     this.bracketMatches[matchIndex][teamPosition] = null;
     this.syncMatchesToSlots();
+    // La lista se actualiza automáticamente gracias a getAvailableTeams()
   }
 
   // Sincronizar enfrentamientos con slots para compatibilidad
@@ -900,8 +943,12 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       return;
     }
     
-    // Sincronizar antes de confirmar
-    this.syncMatchesToSlots();
+    // Verificar que todos los enfrentamientos estén completos
+    const incompleteMatches = this.bracketMatches.filter(m => !m.team1 || !m.team2);
+    if (incompleteMatches.length > 0) {
+      alert(`Debes completar todos los enfrentamientos. Faltan ${incompleteMatches.length} enfrentamientos.`);
+      return;
+    }
     
     // Obtener equipos desde los enfrentamientos, en orden de los enfrentamientos
     const teams: Team[] = [];
@@ -910,15 +957,15 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       if (match.team2) teams.push(match.team2);
     });
     
-    if (teams.length !== tournament.maxTeams) {
-      alert(`Debes organizar todos los ${tournament.maxTeams} equipos en enfrentamientos`);
+    // Validar que haya al menos 2 equipos (versus mínimo)
+    if (teams.length < 2) {
+      alert('Necesitas al menos 2 equipos para crear un bracket');
       return;
     }
     
-    // Verificar que todos los enfrentamientos estén completos
-    const incompleteMatches = this.bracketMatches.filter(m => !m.team1 || !m.team2);
-    if (incompleteMatches.length > 0) {
-      alert(`Debes completar todos los enfrentamientos. Faltan ${incompleteMatches.length} enfrentamientos.`);
+    // Validar que no haya más equipos de los permitidos
+    if (teams.length > tournament.maxTeams) {
+      alert(`No puedes tener más de ${tournament.maxTeams} equipos en el bracket`);
       return;
     }
     
@@ -1419,6 +1466,62 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       alert('Error al eliminar el torneo. Por favor intenta nuevamente.');
     } finally {
       this.deletingTournamentId.set(null);
+    }
+  }
+
+  // Descargar Excel con información de equipos y miembros
+  async downloadTournamentExcel() {
+    const tournament = this.selectedTournamentForBracket();
+    if (!tournament || !tournament.teams) {
+      alert('No hay equipos para exportar');
+      return;
+    }
+
+    try {
+      // Crear contenido CSV (compatible con Excel)
+      let csvContent = '\uFEFF'; // BOM para UTF-8 en Excel
+      
+      // Encabezados
+      csvContent += 'Torneo,Equipo,Capitán,Rol,Nombre,Jugador,Email,Teléfono,Invocador,Tagline,Campeón Principal\n';
+      
+      // Datos de cada equipo
+      tournament.teams.forEach((team, teamIndex) => {
+        const teamName = team.name || `Equipo ${teamIndex + 1}`;
+        const captainName = team.captainName || 'N/A';
+        const tournamentName = tournament.name || 'Torneo';
+        
+        // Si el equipo tiene playerInfo, usar esos datos
+        if (team.playerInfo && team.playerInfo.length > 0) {
+          team.playerInfo.forEach((player, playerIndex) => {
+            csvContent += `"${tournamentName}","${teamName}","${captainName}","${player.role || 'N/A'}","${player.name || 'N/A'}","Jugador ${playerIndex + 1}","${player.email || 'N/A'}","${player.phone || 'N/A'}","${player.gameName || 'N/A'}","${player.tagLine || 'N/A'}","${player.mainChampion || 'N/A'}"\n`;
+          });
+        } else if (team.players && team.players.length > 0) {
+          // Si no hay playerInfo, usar players (legacy)
+          team.players.forEach((playerEmail, playerIndex) => {
+            csvContent += `"${tournamentName}","${teamName}","${captainName}","N/A","N/A","Jugador ${playerIndex + 1}","${playerEmail}","N/A","N/A","N/A","N/A"\n`;
+          });
+        } else {
+          // Equipo sin jugadores
+          csvContent += `"${tournamentName}","${teamName}","${captainName}","N/A","N/A","Sin jugadores","N/A","N/A","N/A","N/A","N/A"\n`;
+        }
+      });
+      
+      // Crear blob y descargar
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${tournament.name.replace(/[^a-z0-9]/gi, '_')}_equipos_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      alert('Excel descargado exitosamente');
+    } catch (error) {
+      console.error('Error descargando Excel:', error);
+      alert('Error al descargar el Excel. Por favor intenta nuevamente.');
     }
   }
 }

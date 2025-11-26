@@ -110,9 +110,9 @@ const cache = new Map();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
 // Helper para obtener datos con caché
-const getCachedData = async (key, fetchFn) => {
+const getCachedData = async (key, fetchFn, customDuration = CACHE_DURATION) => {
   const cached = cache.get(key);
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+  if (cached && Date.now() - cached.timestamp < customDuration) {
     return cached.data;
   }
   
@@ -379,6 +379,66 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
     // Determinar el código de estado apropiado
     let statusCode = 500;
     if (err.message.includes('no encontrado')) {
+      statusCode = 404;
+    } else if (err.message.includes('API key') || err.message.includes('autenticación') || err.message.includes('restringida')) {
+      statusCode = 401;
+    }
+    
+    res.status(statusCode).json({ 
+      error: err.message || 'Error interno del servidor',
+      statusCode: statusCode
+    });
+  }
+});
+
+// Endpoint para obtener datos del account usando PUUID (para actualizar nombres/tags)
+app.get('/api/account/:region/:puuid', async (req, res) => {
+  try {
+    const { region, puuid } = req.params;
+    
+    const RIOT_API_KEY = getRiotApiKey();
+    
+    if (!RIOT_API_KEY) {
+      return res.status(503).json({ 
+        error: 'El servicio no está disponible en este momento. Por favor, intenta más tarde.' 
+      });
+    }
+    
+    const routing = regionalRouting[region] || 'americas';
+    const cacheKey = `account-${puuid}`;
+    
+    // Cache más corto para actualizaciones en tiempo real (30 segundos)
+    const accountData = await getCachedData(cacheKey, async () => {
+      // Obtener datos del account usando PUUID
+      const accountUrl = `https://${routing}.api.riotgames.com/riot/account/v1/accounts/by-puuid/${puuid}`;
+      
+      const accountResponse = await fetch(accountUrl, {
+        headers: { 'X-Riot-Token': RIOT_API_KEY }
+      });
+      
+      if (!accountResponse.ok) {
+        if (accountResponse.status === 401 || accountResponse.status === 403) {
+          throw new Error('El servicio no está disponible en este momento. Por favor, intenta más tarde.');
+        }
+        if (accountResponse.status === 404) {
+          throw new Error('Cuenta no encontrada');
+        }
+        throw new Error(`Error obteniendo cuenta: ${accountResponse.status}`);
+      }
+      
+      return await accountResponse.json();
+    }, 30000); // Cache de 30 segundos
+    
+    res.json({
+      puuid: accountData.puuid,
+      gameName: accountData.gameName,
+      tagLine: accountData.tagLine
+    });
+  } catch (err) {
+    console.error('Error en /api/account:', err);
+    
+    let statusCode = 500;
+    if (err.message.includes('no encontrada')) {
       statusCode = 404;
     } else if (err.message.includes('API key') || err.message.includes('autenticación') || err.message.includes('restringida')) {
       statusCode = 401;
