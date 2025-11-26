@@ -1,4 +1,5 @@
-import { Component, signal, inject, OnInit, computed } from '@angular/core';
+import { Component, signal, inject, OnInit, OnDestroy, computed } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -12,12 +13,13 @@ import { RiotApiService, SummonerData } from '../../services/riot-api.service';
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.css']
 })
-export class ProfileComponent implements OnInit {
+export class ProfileComponent implements OnInit, OnDestroy {
   // Exponer URL global para usar en el template
   URL = URL;
   private firebaseService = inject(FirebaseService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private profileSubscription: Subscription | null = null;
 
   userId = signal<string | null>(null);
   profile = signal<UserProfile | null>(null);
@@ -141,6 +143,14 @@ export class ProfileComponent implements OnInit {
     try {
       const profile = await this.firebaseService.getUserProfile(userId);
       this.profile.set(profile);
+      
+      // Suscribirse a cambios en tiempo real del perfil
+      this.subscribeToProfileRealtime(userId);
+      
+      // Verificar y actualizar el nombre/tag del invocador si tiene PUUID
+      if (profile && profile.puuid && profile.region) {
+        this.firebaseService.checkAndUpdateUserSummonerName(userId);
+      }
       
       const currentUser = this.firebaseService.getCurrentUser();
       if (currentUser && profile) {
@@ -749,6 +759,35 @@ export class ProfileComponent implements OnInit {
       return 'text-long';
     } else {
       return 'text-very-long';
+    }
+  }
+
+  // Suscribirse a cambios en tiempo real del perfil
+  subscribeToProfileRealtime(userId: string) {
+    // Limpiar suscripción anterior si existe
+    if (this.profileSubscription) {
+      this.profileSubscription.unsubscribe();
+    }
+
+    // Suscribirse a cambios en tiempo real usando el método del servicio
+    this.profileSubscription = this.firebaseService.getUserProfileRealtime(userId).subscribe({
+      next: (updatedProfile) => {
+        if (updatedProfile) {
+          this.profile.set(updatedProfile);
+          // Los cambios se reflejarán automáticamente en la UI gracias al signal
+        }
+      },
+      error: (error) => {
+        console.error('Error en suscripción de perfil en tiempo real:', error);
+      }
+    });
+  }
+
+  ngOnDestroy() {
+    // Limpiar suscripción cuando el componente se destruya
+    if (this.profileSubscription) {
+      this.profileSubscription.unsubscribe();
+      this.profileSubscription = null;
     }
   }
 }

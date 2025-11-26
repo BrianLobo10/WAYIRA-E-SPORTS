@@ -37,7 +37,8 @@ import {
   getDownloadURL,
   deleteObject 
 } from '@angular/fire/storage';
-import { Observable, from, map, BehaviorSubject } from 'rxjs';
+import { Observable, from, map, BehaviorSubject, interval } from 'rxjs';
+import { RiotApiService } from './riot-api.service';
 
 export interface UserProfile {
   uid: string;
@@ -206,9 +207,11 @@ export class FirebaseService {
   private firestore = inject(Firestore);
   private auth = inject(Auth);
   private storage = inject(Storage);
+  private riotApiService = inject(RiotApiService);
   
   private currentUser$ = new BehaviorSubject<User | null>(null);
   public currentUser = this.currentUser$.asObservable();
+  private summonerUpdateInterval: any = null;
 
   constructor() {
     onAuthStateChanged(this.auth, (user: User | null) => {
@@ -1947,6 +1950,98 @@ export class FirebaseService {
         if (unsubscribe2) unsubscribe2();
       };
     });
+  }
+
+  // Iniciar sistema de actualización automática de nombres/tags de invocadores
+  startSummonerNameUpdateSystem() {
+    // Verificar cada 5 minutos
+    const CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutos
+    
+    // Verificar inmediatamente al iniciar (después de un pequeño delay)
+    setTimeout(() => {
+      this.checkAndUpdateSummonerNames();
+    }, 10000); // Esperar 10 segundos después de cargar la app
+    
+    // Configurar intervalo periódico
+    if (this.summonerUpdateInterval) {
+      clearInterval(this.summonerUpdateInterval);
+    }
+    
+    this.summonerUpdateInterval = setInterval(() => {
+      this.checkAndUpdateSummonerNames();
+    }, CHECK_INTERVAL);
+  }
+
+  // Detener sistema de actualización
+  stopSummonerNameUpdateSystem() {
+    if (this.summonerUpdateInterval) {
+      clearInterval(this.summonerUpdateInterval);
+      this.summonerUpdateInterval = null;
+    }
+  }
+
+  // Verificar y actualizar nombres/tags de todos los usuarios con PUUID
+  async checkAndUpdateSummonerNames() {
+    try {
+      // Obtener usuarios conectados actualmente y los que tienen PUUID verificado
+      // Verificamos solo usuarios activos para no sobrecargar la API
+      const currentUser = this.getCurrentUser();
+      
+      // Verificar el usuario actual si está autenticado
+      if (currentUser) {
+        await this.checkAndUpdateUserSummonerName(currentUser.uid);
+      }
+      
+      // También verificar usuarios que están viendo perfiles (opcional, para mejorar UX)
+      // Por ahora solo verificamos el usuario actual para evitar demasiadas llamadas a la API
+    } catch (error) {
+      console.error('Error en checkAndUpdateSummonerNames:', error);
+    }
+  }
+
+  // Verificar y actualizar el nombre/tag de un usuario específico
+  async checkAndUpdateUserSummonerName(uid: string): Promise<boolean> {
+    try {
+      const userProfile = await this.getUserProfile(uid);
+      
+      if (!userProfile || !userProfile.puuid || !userProfile.region) {
+        return false;
+      }
+      
+      // Obtener datos actuales del invocador
+      return new Promise((resolve) => {
+        this.riotApiService.getAccountByPuuid(userProfile.region!, userProfile.puuid!).subscribe({
+          next: async (accountData) => {
+            // Verificar si el nombre o tag han cambiado
+            if (accountData.gameName !== userProfile.gameName || accountData.tagLine !== userProfile.tagLine) {
+              // Actualizar el perfil
+              await this.updateUserProfile(uid, {
+                gameName: accountData.gameName,
+                tagLine: accountData.tagLine,
+                displayName: accountData.gameName
+              });
+              
+              // Actualizar también en Auth si es el usuario actual
+              const currentUser = this.getCurrentUser();
+              if (currentUser && currentUser.uid === uid) {
+                await updateProfile(currentUser, { displayName: accountData.gameName });
+              }
+              
+              resolve(true);
+            } else {
+              resolve(false);
+            }
+          },
+          error: (error) => {
+            console.error(`Error verificando summoner para usuario ${uid}:`, error);
+            resolve(false);
+          }
+        });
+      });
+    } catch (error) {
+      console.error(`Error en checkAndUpdateUserSummonerName para ${uid}:`, error);
+      return false;
+    }
   }
 
 }

@@ -78,8 +78,8 @@
                     }
                   </button>
                 }
-                @if (tournament.confirmed || tournament.bracket || (isAdmin() && (tournament.teams || []).length === tournament.maxTeams)) {
-                  @if (isAdmin() && (tournament.teams || []).length === tournament.maxTeams && !tournament.confirmed) {
+                @if (tournament.confirmed || tournament.bracket || (isAdmin() && (tournament.teams || []).length >= 2)) {
+                  @if (isAdmin() && (tournament.teams || []).length >= 2 && !tournament.confirmed) {
                     <button class="btn-view-bracket" (click)="openBracketOrganizer(tournament)">
                       Organizar Bracket
                     </button>
@@ -525,29 +525,25 @@
         @if (organizingBracket() || !selectedTournamentForBracket()!.confirmed) {
           <!-- Canvas Organizador del Bracket -->
           <div class="bracket-organizer-container">
-            <!-- Lista de Equipos Registrados -->
+            <!-- Lista de Equipos Registrados (Solo disponibles - no en enfrentamientos) -->
             <div class="teams-list-container">
               <h4>Equipos Registrados</h4>
               <div class="teams-list" #teamsList>
-                @for (team of selectedTournamentForBracket()!.teams; track team.id; let i = $index) {
-                  <div 
-                    class="team-item" 
-                    [draggable]="true"
-                    (dragstart)="onTeamDragStart($event, team)"
-                    (dragend)="onTeamDragEnd($event)">
-                    @if (team.logoUrl) {
-                      <img [src]="team.logoUrl" [alt]="team.name" class="team-logo-small">
-                    }
-                    <span class="team-name-item">{{ team.name }}</span>
-                    <button 
-                      class="remove-team-btn" 
-                      (click)="removeTeamFromBracket(i)"
-                      title="Eliminar">
-                      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
+                @if (getAvailableTeams().length === 0) {
+                  <p class="no-teams-message">Todos los equipos están organizados</p>
+                } @else {
+                  @for (team of getAvailableTeams(); track team.id; let i = $index) {
+                    <div 
+                      class="team-item" 
+                      [draggable]="true"
+                      (dragstart)="onTeamDragStart($event, team)"
+                      (dragend)="onTeamDragEnd($event)">
+                      @if (team.logoUrl) {
+                        <img [src]="team.logoUrl" [alt]="team.name" class="team-logo-small">
+                      }
+                      <span class="team-name-item">{{ team.name }}</span>
+                    </div>
+                  }
                 }
               </div>
             </div>
@@ -700,6 +696,12 @@
               <div class="bracket-actions">
                 <button class="btn-edit-bracket" (click)="organizingBracket.set(true)">
                   Editar Bracket
+                </button>
+                <button class="btn-download-excel" (click)="downloadTournamentExcel()">
+                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Descargar Excel
                 </button>
               </div>
             }

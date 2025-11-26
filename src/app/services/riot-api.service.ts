@@ -95,5 +95,12 @@ export class RiotApiService {
       getApiUrl(`/mastery/${region}/${puuid}?count=${count}`)
     );
   }
+
+  // Obtener datos del account usando PUUID (para actualizar nombres/tags)
+  getAccountByPuuid(region: string, puuid: string): Observable<{ puuid: string; gameName: string; tagLine: string }> {
+    return this.http.get<{ puuid: string; gameName: string; tagLine: string }>(
+      getApiUrl(`/account/${region}/${puuid}`)
+    );
+  }
 }
 
