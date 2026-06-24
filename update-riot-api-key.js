@@ -69,7 +69,7 @@ async function updateRiotApiKey() {
     });
 
     console.log('\n✅ ¡Listo! La API key ha sido actualizada y las funciones redesplegadas.');
-    console.log('   Prueba el endpoint ahora: https://wayirae-sports.web.app/api/summoner/...\n');
+    console.log('   Prueba el endpoint ahora: https://wayira-e-sports.web.app/api/summoner/...\n');
 
   } catch (error) {
     console.error('\n❌ Error al actualizar la API key:', error.message);

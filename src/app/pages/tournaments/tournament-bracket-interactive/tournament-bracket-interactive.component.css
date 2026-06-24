@@ -1,0 +1,463 @@
+:host {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  background: radial-gradient(ellipse 120% 80% at 50% 0%, #1a1f35 0%, #0b0e18 55%, #07080f 100%);
+  color: #e8edf7;
+  font-family: system-ui, sans-serif;
+}
+
+.tbi-loading,
+.tbi-error {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 2rem;
+  text-align: center;
+}
+
+.tbi-error a {
+  color: #7dd3fc;
+}
+
+.tbi-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.tbi-help {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0.5rem 1rem 0.65rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: rgba(232, 237, 247, 0.82);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.2);
+  max-width: min(2200px, 100%);
+}
+
+.tbi-help strong {
+  color: #e8edf7;
+  font-weight: 600;
+}
+
+.tbi-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.tbi-back {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.tbi-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  flex: 1;
+  min-width: 0;
+}
+
+.tbi-badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.25);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+}
+
+.tbi-mode {
+  font-size: 0.75rem;
+  opacity: 0.85;
+}
+
+.tbi-mode-admin {
+  color: #86efac;
+}
+
+.tbi-zoom {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tbi-zoom button {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  cursor: pointer;
+}
+
+.tbi-final-bo {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.tbi-final-bo button {
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  cursor: pointer;
+}
+
+.tbi-final-bo button.active {
+  background: rgba(34, 197, 94, 0.25);
+  border-color: rgba(34, 197, 94, 0.5);
+}
+
+.tbi-historial-link {
+  font-size: 0.8rem;
+  color: #a5b4fc;
+  text-decoration: none;
+  padding: 0.35rem 0.55rem;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.tbi-historial-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.tbi-badge--done {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.45);
+  color: #bbf7d0;
+}
+
+.tbi-finished-banner {
+  margin: 0;
+  padding: 0.65rem 1rem;
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.14), rgba(99, 102, 241, 0.12));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.88rem;
+  max-width: min(2200px, 100%);
+}
+
+.tbi-finished-banner strong {
+  color: #fef9c3;
+}
+
+.tbi-help a {
+  color: #93c5fd;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.tbi-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tbi-stage {
+  position: relative;
+  /* Más ancho útil para separar columnas del upper (alineado con el estilo del lower) */
+  width: min(2800px, max(100%, 1400px));
+  /* Altura mínima alta: el upper bracket usa mucha franja vertical del viewBox; en pantalla necesita píxeles */
+  min-height: min(1780px, max(155vh, 1520px));
+  margin: 0 auto;
+  padding: 1.25rem 0.5rem 2.25rem;
+  transition: transform 0.2s ease;
+}
+
+.tbi-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Línea sombra + trazo (estilo kavlih: polyline doble) */
+.tbi-path-shadow,
+.tbi-path-line {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.tbi-path-shadow {
+  stroke-width: 0.95;
+  opacity: 0.55;
+}
+
+.tbi-path-shadow-upper {
+  stroke: rgb(30, 90, 140);
+}
+
+.tbi-path-shadow-lower {
+  stroke: rgb(120, 40, 70);
+}
+
+.tbi-path-shadow-cross {
+  stroke: rgb(120, 90, 30);
+}
+
+.tbi-path-line {
+  stroke-width: 0.48;
+}
+
+.tbi-path-upper {
+  stroke: rgb(70, 185, 255);
+}
+
+.tbi-path-lower {
+  stroke: rgb(255, 120, 160);
+}
+
+.tbi-path-cross {
+  stroke: rgb(255, 210, 90);
+}
+
+.tbi-nodes {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.tbi-nodes .tbi-card {
+  pointer-events: auto;
+}
+
+.tbi-card {
+  position: absolute;
+  box-sizing: border-box;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: linear-gradient(180deg, rgba(22, 32, 58, 0.98), rgba(8, 12, 28, 0.98));
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.5),
+    0 6px 18px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  padding: 0.26rem 0.12rem;
+  transition: left 0.28s ease, top 0.28s ease, transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  z-index: 2;
+}
+
+.tbi-card:not(.lower) {
+  padding: 0.36rem 0.08rem;
+}
+
+.tbi-card--enter {
+  animation: tbi-card-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes tbi-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+.tbi-root:not(.spectator) .tbi-card:hover {
+  transform: scale(1.02);
+  border-color: rgba(125, 211, 252, 0.45);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+
+.tbi-card.lower {
+  border-color: rgba(251, 113, 133, 0.35);
+  padding: 0.36rem 0.08rem;
+}
+
+.tbi-card.tbi-card--gf {
+  z-index: 4;
+  border-color: rgba(250, 204, 21, 0.45);
+  box-shadow:
+    0 0 0 1px rgba(250, 204, 21, 0.12),
+    0 8px 22px rgba(0, 0, 0, 0.5);
+}
+
+.tbi-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.2rem;
+}
+
+.tbi-lbl {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+}
+
+.tbi-swap {
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.25rem;
+}
+
+.tbi-team {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.28rem;
+  font-size: 0.56rem;
+  padding: 0.16rem 0.06rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  margin-bottom: 0.15rem;
+}
+
+.tbi-team span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tbi-team.dim {
+  opacity: 0.45;
+}
+
+.tbi-win {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(34, 197, 94, 0.35);
+  color: #bbf7d0;
+  cursor: pointer;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.tbi-lose-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.25rem;
+  margin-top: 0.2rem;
+}
+
+.tbi-lose {
+  flex: 1;
+  border: none;
+  border-radius: 6px;
+  padding: 0.2rem;
+  font-size: 0.65rem;
+  background: rgba(239, 68, 68, 0.25);
+  color: #fecaca;
+  cursor: pointer;
+}
+
+.tbi-bo3-panel {
+  margin-top: 0.35rem;
+  padding: 0.45rem 0.35rem 0.4rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.38);
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.tbi-bo3-maps-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.2rem;
+  font-size: 0.52rem;
+}
+
+.tbi-bo3-maps-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.92;
+}
+
+.tbi-map-pip {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  transition:
+    background 0.28s ease,
+    transform 0.22s ease,
+    box-shadow 0.28s ease;
+}
+
+.tbi-map-pip--on {
+  background: linear-gradient(135deg, #38bdf8, #6366f1);
+  border-color: rgba(125, 211, 252, 0.55);
+  transform: scale(1.12);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+}
+
+.tbi-map-pip--b.tbi-map-pip--on {
+  background: linear-gradient(135deg, #fb7185, #e879f9);
+  box-shadow: 0 0 10px rgba(251, 113, 133, 0.45);
+}
+
+.tbi-bo3-scoreline {
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: #fde68a;
+  margin: 0.15rem 0 0.25rem;
+}
+
+.tbi-bo3-hint {
+  font-size: 0.5rem;
+  text-align: center;
+  margin: 0.2rem 0 0;
+  color: rgba(226, 232, 240, 0.82);
+}
+
+.tbi-done {
+  font-size: 0.58rem;
+  margin-top: 0.25rem;
+  color: rgba(167, 243, 208, 0.95);
+  text-align: center;
+}
+
+.tbi-root.spectator .tbi-win,
+.tbi-root.spectator .tbi-lose,
+.tbi-root.spectator .tbi-swap {
+  display: none;
+}

@@ -1,10 +1,10 @@
 .header {
-  background: linear-gradient(135deg, #00363D 0%, #014C4A 100%);
-  border-bottom: 2px solid #016C6C;
+  background: linear-gradient(135deg, #002a30 0%, #00363D 50%, #014C4A 100%);
+  border-bottom: 1px solid rgba(1, 108, 108, 0.4);
   position: sticky;
   top: 0;
   z-index: 1000;
-  box-shadow: 0 4px 20px rgba(1, 108, 108, 0.3);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
 }
 
 .container {
@@ -17,7 +17,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.2rem 0;
+  padding: 0.9rem 0;
 }
 
 .logo a {
@@ -65,8 +65,12 @@
   font-weight: 500;
   font-size: 1rem;
   position: relative;
-  transition: color 0.3s ease;
+  transition: color 0.2s ease, opacity 0.2s ease;
   padding: 0.5rem 0;
+}
+
+.nav a:hover {
+  opacity: 0.9;
 }
 
 .nav-link-icon {
@@ -91,13 +95,31 @@
     display: none;
   }
   
-  .nav-link-icon {
+  .nav {
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+  
+  .nav-link-icon,
+  .nav .dropdown-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: 0.5rem;
     border-radius: 8px;
+    min-width: 40px;
+    min-height: 40px;
+    box-sizing: border-box;
   }
   
   .nav-link-icon:hover {
     background: rgba(255, 255, 255, 0.1);
+  }
+  
+  .nav-link-icon svg,
+  .nav .dropdown-trigger svg {
+    flex-shrink: 0;
   }
 }
 
@@ -131,43 +153,91 @@ app-notifications {
   align-items: center;
 }
 
-.active-tournament-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  background: linear-gradient(135deg, #fbbf24, #f59e0b);
-  color: #000000;
-  text-decoration: none;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 0.9375rem;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
-  animation: pulse 2s infinite;
+/* Botón Torneos: siempre visible, grande y simple; "encendido" cuando hay torneos */
+.nav-tournaments-btn::after {
+  display: none;
 }
 
-.active-tournament-btn:hover {
+.nav-tournaments-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 0.8rem 1.35rem;
+  min-width: 9.5rem;
+  min-height: 48px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.nav-tournaments-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.nav-tournaments-btn svg {
+  flex-shrink: 0;
+  color: currentColor;
+  width: 20px;
+  height: 20px;
+}
+
+.tournament-btn-text {
+  font-weight: 700;
+  line-height: 1.2;
+  overflow: visible;
+  flex-shrink: 0;
+}
+
+/* Encendido / Pro: cuando hay torneos disponibles */
+.nav-tournaments-btn.has-tournaments {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #000;
+  border-color: transparent;
+  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.45);
+  animation: tournament-glow 2.5s ease-in-out infinite;
+}
+
+.nav-tournaments-btn.has-tournaments:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(251, 191, 36, 0.6);
+  box-shadow: 0 6px 24px rgba(251, 191, 36, 0.55);
   background: linear-gradient(135deg, #f59e0b, #d97706);
 }
 
-.active-tournament-btn svg {
-  color: #000000;
+.nav-tournaments-btn.has-tournaments svg {
+  color: #000;
 }
 
-.tournament-text {
-  font-weight: 700;
+.nav-link-text-only {
+  color: rgba(255, 255, 255, 0.82);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
+  white-space: nowrap;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
-@keyframes pulse {
-  0%, 100% {
-    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
-  }
-  50% {
-    box-shadow: 0 4px 20px rgba(251, 191, 36, 0.7);
-  }
+.nav-link-text-only:hover,
+.nav-link-text-only.active {
+  color: #c7d2fe;
+  background: rgba(99, 102, 241, 0.15);
+}
+
+@keyframes tournament-glow {
+  0%, 100% { box-shadow: 0 4px 16px rgba(251, 191, 36, 0.45); }
+  50% { box-shadow: 0 4px 22px rgba(251, 191, 36, 0.6); }
 }
 
 .create-tournament-btn {
@@ -339,8 +409,9 @@ app-notifications {
     right: 0;
     background: linear-gradient(135deg, #00363D 0%, #014C4A 100%);
     flex-direction: column;
-    padding: 2rem;
-    gap: 1.5rem;
+    align-items: stretch;
+    padding: 1.5rem 1.25rem;
+    gap: 0.5rem;
     transform: translateY(-100%);
     opacity: 0;
     visibility: hidden;
@@ -358,24 +429,76 @@ app-notifications {
     pointer-events: all;
   }
 
-  .nav a {
+  /* En móvil mostramos icono + texto alineados en cada ítem */
+  .nav .nav-link-text {
+    display: inline !important;
+  }
+
+  .nav a,
+  .nav .dropdown-trigger {
     width: 100%;
-    text-align: center;
-    font-size: 1.2rem;
-    padding: 1rem 0;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    font-size: 1.05rem;
+    padding: 1rem 1.25rem;
+    text-align: left;
+    border-radius: 10px;
+    box-sizing: border-box;
+  }
+
+  .nav .nav-link-icon,
+  .nav .dropdown-trigger.nav-link-icon {
+    justify-content: center;
+  }
+
+  .nav .dropdown-trigger svg:first-of-type {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+  }
+
+  .nav .dropdown-trigger svg:last-of-type {
+    flex-shrink: 0;
+    margin-left: 0.25rem;
+  }
+
+  .nav .profile-name {
+    display: inline !important;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nav .nav-tournaments-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 1rem 1.25rem;
+  }
+
+  .nav .create-tournament-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 0.75rem 1rem;
+  }
+
+  .nav .create-tournament-btn .nav-link-text {
+    display: inline !important;
   }
 
   .dropdown {
     width: 100%;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
   }
 
   .dropdown-trigger {
-    width: 100%;
-    text-align: center;
-    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .dropdown-menu {
@@ -384,13 +507,14 @@ app-notifications {
     visibility: visible;
     transform: none;
     box-shadow: 0 4px 15px rgba(1, 108, 108, 0.3);
-    background: linear-gradient(135deg, #00363D 0%, #014C4A 100%);
-    margin-top: 0.5rem;
-    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    margin-top: 0.25rem;
+    margin-bottom: 0.5rem;
+    border-radius: 10px;
     display: none;
     border: 1px solid rgba(1, 108, 108, 0.3);
     width: 100%;
-    max-width: 300px;
+    max-width: none;
   }
   
   .dropdown-menu.active {
@@ -401,7 +525,7 @@ app-notifications {
   @keyframes slideDown {
     from {
       opacity: 0;
-      transform: translateY(-10px);
+      transform: translateY(-8px);
     }
     to {
       opacity: 1;
@@ -410,17 +534,22 @@ app-notifications {
   }
 
   .dropdown-item {
-    padding: 1.2rem 1.2rem;
+    padding: 1rem 1.25rem;
     border-radius: 8px;
-    margin: 0.2rem 0.6rem;
-    text-align: center;
-    display: block;
+    margin: 0.15rem 0.5rem;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
   }
 
-  .dropdown-trigger {
-    cursor: pointer;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
+  .nav-item {
+    width: 100%;
+  }
+
+  .nav app-notifications {
+    width: 100%;
+    display: block;
   }
 }
 
@@ -532,6 +661,18 @@ app-notifications {
   color: #ffffff;
 }
 
+.profile-menu .dropdown-item .unread-badge {
+  margin-left: auto;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
 @media (max-width: 1024px) {
   .profile-name {
     display: none;
@@ -545,7 +686,20 @@ app-notifications {
     padding: 0.35rem 0.5rem;
     font-size: 0.7rem;
     min-width: 40px;
+    min-height: 40px;
     justify-content: center;
+  }
+  
+  /* Mantener texto "Torneos" legible; ancho mínimo para que no se corte */
+  .nav-tournaments-btn .tournament-btn-text {
+    display: inline;
+  }
+
+  .nav-tournaments-btn {
+    min-width: 8.75rem;
+    padding: 0.55rem 1rem;
+    min-height: 44px;
+    gap: 0.5rem;
   }
 }
 
@@ -633,24 +787,24 @@ app-notifications {
   }
 
   .container {
-    padding: 0 1rem;
+    padding: 0 0.9rem;
   }
-  
+
   .header-content {
-    padding: 1rem 0;
+    padding: 0.75rem 0;
   }
-  
+
   .logo-text,
   .logo-accent {
-    font-size: 1.4rem;
+    font-size: 1.35rem;
   }
-  
+
   .nav {
-    padding: 1.5rem;
+    padding: 1.25rem;
   }
-  
+
   .nav a {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
   }
 }
 

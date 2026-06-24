@@ -9,11 +9,12 @@ import { NewsComponent } from './pages/news/news.component';
 import { LoginComponent } from './pages/auth/login/login.component';
 import { RegisterComponent } from './pages/auth/register/register.component';
 import { BlogComponent } from './pages/blog/blog.component';
+import { FeedComponent } from './pages/feed/feed.component';
+import { ExploreUsersComponent } from './pages/explore-users/explore-users.component';
 import { ProfileComponent } from './pages/profile/profile.component';
 import { MessagesComponent } from './pages/messages/messages.component';
 import { TournamentsComponent } from './pages/tournaments/tournaments.component';
-import { authGuard } from './guards/auth.guard';
-import { adminGuard } from './guards/admin.guard';
+import { sessionGuard } from './guards/session.guard';
 import { guestGuard } from './guards/guest.guard';
 
 export const routes: Routes = [
@@ -32,7 +33,7 @@ export const routes: Routes = [
   {
     path: 'contact',
     component: ContactComponent,
-    canActivate: [authGuard]
+    canActivate: [sessionGuard]
   },
   {
     path: 'about',
@@ -47,14 +48,24 @@ export const routes: Routes = [
     component: NewsComponent
   },
   {
+    path: 'feed',
+    component: FeedComponent,
+    canActivate: [sessionGuard]
+  },
+  {
+    path: 'explore',
+    component: ExploreUsersComponent,
+    canActivate: [sessionGuard]
+  },
+  {
     path: 'blog',
-    component: BlogComponent,
-    canActivate: [authGuard]
+    redirectTo: 'feed',
+    pathMatch: 'full'
   },
   {
     path: 'blog/post/:id',
     loadComponent: () => import('./pages/blog/post-view/post-view.component').then(m => m.PostViewComponent),
-    canActivate: [authGuard]
+    canActivate: [sessionGuard]
   },
   {
     path: 'login',
@@ -69,21 +80,40 @@ export const routes: Routes = [
   {
     path: 'profile/:id',
     component: ProfileComponent,
-    canActivate: [authGuard]
+    canActivate: [sessionGuard]
   },
   {
     path: 'profile',
     component: ProfileComponent,
-    canActivate: [authGuard]
+    canActivate: [sessionGuard]
   },
   {
     path: 'messages',
     component: MessagesComponent,
-    canActivate: [authGuard]
+    canActivate: [sessionGuard]
   },
   {
     path: 'tournaments',
     component: TournamentsComponent
+  },
+  {
+    path: 'tournaments/:tournamentId/vista-interactiva',
+    loadComponent: () =>
+      import('./pages/tournaments/tournament-bracket-interactive/tournament-bracket-interactive.component').then(
+        m => m.TournamentBracketInteractiveComponent
+      )
+  },
+  {
+    path: 'tournaments/historial',
+    loadComponent: () =>
+      import('./pages/tournaments/tournament-history/tournament-history.component').then(m => m.TournamentHistoryComponent)
+  },
+  {
+    path: 'tournaments/historial/:tournamentId',
+    loadComponent: () =>
+      import('./pages/tournaments/tournament-history/tournament-history-detail.component').then(
+        m => m.TournamentHistoryDetailComponent
+      )
   },
   {
     path: '**',

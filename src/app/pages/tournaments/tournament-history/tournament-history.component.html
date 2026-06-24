@@ -1,0 +1,36 @@
+<div class="th-page">
+  <div class="th-hero">
+    <div class="container">
+      <a routerLink="/tournaments" class="th-back">← Torneos activos</a>
+      <h1>Historial de torneos</h1>
+      <p>Torneos finalizados: campeón, subcampeón (redención) y fecha de cierre.</p>
+    </div>
+  </div>
+
+  <div class="container th-content">
+    @if (loading()) {
+      <p class="th-muted">Cargando…</p>
+    } @else if (error()) {
+      <p class="th-error">{{ error() }}</p>
+    } @else if (tournaments().length === 0) {
+      <p class="th-muted">Aún no hay torneos cerrados en el historial.</p>
+    } @else {
+      <ul class="th-list">
+        @for (t of tournaments(); track t.id) {
+          <li class="th-card th-card--enter" [style.animation-delay.ms]="$index * 45">
+            <a [routerLink]="['/tournaments/historial', t.id]" class="th-card-link">
+              <span class="th-card-title">{{ t.name }}</span>
+              <span class="th-card-meta">Finalizado: {{ formatDate(t) }}</span>
+              @if (t.championTeamName) {
+                <span class="th-card-champ">Campeón: <strong>{{ t.championTeamName }}</strong></span>
+              }
+              @if (t.format === 'double' && t.redemptionChampionTeamName) {
+                <span class="th-card-second">2.º (redención): {{ t.redemptionChampionTeamName }}</span>
+              }
+            </a>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</div>

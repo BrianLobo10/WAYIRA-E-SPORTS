@@ -1,0 +1,177 @@
+.activity-timeline-card.aurea-card {
+  background: #1a2332;
+  border-radius: 12px;
+  padding: 1.5rem 1.25rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.aurea-container {
+  max-width: 935px;
+  margin: 0 auto;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+
+.activity-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+}
+
+.period-badge {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.activity-hint {
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0 0 1rem 0;
+  text-align: center;
+}
+
+/* Vista por mes */
+.activity-by-month {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.month-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.month-label {
+  flex: 0 0 36px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.month-bar-track {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 20px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.month-bar {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  border-radius: 4px;
+  background: transparent;
+  transition: width 0.2s ease;
+}
+
+.month-bar.has-activity {
+  background: linear-gradient(90deg, rgba(234, 179, 8, 0.6), rgba(234, 179, 8, 0.95));
+}
+
+.month-count {
+  flex: 0 0 32px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: right;
+}
+
+.activity-timeline-body {
+  overflow-x: auto;
+}
+
+.activity-scroll {
+  min-width: min-content;
+}
+
+.activity-days-row {
+  display: grid;
+  grid-template-columns: 28px repeat(31, minmax(10px, 1fr));
+  gap: 2px;
+  margin-bottom: 2px;
+}
+
+.activity-corner {
+  grid-column: 1;
+}
+
+.activity-day-num {
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.4);
+  text-align: center;
+}
+
+.activity-grid {
+  display: grid;
+  grid-template-columns: 28px repeat(31, minmax(10px, 1fr));
+  grid-template-rows: repeat(12, 1fr);
+  gap: 2px;
+}
+
+.activity-month-label {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.activity-cell {
+  min-width: 10px;
+  min-height: 12px;
+  border-radius: 2px;
+}
+
+.act-empty { background: rgba(255, 255, 255, 0.08); }
+.act-0 { background: rgba(255, 255, 255, 0.08); }
+.act-1 { background: rgba(234, 179, 8, 0.35); }
+.act-2 { background: rgba(234, 179, 8, 0.55); }
+.act-3 { background: rgba(234, 179, 8, 0.75); }
+.act-4 { background: rgba(234, 179, 8, 0.95); }
+
+.activity-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.activity-total {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.activity-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.legend-cells {
+  display: flex;
+  gap: 2px;
+}
+
+.legend-cells .act {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}

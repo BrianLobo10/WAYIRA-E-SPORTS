@@ -16,7 +16,6 @@
             <h2>Configura tu Ruleta</h2>
             <p class="section-subtitle">Escriba los nombres que quiere incluir en la ruleta</p>
           </div>
-          
           <div class="options-input-container">
             <textarea 
               [(ngModel)]="optionsText"
@@ -26,7 +25,6 @@
               class="options-input">
             </textarea>
           </div>
-          
           <div class="options-count">
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -34,7 +32,6 @@
             {{ options().length }} Participantes
           </div>
         </div>
-        
         <div class="roulette-display">
           <div class="roulette-wrapper">
             <canvas #canvas id="canvas" width="550" height="550"></canvas>
@@ -43,7 +40,6 @@
               <div class="spinning-text">{{ currentSpinningText() }}</div>
             </div>
           </div>
-          
           <div class="spin-button-container">
             <button 
               (click)="spin()" 

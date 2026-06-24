@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, Injector, runInInjectionContext } from '@angular/core';
 import { 
   Firestore, 
   collection, 
@@ -11,9 +11,11 @@ import {
   where, 
   orderBy, 
   limit,
+  startAfter,
   getDocs,
   addDoc,
   Timestamp,
+  increment,
   onSnapshot,
   QuerySnapshot,
   DocumentData,
@@ -24,12 +26,19 @@ import {
   Auth, 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
+  signInWithPopup,
+  signInWithPhoneNumber,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
+  GoogleAuthProvider,
   signOut,
   onAuthStateChanged,
   User,
   updateProfile,
   sendEmailVerification
 } from '@angular/fire/auth';
+import type { ConfirmationResult, ApplicationVerifier } from 'firebase/auth';
 import { 
   Storage, 
   ref, 
@@ -37,20 +46,23 @@ import {
   getDownloadURL,
   deleteObject 
 } from '@angular/fire/storage';
-import { Observable, from, map, BehaviorSubject, interval } from 'rxjs';
+import { Observable, from, map, switchMap, BehaviorSubject, interval } from 'rxjs';
 import { RiotApiService } from './riot-api.service';
+import { Router } from '@angular/router';
+import { removeCachedUserProfile } from '../utils/profile-view-cache';
 
 export interface UserProfile {
   uid: string;
   email: string;
   displayName: string;
   photoURL?: string;
+  coverImageURL?: string;
   role: 'user' | 'admin';
   gameName?: string;
   tagLine?: string;
   region?: string;
   puuid?: string;
-  riotVerified?: boolean; // Indica si el invocador ha sido verificado con Riot API
+  riotVerified?: boolean;
   followers?: string[];
   following?: string[];
   createdAt: Timestamp;
@@ -103,17 +115,40 @@ export interface Tournament {
   id?: string;
   name: string;
   description: string;
-  game: string; // Juego del torneo (League of Legends, Valorant, etc.)
+  game: string;
   startDate: Timestamp;
   endDate: Timestamp;
   maxTeams: number;
   teams: Team[];
   status: 'upcoming' | 'ongoing' | 'finished' | 'confirmed';
+  format?: 'single' | 'double';
+  configuredRounds?: number;
   createdBy: string;
   createdAt: Timestamp;
   bracket?: BracketMatch[];
+  lowerBracket?: BracketMatch[]; // bracket de recuperación (doble eliminación)
   confirmed?: boolean;
   confirmedAt?: Timestamp;
+  /** Mejor de 1 o 3 en la gran final */
+  grandFinalBestOf?: 1 | 3;
+  /** Mejor de 1 o 3 en la final del bracket de redención */
+  redemptionFinalBestOf?: 1 | 3;
+  /** Cierre automático al completar finales */
+  finishedAt?: Timestamp;
+  /** Campeón del torneo (gran final) */
+  championTeamId?: string;
+  championTeamName?: string;
+  /** Campeón del bracket de redención (2.º lugar) */
+  redemptionChampionTeamId?: string;
+  redemptionChampionTeamName?: string;
+}
+
+/** Estadísticas globales por equipo (torneos ganados) */
+export interface TeamTournamentStats {
+  teamId: string;
+  teamName: string;
+  tournamentsWon: number;
+  updatedAt: Timestamp;
 }
 
 export interface PlayerInfo {
@@ -125,6 +160,15 @@ export interface PlayerInfo {
   tagLine: string; // Tagline del invocador
   role?: string; // Rol en el equipo (opcional: Top, Jungle, Mid, ADC, Support)
   mainChampion?: string; // Campeón principal de LoL
+}
+
+/** Proyecto activo (Proyectos Activos en la página de proyectos). */
+export interface ActiveProject {
+  icon: string;
+  title: string;
+  description: string;
+  status: string;
+  date: string;
 }
 
 export interface Team {
@@ -142,14 +186,27 @@ export interface Team {
 
 export interface BracketMatch {
   id: string;
-  round: 'round16' | 'quarter' | 'semi' | 'final';
+  round: string;
+  bracketType?: 'upper' | 'lower';
+  roundIndex?: number;
+  roundLabel?: string;
+  slotIndex?: number;
   team1Id?: string;
   team1Name?: string;
   team2Id?: string;
   team2Name?: string;
   score1?: number;
   score2?: number;
+  bestOf?: number; // ej. 3 = al mejor de 3
   winnerId?: string;
+  loserId?: string; // para enviar a bracket de recuperación
+  loserGoesToMatchId?: string; // id del partido en lower bracket al que va el perdedor
+  loserGoesToMatchSlot?: 'team1' | 'team2';
+  nextMatchId?: string;
+  nextMatchSlot?: 'team1' | 'team2';
+  team1SourceMatchId?: string;
+  team2SourceMatchId?: string;
+  autoAdvance?: boolean;
   matchDate?: Timestamp;
 }
 
@@ -200,6 +257,9 @@ export interface Notification {
   createdAt: Timestamp;
 }
 
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutos
+const REMEMBER_KEY = 'wayira_remember';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -208,15 +268,75 @@ export class FirebaseService {
   private auth = inject(Auth);
   private storage = inject(Storage);
   private riotApiService = inject(RiotApiService);
-  
+  private router = inject(Router);
+  private injector = inject(Injector);
+
   private currentUser$ = new BehaviorSubject<User | null>(null);
   public currentUser = this.currentUser$.asObservable();
+  /** Resuelve cuando Firebase Auth ha emitido el primer estado (evita flash de login al recargar) */
+  private authReady$ = new BehaviorSubject<boolean>(false);
   private summonerUpdateInterval: any = null;
+  private idleTimer: ReturnType<typeof setTimeout> | null = null;
+  private idleReset = () => this.resetIdleTimer();
 
   constructor() {
     onAuthStateChanged(this.auth, (user: User | null) => {
       this.currentUser$.next(user);
+      if (!this.authReady$.value) this.authReady$.next(true);
+      if (user) this.startIdleTimeout();
+      else this.clearIdleTimeout();
     });
+  }
+
+  /**
+   * Espera a que Firebase Auth haya emitido el primer estado antes de decidir si hay sesión.
+   * Evita mostrar la página de login por un instante al recargar con sesión abierta.
+   */
+  waitForAuthInit(timeoutMs: number = 3000): Promise<void> {
+    if (this.authReady$.value) return Promise.resolve();
+    return new Promise((resolve) => {
+      const sub = this.authReady$.subscribe((ready) => {
+        if (ready) {
+          sub.unsubscribe();
+          resolve();
+        }
+      });
+      setTimeout(() => {
+        sub.unsubscribe();
+        resolve();
+      }, timeoutMs);
+    });
+  }
+
+  private startIdleTimeout() {
+    if (typeof localStorage === 'undefined') return;
+    if (localStorage.getItem(REMEMBER_KEY) === '1') return; // Recordarme: no cerrar por inactividad
+    this.resetIdleTimer();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('click', this.idleReset);
+      window.addEventListener('keydown', this.idleReset);
+      window.addEventListener('mousemove', this.idleReset);
+    }
+  }
+
+  private resetIdleTimer() {
+    this.clearIdleTimeout();
+    this.idleTimer = setTimeout(() => {
+      this.logout();
+      this.router.navigate(['/login'], { replaceUrl: true });
+    }, IDLE_TIMEOUT_MS);
+  }
+
+  private clearIdleTimeout() {
+    if (this.idleTimer) {
+      clearTimeout(this.idleTimer);
+      this.idleTimer = null;
+    }
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('click', this.idleReset);
+      window.removeEventListener('keydown', this.idleReset);
+      window.removeEventListener('mousemove', this.idleReset);
+    }
   }
 
   // Auth Methods
@@ -283,8 +403,38 @@ export class FirebaseService {
         createdAt: Timestamp.now()
       };
 
-      await setDoc(doc(this.firestore, 'users', user.uid), userProfile);
-      await updateProfile(user, { displayName: gameName });
+      // Crear el perfil en Firestore - con manejo de errores específico
+      try {
+        await setDoc(doc(this.firestore, 'users', user.uid), userProfile);
+        console.log('Perfil de usuario creado exitosamente en Firestore:', user.uid);
+      } catch (profileError: any) {
+        console.error('Error al crear perfil en Firestore:', profileError);
+        // Si falla la creación del perfil, intentar crear uno básico
+        try {
+          await this.createDefaultProfile(user.uid, user);
+          // Si el perfil básico se creó, actualizar con los datos del registro
+          await updateDoc(doc(this.firestore, 'users', user.uid), {
+            gameName,
+            tagLine,
+            region,
+            puuid: puuid || undefined,
+            riotVerified
+          });
+          console.log('Perfil básico creado y actualizado con datos de registro');
+        } catch (fallbackError: any) {
+          console.error('Error al crear perfil de respaldo:', fallbackError);
+          // Lanzar error para que el usuario sepa que hubo un problema
+          throw new Error('El usuario se creó pero hubo un problema al guardar el perfil. Por favor, intenta iniciar sesión y actualiza tu perfil manualmente.');
+        }
+      }
+
+      // Actualizar el perfil de Firebase Auth
+      try {
+        await updateProfile(user, { displayName: gameName });
+      } catch (authError: any) {
+        console.warn('No se pudo actualizar el perfil de Auth:', authError.message);
+        // No bloquear el registro si falla la actualización de Auth
+      }
       
       return user;
     } catch (error: any) {
@@ -540,7 +690,46 @@ export class FirebaseService {
     return await signInWithEmailAndPassword(this.auth, email, password);
   }
 
+  /** Iniciar sesión con Google. Crea perfil en Firestore si no existe. */
+  async loginWithGoogle() {
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(this.auth, provider);
+    const user = result.user;
+    const existing = await this.getUserProfile(user.uid);
+    if (!existing) {
+      await this.createDefaultProfile(user.uid, user);
+    }
+    return result;
+  }
+
+  /** Establecer persistencia de sesión: local (recordarme) o solo sesión. */
+  async setSessionPersistence(remember: boolean) {
+    await setPersistence(this.auth, remember ? browserLocalPersistence : browserSessionPersistence);
+    if (typeof localStorage !== 'undefined') {
+      if (remember) localStorage.setItem(REMEMBER_KEY, '1');
+      else localStorage.removeItem(REMEMBER_KEY);
+    }
+  }
+
+  /** Enviar código SMS al teléfono. Devuelve ConfirmationResult para verificar después. */
+  async sendPhoneVerificationCode(phoneNumber: string, appVerifier: ApplicationVerifier): Promise<ConfirmationResult> {
+    return await signInWithPhoneNumber(this.auth, phoneNumber, appVerifier);
+  }
+
+  /** Verificar código SMS y completar inicio de sesión. Crea perfil si no existe. */
+  async verifyPhoneCode(confirmationResult: ConfirmationResult, code: string) {
+    const result = await confirmationResult.confirm(code);
+    const user = result.user;
+    const existing = await this.getUserProfile(user.uid);
+    if (!existing) {
+      await this.createDefaultProfile(user.uid, user);
+    }
+    return result;
+  }
+
   async logout() {
+    const uid = this.getCurrentUser()?.uid;
+    if (uid) removeCachedUserProfile(uid);
     return await signOut(this.auth);
   }
 
@@ -554,24 +743,71 @@ export class FirebaseService {
   async getUserProfile(uid: string): Promise<UserProfile | null> {
     try {
       const docRef = doc(this.firestore, 'users', uid);
-      const result = await from(getDoc(docRef)).pipe(
-        map((docSnap: any) => {
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            return {
-              uid: docSnap.id,
-              ...data
-            } as UserProfile;
-          } else {
-            console.warn(`User profile not found for uid: ${uid}`);
-            return null;
-          }
-        })
-      ).toPromise();
-      return result || null;
+      const docSnap = await runInInjectionContext(this.injector, () => getDoc(docRef));
+      
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const role = data['role'] != null ? String(data['role']).trim().toLowerCase() : 'user';
+        return {
+          uid: docSnap.id,
+          ...data,
+          role: (role === 'admin' ? 'admin' : 'user') as 'user' | 'admin'
+        } as UserProfile;
+      } else {
+        // Si no existe el perfil, verificar si el usuario está autenticado
+        // y crear un perfil básico automáticamente
+        const currentUser = this.getCurrentUser();
+        if (currentUser && currentUser.uid === uid) {
+          // Usuario autenticado sin perfil - crear uno básico
+          console.log(`Creating default profile for authenticated user: ${uid}`);
+          return await this.createDefaultProfile(uid, currentUser);
+        } else {
+          console.warn(`User profile not found for uid: ${uid}`);
+          return null;
+        }
+      }
     } catch (error) {
       console.error(`Error getting user profile for uid ${uid}:`, error);
+      // Intentar crear perfil básico si hay error y el usuario está autenticado
+      const currentUser = this.getCurrentUser();
+      if (currentUser && currentUser.uid === uid) {
+        try {
+          return await this.createDefaultProfile(uid, currentUser);
+        } catch (createError) {
+          console.error('Error creating default profile:', createError);
+        }
+      }
       return null;
+    }
+  }
+
+  // Crear perfil básico para usuarios autenticados sin perfil
+  private async createDefaultProfile(uid: string, authUser: User): Promise<UserProfile> {
+    const displayName = authUser.displayName
+      || authUser.email?.split('@')[0]
+      || authUser.phoneNumber
+      || 'Usuario';
+    const defaultProfile: UserProfile = {
+      uid: uid,
+      email: authUser.email || '',
+      displayName,
+      photoURL: authUser.photoURL || undefined,
+      role: 'user',
+      followers: [],
+      following: [],
+      createdAt: Timestamp.now()
+    };
+
+    try {
+      // Guardar el perfil en Firestore
+      await setDoc(doc(this.firestore, 'users', uid), defaultProfile);
+      console.log(`Default profile created for user: ${uid}`);
+      return defaultProfile;
+    } catch (error) {
+      console.error('Error creating default profile in Firestore:', error);
+      // Retornar el perfil básico aunque no se haya guardado en Firestore
+      // para que la aplicación no falle
+      return defaultProfile;
     }
   }
 
@@ -579,29 +815,70 @@ export class FirebaseService {
   getUserProfileRealtime(uid: string): Observable<UserProfile | null> {
     const docRef = doc(this.firestore, 'users', uid);
     return new Observable((observer) => {
-      const unsubscribe = onSnapshot(docRef, 
-        (docSnap) => {
+      const unsubscribe = runInInjectionContext(this.injector, () => onSnapshot(docRef, 
+        async (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
+            const role = data['role'] != null ? String(data['role']).trim().toLowerCase() : 'user';
             observer.next({
               uid: docSnap.id,
-              ...data
+              ...data,
+              role: (role === 'admin' ? 'admin' : 'user') as 'user' | 'admin'
             } as UserProfile);
           } else {
-            observer.next(null);
+            // Si no existe el perfil, verificar si el usuario está autenticado
+            // y crear un perfil básico automáticamente
+            const currentUser = this.getCurrentUser();
+            if (currentUser && currentUser.uid === uid) {
+              try {
+                const defaultProfile = await this.createDefaultProfile(uid, currentUser);
+                observer.next(defaultProfile);
+              } catch (error) {
+                console.error('Error creating default profile in realtime:', error);
+                observer.next(null);
+              }
+            } else {
+              observer.next(null);
+            }
           }
         },
         (error) => {
           console.error(`Error getting user profile for uid ${uid}:`, error);
-          observer.next(null);
+          // Intentar crear perfil básico si hay error y el usuario está autenticado
+          const currentUser = this.getCurrentUser();
+          if (currentUser && currentUser.uid === uid) {
+            this.createDefaultProfile(uid, currentUser).then(profile => {
+              observer.next(profile);
+            }).catch(err => {
+              console.error('Error creating default profile:', err);
+              observer.next(null);
+            });
+          } else {
+            observer.next(null);
+          }
         }
-      );
+      ));
       return () => unsubscribe();
     });
   }
 
   async updateUserProfile(uid: string, data: Partial<UserProfile>) {
     const docRef = doc(this.firestore, 'users', uid);
+    
+    // Verificar si el documento existe
+    const docSnap = await getDoc(docRef);
+    
+    // Si no existe, crear un perfil básico primero
+    if (!docSnap.exists()) {
+      const currentUser = this.getCurrentUser();
+      if (currentUser && currentUser.uid === uid) {
+        // Crear perfil básico primero
+        await this.createDefaultProfile(uid, currentUser);
+      } else {
+        // Si no es el usuario actual, no podemos crear el perfil
+        throw new Error('No se puede actualizar el perfil: el documento no existe y no se puede crear automáticamente');
+      }
+    }
     
     // Preparar los datos a actualizar
     const updateData: any = { ...data, updatedAt: Timestamp.now() };
@@ -649,6 +926,31 @@ export class FirebaseService {
         // No fallar si no se puede actualizar Auth, pero continuar con Firestore
       }
     }
+  }
+
+  private readonly PROJECTS_CONFIG_PATH = 'config/projects';
+
+  /** Obtiene la lista de proyectos activos (tiempo real). Si no hay en Firestore, devuelve array vacío. */
+  getProjectsRealtime(): Observable<ActiveProject[]> {
+    const docRef = doc(this.firestore, this.PROJECTS_CONFIG_PATH.split('/')[0], this.PROJECTS_CONFIG_PATH.split('/')[1]);
+    return new Observable((observer) => {
+      const unsubscribe = runInInjectionContext(this.injector, () =>
+        onSnapshot(docRef, (snap) => {
+          const items = snap.exists() ? (snap.data()['items'] as ActiveProject[] || []) : [];
+          observer.next(Array.isArray(items) ? items : []);
+        }, (err) => {
+          console.error('Error loading projects:', err);
+          observer.next([]);
+        })
+      );
+      return () => unsubscribe();
+    });
+  }
+
+  /** Guarda la lista de proyectos activos. Solo debe llamarse si el usuario es admin. */
+  async setProjects(projects: ActiveProject[]): Promise<void> {
+    const configRef = doc(this.firestore, this.PROJECTS_CONFIG_PATH.split('/')[0], this.PROJECTS_CONFIG_PATH.split('/')[1]);
+    await setDoc(configRef, { items: projects, updatedAt: Timestamp.now() });
   }
 
   private async updateUserPhotoInPosts(uid: string, photoURL: string | undefined) {
@@ -760,7 +1062,8 @@ export class FirebaseService {
 
   async isAdmin(uid: string): Promise<boolean> {
     const profile = await this.getUserProfile(uid);
-    return profile?.role === 'admin';
+    const role = profile?.role != null ? String(profile.role).trim().toLowerCase() : '';
+    return role === 'admin';
   }
 
   // Posts Methods
@@ -1105,7 +1408,9 @@ export class FirebaseService {
       ...tournament,
       teams: [],
       status: 'upcoming',
-      createdAt: Timestamp.now()
+      createdAt: Timestamp.now(),
+      grandFinalBestOf: tournament.grandFinalBestOf ?? 3,
+      redemptionFinalBestOf: tournament.redemptionFinalBestOf ?? 3
     };
     const docRef = await addDoc(tournamentsRef, newTournament);
     return docRef.id;
@@ -1121,13 +1426,12 @@ export class FirebaseService {
 
   getActiveTournament(): Observable<Tournament | null> {
     const tournamentsRef = collection(this.firestore, 'tournaments');
-    // Query solo por status para evitar necesidad de índice compuesto
     const q = query(
       tournamentsRef,
       where('status', '==', 'ongoing'),
-      limit(10) // Limitar resultados y ordenar en memoria
+      limit(10)
     );
-    return from(getDocs(q)).pipe(
+    return from(runInInjectionContext(this.injector, () => getDocs(q))).pipe(
       map((snapshot: QuerySnapshot<DocumentData>) => {
         if (snapshot.empty) return null;
         // Ordenar por createdAt en memoria
@@ -1168,26 +1472,22 @@ export class FirebaseService {
 
   hasAvailableTournaments(): Observable<boolean> {
     const tournamentsRef = collection(this.firestore, 'tournaments');
-    // Buscar torneos disponibles: upcoming, ongoing o confirmed
-    // Usar solo where para evitar necesidad de índice compuesto
     const q = query(
       tournamentsRef,
       where('status', 'in', ['upcoming', 'ongoing', 'confirmed']),
-      limit(1) // Solo necesitamos saber si existe al menos uno
+      limit(1)
     );
-    
     return new Observable<boolean>((observer) => {
-      const unsubscribe = onSnapshot(
-        q,
-        (snapshot) => {
-          observer.next(!snapshot.empty);
-        },
-        (error) => {
-          console.error('Error checking available tournaments:', error);
-          observer.next(false);
-        }
+      const unsubscribe = runInInjectionContext(this.injector, () =>
+        onSnapshot(
+          q,
+          (snapshot) => observer.next(!snapshot.empty),
+          (error) => {
+            console.error('Error checking available tournaments:', error);
+            observer.next(false);
+          }
+        )
       );
-      
       return () => unsubscribe();
     });
   }
@@ -1244,6 +1544,64 @@ export class FirebaseService {
     );
   }
 
+  getSuggestedUsers(currentUserId: string, limitCount: number = 6): Observable<UserProfile[]> {
+    const usersRef = collection(this.firestore, 'users');
+    const q = query(usersRef, limit(25));
+    return from(getDocs(q)).pipe(
+      map((snapshot: QuerySnapshot<DocumentData>) => {
+        return snapshot.docs
+          .map((docSnap: any) => ({ uid: docSnap.id, ...docSnap.data() } as UserProfile))
+          .filter((u: UserProfile) => u.uid !== currentUserId)
+          .slice(0, limitCount);
+      })
+    );
+  }
+
+  /** Lista de usuarios para explorar: 30 por página, paginación, prioridad a amigos en común */
+  getExploreUsers(
+    currentUserId: string,
+    pageSize: number = 30,
+    lastDoc?: unknown
+  ): Observable<{ users: UserProfile[]; lastDoc: unknown; hasMore: boolean }> {
+    const usersRef = collection(this.firestore, 'users');
+    const batchSize = 80;
+    const q = lastDoc
+      ? query(usersRef, orderBy('createdAt', 'desc'), startAfter(lastDoc), limit(batchSize))
+      : query(usersRef, orderBy('createdAt', 'desc'), limit(batchSize));
+    return from(getDoc(doc(this.firestore, 'users', currentUserId))).pipe(
+      map((currentSnap) => {
+        const data = currentSnap.data();
+        return {
+          following: new Set((data?.['following'] as string[]) || []),
+          followers: new Set((data?.['followers'] as string[]) || [])
+        };
+      }),
+      switchMap(({ following, followers }) =>
+        from(getDocs(q)).pipe(
+          map((snapshot) => {
+            const list = snapshot.docs
+              .map((d) => ({ uid: d.id, ...d.data() } as UserProfile))
+              .filter((u) => u.uid !== currentUserId)
+              .map((u) => {
+                const uFollow = new Set(u.following || []);
+                const uFollowers = new Set(u.followers || []);
+                let common = 0;
+                following.forEach((id) => { if (uFollowers.has(id)) common++; });
+                followers.forEach((id) => { if (uFollow.has(id)) common++; });
+                return { ...u, _common: common };
+              })
+              .sort((a, b) => (b as any)._common - (a as any)._common)
+              .slice(0, pageSize)
+              .map(({ _common, ...u }) => u as UserProfile);
+            const last = snapshot.docs[snapshot.docs.length - 1];
+            const hasMore = snapshot.docs.length >= batchSize && !!last;
+            return { users: list, lastDoc: last ?? null, hasMore };
+          })
+        )
+      )
+    );
+  }
+
   // Get tournament by ID
   getTournamentById(tournamentId: string): Observable<Tournament | null> {
     const tournamentRef = doc(this.firestore, 'tournaments', tournamentId);
@@ -1253,6 +1611,53 @@ export class FirebaseService {
           return { id: docSnap.id, ...docSnap.data() } as Tournament;
         }
         return null;
+      })
+    );
+  }
+
+  /** Torneos finalizados (historial) */
+  getFinishedTournaments(): Observable<Tournament[]> {
+    const tournamentsRef = collection(this.firestore, 'tournaments');
+    const q = query(tournamentsRef, where('status', '==', 'finished'), limit(100));
+    return from(getDocs(q)).pipe(
+      map((snapshot: QuerySnapshot<DocumentData>) => {
+        const list = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as Tournament));
+        return list.sort((a, b) => {
+          const ta = a.finishedAt?.toMillis?.() ?? a.endDate?.toMillis?.() ?? 0;
+          const tb = b.finishedAt?.toMillis?.() ?? b.endDate?.toMillis?.() ?? 0;
+          return tb - ta;
+        });
+      })
+    );
+  }
+
+  /** Suma 1 torneo ganado al equipo campeón (documento teamTournamentStats/{teamId}) */
+  async incrementTeamTournamentWins(teamId: string, teamName: string): Promise<void> {
+    const ref = doc(this.firestore, 'teamTournamentStats', teamId);
+    await setDoc(
+      ref,
+      {
+        teamId,
+        teamName,
+        tournamentsWon: increment(1),
+        updatedAt: Timestamp.now()
+      } as any,
+      { merge: true }
+    );
+  }
+
+  getTeamTournamentStats(teamId: string): Observable<TeamTournamentStats | null> {
+    const ref = doc(this.firestore, 'teamTournamentStats', teamId);
+    return from(getDoc(ref)).pipe(
+      map(snap => {
+        if (!snap.exists()) return null;
+        const d = snap.data() as Partial<TeamTournamentStats>;
+        return {
+          teamId: snap.id,
+          teamName: d.teamName ?? '',
+          tournamentsWon: d.tournamentsWon ?? 0,
+          updatedAt: d.updatedAt ?? Timestamp.now()
+        } as TeamTournamentStats;
       })
     );
   }
@@ -1270,78 +1675,303 @@ export class FirebaseService {
   }
 
   // Generate bracket structure - Genera todos los partidos desde el inicio
-  generateBracket(teams: Team[]): BracketMatch[] {
+  generateBracket(teams: Team[], configuredRounds?: number): BracketMatch[] {
     // Shuffle teams for random bracket
     const shuffled = [...teams].sort(() => Math.random() - 0.5);
-    return this.generateBracketWithOrder(shuffled);
+    return this.generateBracketWithOrder(shuffled, configuredRounds);
+  }
+
+  generateTournamentBrackets(
+    teams: Team[],
+    configuredRounds?: number,
+    format: 'single' | 'double' = 'single'
+  ): { bracket: BracketMatch[]; lowerBracket: BracketMatch[] } {
+    if (format === 'double') {
+      return this.generateDoubleEliminationBracket(teams, configuredRounds);
+    }
+
+    return {
+      bracket: this.generateBracketWithOrder(teams, configuredRounds),
+      lowerBracket: []
+    };
   }
 
   // Generate bracket with specific team order
-  generateBracketWithOrder(teams: Team[]): BracketMatch[] {
+  generateBracketWithOrder(teams: Team[], configuredRounds?: number): BracketMatch[] {
     const matches: BracketMatch[] = [];
     const numTeams = teams.length;
     
     if (numTeams < 2) return matches;
-    
-    // Calcular número de rondas necesarias
-    const totalRounds = Math.ceil(Math.log2(numTeams));
-    
-    // Generar todos los partidos de todas las rondas desde el inicio
-    let currentRoundTeams = teams;
-    let roundNumber = 1;
-    
-    while (roundNumber <= totalRounds) {
-      const roundType = this.getRoundType(numTeams, roundNumber);
-      const nextRoundTeams: Team[] = [];
-      
-      // Generar partidos de esta ronda
-      for (let i = 0; i < currentRoundTeams.length; i += 2) {
-        const team1 = currentRoundTeams[i];
-        const team2 = currentRoundTeams[i + 1];
-        
+
+    const minRounds = Math.max(1, Math.ceil(Math.log2(Math.max(2, numTeams))));
+    const totalRounds = Math.max(minRounds, configuredRounds ?? minRounds);
+    const bracketSize = Math.pow(2, totalRounds);
+    const seededTeams: Array<Team | null> = Array.from({ length: bracketSize }, (_, index) => teams[index] ?? null);
+
+    for (let roundNumber = 1; roundNumber <= totalRounds; roundNumber++) {
+      const roundSize = Math.pow(2, totalRounds - roundNumber + 1);
+      const matchCount = roundSize / 2;
+      const roundType = this.getRoundTypeByParticipants(roundSize);
+      const roundLabel = this.getRoundLabelByParticipants(roundSize);
+
+      for (let slotIndex = 0; slotIndex < matchCount; slotIndex++) {
+        const id = `match-${roundNumber}-${slotIndex}`;
+        const nextMatchId = roundNumber < totalRounds ? `match-${roundNumber + 1}-${Math.floor(slotIndex / 2)}` : undefined;
+        const nextMatchSlot = slotIndex % 2 === 0 ? 'team1' : 'team2';
+
         const match: BracketMatch = {
-          id: `match-${roundNumber}-${Math.floor(i / 2)}`,
+          id,
           round: roundType,
-          team1Id: team1?.id,
-          team1Name: team1?.name || 'TBD',
-          team2Id: team2?.id,
-          team2Name: team2?.name || 'TBD',
-          winnerId: undefined,
+          bracketType: 'upper',
+          roundIndex: roundNumber - 1,
+          roundLabel,
+          slotIndex,
+          score1: 0,
+          score2: 0,
+          bestOf: 1,
+          nextMatchId,
+          nextMatchSlot,
           matchDate: undefined
         };
-        
-        matches.push(match);
-        
-        // Para la siguiente ronda, usar placeholders TBD
-        if (roundNumber < totalRounds) {
-          nextRoundTeams.push({ 
-            id: `placeholder-${roundNumber}-${Math.floor(i / 2)}`,
-            name: 'TBD',
-            captainId: '',
-            captainName: '',
-            players: [],
-            playerInfo: [],
-            substitutes: [],
-            registeredAt: Timestamp.now()
-          } as Team);
+
+        if (roundNumber === 1) {
+          const team1 = seededTeams[slotIndex * 2];
+          const team2 = seededTeams[slotIndex * 2 + 1];
+          match.team1Id = team1?.id;
+          match.team1Name = team1?.name ?? (team2 ? 'BYE' : 'TBD');
+          match.team2Id = team2?.id;
+          match.team2Name = team2?.name ?? (team1 ? 'BYE' : 'TBD');
+          match.autoAdvance = (!!team1 && !team2) || (!team1 && !!team2);
+        } else {
+          match.team1Name = 'TBD';
+          match.team2Name = 'TBD';
+          match.team1SourceMatchId = `match-${roundNumber - 1}-${slotIndex * 2}`;
+          match.team2SourceMatchId = `match-${roundNumber - 1}-${slotIndex * 2 + 1}`;
+          match.autoAdvance = false;
         }
+
+        matches.push(match);
       }
-      
-      currentRoundTeams = nextRoundTeams;
-      roundNumber++;
     }
-    
-    return matches;
+
+    return this.resolveBracketByes(matches);
   }
 
-  private getRoundType(numTeams: number, roundNumber: number): 'round16' | 'quarter' | 'semi' | 'final' {
-    const totalRounds = Math.ceil(Math.log2(numTeams));
-    const currentRound = totalRounds - roundNumber + 1;
-    
-    if (currentRound === totalRounds) return 'final';
-    if (currentRound === totalRounds - 1) return 'semi';
-    if (currentRound === totalRounds - 2) return 'quarter';
+  private resolveBracketByes(matches: BracketMatch[]): BracketMatch[] {
+    const updated = [...matches];
+
+    for (const match of updated) {
+      const hasTeam1 = !!match.team1Id;
+      const hasTeam2 = !!match.team2Id;
+      if ((hasTeam1 && hasTeam2) || (!hasTeam1 && !hasTeam2)) {
+        continue;
+      }
+
+      const winnerId = match.team1Id ?? match.team2Id;
+      const winnerName = match.team1Id ? match.team1Name : match.team2Name;
+      if (!winnerId || !winnerName) continue;
+
+      match.winnerId = winnerId;
+      match.loserId = match.team1Id ? match.team2Id : match.team1Id;
+      match.autoAdvance = true;
+      match.score1 = hasTeam1 && !hasTeam2 ? 1 : 0;
+      match.score2 = hasTeam2 && !hasTeam1 ? 1 : 0;
+
+      if (!match.nextMatchId || !match.nextMatchSlot) {
+        continue;
+      }
+
+      const nextIndex = updated.findIndex(next => next.id === match.nextMatchId);
+      if (nextIndex === -1) continue;
+
+      const nextMatch = { ...updated[nextIndex] };
+      if (match.nextMatchSlot === 'team1') {
+        nextMatch.team1Id = winnerId;
+        nextMatch.team1Name = winnerName;
+      } else {
+        nextMatch.team2Id = winnerId;
+        nextMatch.team2Name = winnerName;
+      }
+      updated[nextIndex] = nextMatch;
+    }
+
+    return updated;
+  }
+
+  private generateDoubleEliminationBracket(
+    teams: Team[],
+    configuredRounds?: number
+  ): { bracket: BracketMatch[]; lowerBracket: BracketMatch[] } {
+    const upperBracket = this.generateBracketWithOrder(teams, configuredRounds);
+    if (!upperBracket.length) {
+      return { bracket: [], lowerBracket: [] };
+    }
+
+    const totalRounds = Math.max(...upperBracket.map(match => (match.roundIndex ?? 0))) + 1;
+    const lowerBracket: BracketMatch[] = [];
+
+    if (totalRounds < 2) {
+      return { bracket: upperBracket, lowerBracket };
+    }
+
+    for (let stage = 0; stage < totalRounds - 1; stage++) {
+      const count = Math.pow(2, totalRounds - stage - 2);
+      const roundAIndex = stage * 2;
+      const roundBIndex = roundAIndex + 1;
+      const isLastStage = stage === totalRounds - 2;
+      /**
+       * Antes: semifinal (lower A) → "final" (lower B) con team2 sin fuente (no venía del upper en el código).
+       * Eso dejaba la final de redención con un cupo vacío y el campeón del lower no cerraba bien.
+       * Un solo partido: los dos rivales vienen de la ronda anterior del lower (misma lógica que la vieja semifinal).
+       */
+      const mergeRedemptionFinal = isLastStage && count === 1;
+
+      if (mergeRedemptionFinal) {
+        const i = 0;
+        const lowerFinalId = `lower-${roundAIndex + 1}-${i}`;
+        const lowerFinalMatch: BracketMatch = {
+          id: lowerFinalId,
+          round: `lower-${roundAIndex + 1}`,
+          bracketType: 'lower',
+          roundIndex: roundBIndex,
+          roundLabel: 'Final Redención',
+          slotIndex: i,
+          team1Name: 'TBD',
+          team2Name: 'TBD',
+          score1: 0,
+          score2: 0,
+          bestOf: 1,
+          nextMatchId: undefined,
+          nextMatchSlot: undefined,
+          team1SourceMatchId:
+            stage === 0 ? `match-1-${i * 2}` : `lower-${roundAIndex}-${i * 2}`,
+          team2SourceMatchId:
+            stage === 0 ? `match-1-${i * 2 + 1}` : `lower-${roundAIndex}-${i * 2 + 1}`
+        };
+        lowerBracket.push(lowerFinalMatch);
+        continue;
+      }
+
+      for (let i = 0; i < count; i++) {
+        const lowerAId = `lower-${roundAIndex + 1}-${i}`;
+        const lowerAMatch: BracketMatch = {
+          id: lowerAId,
+          round: `lower-${roundAIndex + 1}`,
+          bracketType: 'lower',
+          roundIndex: roundAIndex,
+          roundLabel:
+            count === 1 && totalRounds === 2
+              ? 'Final Redención'
+              : stage === totalRounds - 2 && count === 1
+                ? 'Semifinal Redención'
+                : `Redención ${roundAIndex + 1}`,
+          slotIndex: i,
+          team1Name: 'TBD',
+          team2Name: 'TBD',
+          score1: 0,
+          score2: 0,
+          bestOf: 1,
+          nextMatchId: `lower-${roundBIndex + 1}-${i}`,
+          nextMatchSlot: 'team1'
+        };
+
+        if (stage === 0) {
+          lowerAMatch.team1SourceMatchId = `match-1-${i * 2}`;
+          lowerAMatch.team2SourceMatchId = `match-1-${i * 2 + 1}`;
+        } else {
+          lowerAMatch.team1SourceMatchId = `lower-${roundAIndex}-${i * 2}`;
+          lowerAMatch.team2SourceMatchId = `lower-${roundAIndex}-${i * 2 + 1}`;
+        }
+
+        lowerBracket.push(lowerAMatch);
+      }
+
+      for (let i = 0; i < count; i++) {
+        const lowerBId = `lower-${roundBIndex + 1}-${i}`;
+        const isGrandLowerFinal = stage === totalRounds - 2;
+        const lowerBMatch: BracketMatch = {
+          id: lowerBId,
+          round: `lower-${roundBIndex + 1}`,
+          bracketType: 'lower',
+          roundIndex: roundBIndex,
+          roundLabel: isGrandLowerFinal ? 'Final Redención' : `Redención ${roundBIndex + 1}`,
+          slotIndex: i,
+          team1Name: 'TBD',
+          team2Name: 'TBD',
+          score1: 0,
+          score2: 0,
+          bestOf: 1,
+          team1SourceMatchId: `lower-${roundAIndex + 1}-${i}`
+        };
+
+        if (isGrandLowerFinal) {
+          // Solo alcanzable si count > 1 en última etapa (no debería ocurrir con mergeRedemptionFinal)
+          lowerBMatch.nextMatchId = undefined;
+          lowerBMatch.nextMatchSlot = undefined;
+          lowerBMatch.team2SourceMatchId = undefined;
+        } else {
+          lowerBMatch.nextMatchId = `lower-${roundBIndex + 2}-${Math.floor(i / 2)}`;
+          lowerBMatch.nextMatchSlot = i % 2 === 0 ? 'team1' : 'team2';
+          lowerBMatch.team2SourceMatchId = `match-${stage + 2}-0`;
+          if (count > 1) {
+            lowerBMatch.team2SourceMatchId = `match-${stage + 2}-${i}`;
+          }
+        }
+
+        lowerBracket.push(lowerBMatch);
+      }
+    }
+
+    upperBracket.forEach(match => {
+      const roundIndex = match.roundIndex ?? 0;
+      const slotIndex = match.slotIndex ?? 0;
+      if (roundIndex === totalRounds - 1) return;
+
+      if (roundIndex === 0) {
+        const targetMatch = `lower-1-${Math.floor(slotIndex / 2)}`;
+        match.loserGoesToMatchId = targetMatch;
+        match.loserGoesToMatchSlot = slotIndex % 2 === 0 ? 'team1' : 'team2';
+        return;
+      }
+
+      const lowerTargetRound = roundIndex * 2;
+      const targetMatch = `lower-${lowerTargetRound}-${slotIndex}`;
+      match.loserGoesToMatchId = targetMatch;
+      match.loserGoesToMatchSlot = 'team2';
+    });
+
+    const upperFinal = upperBracket.find(match => match.roundIndex === totalRounds - 1);
+    if (upperFinal) {
+      const oldFinalId = upperFinal.id;
+      upperFinal.id = 'match-grand-final-0';
+      upperFinal.roundLabel = 'Gran Final';
+      // Solo ganadores del cuadro superior (semifinales); sin hueco desde redención
+      upperBracket.forEach(m => {
+        if (m.nextMatchId === oldFinalId) {
+          m.nextMatchId = 'match-grand-final-0';
+        }
+      });
+    }
+
+    return {
+      bracket: upperBracket,
+      lowerBracket
+    };
+  }
+
+  private getRoundTypeByParticipants(participants: number): 'round16' | 'quarter' | 'semi' | 'final' {
+    if (participants <= 2) return 'final';
+    if (participants === 4) return 'semi';
+    if (participants === 8) return 'quarter';
     return 'round16';
+  }
+
+  private getRoundLabelByParticipants(participants: number): string {
+    if (participants <= 2) return 'Final';
+    if (participants === 4) return 'Semifinal';
+    if (participants === 8) return 'Cuartos';
+    if (participants === 16) return 'Octavos';
+    return 'Ronda';
   }
 
   // Helper function para obtener los IDs de usuario ordenados para una conversación
@@ -1701,9 +2331,8 @@ export class FirebaseService {
 
   getUserPosts(userId: string): Observable<Post[]> {
     const postsRef = collection(this.firestore, 'posts');
-    // Query solo por authorId para evitar necesidad de índice compuesto
     const q = query(postsRef, where('authorId', '==', userId));
-    return collectionSnapshots(q).pipe(
+    return runInInjectionContext(this.injector, () => collectionSnapshots(q)).pipe(
       map((docs) => {
         // Ordenar por createdAt en memoria
         return docs
@@ -1836,7 +2465,7 @@ export class FirebaseService {
       orderBy('createdAt', 'desc'),
       limit(50)
     );
-    return collectionSnapshots(q).pipe(
+    return runInInjectionContext(this.injector, () => collectionSnapshots(q)).pipe(
       map((docs) => {
         return docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as Notification));
       })
@@ -1850,7 +2479,7 @@ export class FirebaseService {
       where('userId', '==', userId),
       where('read', '==', false)
     );
-    return collectionSnapshots(q).pipe(
+    return runInInjectionContext(this.injector, () => collectionSnapshots(q)).pipe(
       map((docs) => docs.length)
     );
   }
@@ -1906,7 +2535,7 @@ export class FirebaseService {
           where('user1Id', '==', userId)
         );
         
-        unsubscribe1 = onSnapshot(q1, 
+        unsubscribe1 = runInInjectionContext(this.injector, () => onSnapshot(q1, 
           (snapshot: QuerySnapshot<DocumentData>) => {
             conversations1 = snapshot.docs.map((doc: any) => ({ 
               id: doc.id, 
@@ -1917,7 +2546,7 @@ export class FirebaseService {
           error => {
             console.error('Error en query de conversaciones user1Id:', error);
           }
-        );
+        ));
       } catch (error) {
         console.error('Error creando query de conversaciones user1Id:', error);
       }
@@ -1929,7 +2558,7 @@ export class FirebaseService {
           where('user2Id', '==', userId)
         );
         
-        unsubscribe2 = onSnapshot(q2, 
+        unsubscribe2 = runInInjectionContext(this.injector, () => onSnapshot(q2, 
           (snapshot: QuerySnapshot<DocumentData>) => {
             conversations2 = snapshot.docs.map((doc: any) => ({ 
               id: doc.id,
@@ -1940,7 +2569,7 @@ export class FirebaseService {
           error => {
             console.error('Error en query de conversaciones user2Id:', error);
           }
-        );
+        ));
       } catch (error) {
         console.error('Error creando query de conversaciones user2Id:', error);
       }
@@ -2033,7 +2662,8 @@ export class FirebaseService {
             }
           },
           error: (error) => {
-            console.error(`Error verificando summoner para usuario ${uid}:`, error);
+            const msg = error?.error?.error || error?.message || error?.statusText || 'Servicio no disponible';
+            console.warn(`Error verificando summoner para usuario ${uid}:`, msg, error?.status === 503 ? '(Revisa la API key de Riot en Firebase)' : '');
             resolve(false);
           }
         });

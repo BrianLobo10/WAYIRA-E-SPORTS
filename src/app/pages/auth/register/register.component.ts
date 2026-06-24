@@ -1,9 +1,10 @@
-import { Component, signal, inject, OnInit } from '@angular/core';
+import { Component, signal, inject, OnInit, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { FirebaseService } from '../../../services/firebase.service';
-import { RiotApiService } from '../../../services/riot-api.service';
+import { Auth } from '@angular/fire/auth';
+import { RecaptchaVerifier } from 'firebase/auth';
 
 @Component({
   selector: 'app-register',
@@ -12,152 +13,109 @@ import { RiotApiService } from '../../../services/riot-api.service';
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.css']
 })
-export class RegisterComponent implements OnInit {
-  gameName = signal('');
-  tagLine = signal('');
-  region = signal('la1');
-  email = signal('');
-  password = signal('');
-  confirmPassword = signal('');
-  showPassword = signal(false);
-  showConfirmPassword = signal(false);
-  loading = signal(false);
+export class RegisterComponent implements OnInit, AfterViewInit, OnDestroy {
+  phone = signal('');
+  verificationCode = signal('');
+  codeSent = signal(false);
+  loadingSocial = signal(false);
+  loadingPhone = signal(false);
+  loadingVerify = signal(false);
   error = signal('');
-  errors = signal<{ [key: string]: string }>({});
-
-  regions = [
-    { code: 'la1', name: 'LAS - Latinoamérica Sur' },
-    { code: 'la2', name: 'LAN - Latinoamérica Norte' },
-    { code: 'na1', name: 'NA - Norteamérica' },
-    { code: 'br1', name: 'BR - Brasil' },
-    { code: 'euw1', name: 'EUW - Europa Oeste' },
-    { code: 'eun1', name: 'EUN - Europa Nórdica' },
-    { code: 'kr', name: 'KR - Corea' },
-    { code: 'jp1', name: 'JP - Japón' }
-  ];
 
   private firebaseService = inject(FirebaseService);
-  private riotApiService = inject(RiotApiService);
   private router = inject(Router);
+  private auth = inject(Auth);
+  private recaptchaVerifier: RecaptchaVerifier | null = null;
+  private confirmationResult: any = null;
 
   ngOnInit() {
-    // Verificar si ya está logueado y redirigir
     const user = this.firebaseService.getCurrentUser();
     if (user) {
-      this.router.navigate(['/']);
+      this.router.navigate(['/feed']);
       return;
     }
-    
-    // También suscribirse al observable por si el estado cambia
     this.firebaseService.currentUser.subscribe(user => {
-      if (user) {
-        this.router.navigate(['/']);
-      }
+      if (user) this.router.navigate(['/feed']);
     });
   }
 
-  async onRegister() {
-    this.errors.set({});
+  ngAfterViewInit() {
+    this.initRecaptcha();
+  }
+
+  ngOnDestroy() {
+    if (this.recaptchaVerifier) {
+      try {
+        this.recaptchaVerifier.clear();
+      } catch (_) {}
+    }
+  }
+
+  private initRecaptcha() {
+    if (this.recaptchaVerifier) return;
+    try {
+      this.recaptchaVerifier = new RecaptchaVerifier(this.auth, 'recaptcha-phone-container-register', {
+        size: 'invisible',
+        callback: () => {}
+      });
+    } catch (e) {
+      console.warn('RecaptchaVerifier init:', e);
+    }
+  }
+
+  async onRegisterWithGoogle() {
     this.error.set('');
-
-    // Validaciones
-    const validationErrors: { [key: string]: string } = {};
-
-    if (!this.email().trim()) {
-      validationErrors['email'] = 'El email es requerido';
-    } else if (!this.isValidEmail(this.email())) {
-      validationErrors['email'] = 'El email no es válido';
+    this.loadingSocial.set(true);
+    try {
+      await this.firebaseService.setSessionPersistence(true);
+      await this.firebaseService.loginWithGoogle();
+      this.router.navigate(['/feed']);
+    } catch (err: any) {
+      this.loadingSocial.set(false);
+      if (err?.code === 'auth/popup-closed-by-user') return;
+      this.error.set(err?.message || 'No se pudo continuar con Google.');
     }
+  }
 
-    if (!this.gameName().trim()) {
-      validationErrors['gameName'] = 'El nombre de invocador es requerido';
-    } else if (this.gameName().trim().length < 3) {
-      validationErrors['gameName'] = 'El nombre debe tener al menos 3 caracteres';
-    } else if (this.gameName().trim().length > 16) {
-      validationErrors['gameName'] = 'El nombre no puede tener más de 16 caracteres';
+  async onSendCode() {
+    this.error.set('');
+    let phoneNumber = this.phone().trim().replace(/\s/g, '');
+    if (!phoneNumber.startsWith('+')) {
+      phoneNumber = '+51' + phoneNumber.replace(/^0/, '');
     }
-
-    if (!this.tagLine().trim()) {
-      validationErrors['tagLine'] = 'El tagline es requerido';
-    } else if (this.tagLine().trim().length < 3) {
-      validationErrors['tagLine'] = 'El tagline debe tener al menos 3 caracteres';
-    } else if (this.tagLine().trim().length > 5) {
-      validationErrors['tagLine'] = 'El tagline no puede tener más de 5 caracteres';
-    }
-
-    if (!this.password().trim()) {
-      validationErrors['password'] = 'La contraseña es requerida';
-    } else if (this.password().length < 8) {
-      validationErrors['password'] = 'La contraseña debe tener al menos 8 caracteres';
-    } else if (!this.isValidPassword(this.password())) {
-      validationErrors['password'] = 'La contraseña debe incluir mayúsculas, minúsculas y números';
-    }
-
-    if (!this.confirmPassword().trim()) {
-      validationErrors['confirmPassword'] = 'Confirma tu contraseña';
-    } else if (this.password() !== this.confirmPassword()) {
-      validationErrors['confirmPassword'] = 'Las contraseñas no coinciden';
-    }
-
-    if (Object.keys(validationErrors).length > 0) {
-      this.errors.set(validationErrors);
+    if (!phoneNumber || phoneNumber.length < 10) {
+      this.error.set('Ingresa un número válido con código de país (ej. +51999123456).');
       return;
     }
-
-    this.loading.set(true);
-
+    this.initRecaptcha();
+    if (!this.recaptchaVerifier) {
+      this.error.set('No se pudo cargar la verificación. Recarga la página.');
+      return;
+    }
+    this.loadingPhone.set(true);
     try {
-      // Intentar verificar el invocador con Riot API (opcional)
-      let puuid: string | null = null;
-      let riotVerified = false;
-
-      try {
-        const summonerData = await this.riotApiService.getSummoner(
-          this.region(),
-          this.gameName().trim(),
-          this.tagLine().trim()
-        ).toPromise();
-        
-        if (summonerData && summonerData.puuid) {
-          puuid = summonerData.puuid;
-          riotVerified = true;
-        }
-      } catch (apiError: any) {
-        // Si falla la API, continuar sin verificación
-        // El usuario puede verificar después desde su perfil
-        puuid = null;
-        riotVerified = false;
-      }
-
-      // Registrar en Firebase (con o sin verificación de Riot)
-      await this.firebaseService.registerWithRiot(
-        this.gameName().trim(),
-        this.tagLine().trim(),
-        this.region(),
-        puuid || '', // PUUID vacío si no se pudo verificar
-        this.password(),
-        this.email().trim(),
-        riotVerified // Indicar si fue verificado
-      );
-
-      this.router.navigate(['/']);
+      this.confirmationResult = await this.firebaseService.sendPhoneVerificationCode(phoneNumber, this.recaptchaVerifier);
+      this.codeSent.set(true);
+      this.verificationCode.set('');
     } catch (err: any) {
-      this.loading.set(false);
-      const errorMessage = err.message || 'Error al registrarse. Por favor intenta nuevamente.';
-      this.error.set(errorMessage);
+      this.error.set(err?.message || 'No se pudo enviar el SMS. Revisa el número e intenta de nuevo.');
+    } finally {
+      this.loadingPhone.set(false);
     }
   }
 
-  private isValidPassword(password: string): boolean {
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumbers = /[0-9]/.test(password);
-    return hasUpperCase && hasLowerCase && hasNumbers;
-  }
-
-  isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+  async onVerifyCode() {
+    const code = this.verificationCode().trim();
+    if (code.length < 6 || !this.confirmationResult) return;
+    this.error.set('');
+    this.loadingVerify.set(true);
+    try {
+      await this.firebaseService.setSessionPersistence(true);
+      await this.firebaseService.verifyPhoneCode(this.confirmationResult, code);
+      this.router.navigate(['/feed']);
+    } catch (err: any) {
+      this.loadingVerify.set(false);
+      this.error.set(err?.message || 'Código incorrecto o expirado. Intenta de nuevo.');
+    }
   }
 }
-

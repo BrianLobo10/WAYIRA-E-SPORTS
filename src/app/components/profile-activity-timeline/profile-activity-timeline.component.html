@@ -1,0 +1,35 @@
+<div class="aurea-card activity-timeline-card">
+  <div class="aurea-container">
+    <div class="activity-header">
+      <h2 class="section-title">Activity timeline</h2>
+      <span class="period-badge">This year</span>
+    </div>
+    @if (data(); as d) {
+      <p class="activity-hint">Actividad por mes (partidas en cada mes).</p>
+      @if (d.monthlyTotals && d.monthlyTotals.length === 12) {
+        <div class="activity-by-month">
+          @for (month of d.months; track month.monthIndex) {
+            @let count = d.monthlyTotals[month.monthIndex];
+            <div class="month-bar-wrap" [title]="month.monthLabel + ': ' + count + ' partidas'">
+              <span class="month-label">{{ month.monthLabel }}</span>
+              <span class="month-bar-track">
+                <span class="month-bar" [class.has-activity]="count > 0" [style.width.%]="(count / getMaxMonthlyCount()) * 100"></span>
+              </span>
+              <span class="month-count">{{ count }}</span>
+            </div>
+          }
+        </div>
+      }
+      <div class="activity-footer">
+        <span class="activity-total">{{ totalLabel() }}: {{ d.total }} {{ activitiesLabel() }}</span>
+        <div class="activity-legend">
+          <span>Menos</span>
+          <span class="legend-cells">
+            <span class="act act-0"></span><span class="act act-1"></span><span class="act act-2"></span><span class="act act-3"></span><span class="act act-4"></span>
+          </span>
+          <span>Más</span>
+        </div>
+      </div>
+    }
+  </div>
+</div>

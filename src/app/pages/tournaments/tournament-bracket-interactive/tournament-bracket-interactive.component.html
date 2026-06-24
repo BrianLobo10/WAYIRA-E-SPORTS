@@ -1,0 +1,150 @@
+@if (loading()) {
+  <div class="tbi-loading">Cargando bracket…</div>
+} @else if (error()) {
+  <div class="tbi-error">
+    <p>{{ error() }}</p>
+    <a routerLink="/tournaments">Volver a torneos</a>
+  </div>
+} @else if (tournament(); as t) {
+  <div class="tbi-root" [class.spectator]="spectator()">
+    <header class="tbi-toolbar">
+      <button type="button" class="tbi-back" (click)="goBack()">← Torneos</button>
+      <a routerLink="/tournaments/historial" class="tbi-historial-link">Historial</a>
+      <h1 class="tbi-title">{{ t.name }}</h1>
+      <span class="tbi-badge">{{ t.format === 'double' ? 'Con bracket de redención' : 'Sin redención' }}</span>
+      @if (t.status === 'finished') {
+        <span class="tbi-badge tbi-badge--done">Finalizado</span>
+      }
+      @if (spectator()) {
+        <span class="tbi-mode">Solo lectura</span>
+      } @else if (editable()) {
+        <span class="tbi-mode tbi-mode-admin">Administrador</span>
+      }
+      <div class="tbi-zoom">
+        <button type="button" (click)="setZoom(-0.1)" aria-label="Alejar">−</button>
+        <span>{{ (zoom() * 100) | number: '1.0-0' }}%</span>
+        <button type="button" (click)="setZoom(0.1)" aria-label="Acercar">+</button>
+      </div>
+      @if (editable() && t.status !== 'finished') {
+        <div class="tbi-final-bo">
+          <span>GF:</span>
+          <button type="button" [class.active]="grandFinalBestOf() === 1" (click)="setGrandFinalMode(1)">Bo1</button>
+          <button type="button" [class.active]="grandFinalBestOf() === 3" (click)="setGrandFinalMode(3)">Bo3</button>
+        </div>
+      }
+      @if (editable() && t.format === 'double' && t.status !== 'finished') {
+        <div class="tbi-final-bo">
+          <span>Red.:</span>
+          <button type="button" [class.active]="redemptionFinalBestOf() === 1" (click)="setRedemptionFinalMode(1)">Bo1</button>
+          <button type="button" [class.active]="redemptionFinalBestOf() === 3" (click)="setRedemptionFinalMode(3)">Bo3</button>
+        </div>
+      }
+    </header>
+
+    @if (t.status === 'finished') {
+      <p class="tbi-finished-banner">
+        Torneo cerrado.
+        @if (t.championTeamName) {
+          <strong>1.º {{ t.championTeamName }}</strong>
+        }
+        @if (t.format === 'double' && t.redemptionChampionTeamName) {
+          · <strong>2.º (redención) {{ t.redemptionChampionTeamName }}</strong>
+        }
+      </p>
+    }
+    @if (t.format === 'double') {
+      <p class="tbi-help">
+        <strong>Bracket superior:</strong> la <strong>gran final</strong> (mejor de 3 por defecto) define al <strong>campeón</strong>.
+        <strong>Redención:</strong> la <strong>final de redención</strong> (mejor de 3) define al <strong>2.º lugar</strong>. El torneo se archiva en <a routerLink="/tournaments/historial">Historial</a> al completar ambas finales.
+      </p>
+    }
+
+    <div class="tbi-scroll" #scrollHost>
+      <div class="tbi-stage" [style.transform]="'scale(' + zoom() + ')'" [style.transformOrigin]="'top center'">
+        <svg class="tbi-svg" [attr.viewBox]="'0 0 100 ' + vbHeight" preserveAspectRatio="none">
+          @for (p of paths(); track p.id) {
+            <path [attr.d]="p.d" [class]="'tbi-path tbi-path-shadow tbi-path-shadow-' + p.kind"></path>
+            <path [attr.d]="p.d" [class]="'tbi-path tbi-path-line tbi-path-' + p.kind"></path>
+          }
+        </svg>
+        <div class="tbi-nodes">
+          @for (n of nodes(); track trackById($index, n)) {
+            <article
+              class="tbi-card tbi-card--enter"
+              [class.lower]="n.layer === 'lower'"
+              [style.animation-delay.ms]="$index * 35"
+              [style.left.%]="n.cx - n.w / 2"
+              [style.top.%]="(n.cy - n.h / 2) / vbHeight * 100"
+              [style.width.%]="n.w"
+              [style.minHeight.%]="n.h / vbHeight * 100"
+              [class.tbi-card--gf]="isGrandFinal(n.match)">
+              <div class="tbi-card-head">
+                <span class="tbi-lbl">{{ displayRoundLabel(n.match) }}</span>
+                @if (editable() && t.status !== 'finished') {
+                  <button type="button" class="tbi-swap" (click)="swapSides(n.match.id)" title="Intercambiar lados">⇄</button>
+                }
+              </div>
+              <div
+                class="tbi-team"
+                [class.dim]="n.match.winnerId && n.match.winnerId !== n.match.team1Id"
+                draggable="true"
+                (dragstart)="onDragStart($event, n.match.id, 'team1')"
+                (dragover)="onDragOver($event)"
+                (drop)="onDrop($event, n.match.id, 'team1')">
+                <span>{{ n.match.team1Name || 'TBD' }}</span>
+                @if (editable() && t.status !== 'finished' && n.match.team1Id && n.match.team2Id && !n.match.winnerId) {
+                  <button
+                    type="button"
+                    class="tbi-win"
+                    (click)="pickWinner(n.match.id, n.match.team1Id!)"
+                    [title]="showBo3Ui(n.match) ? 'Gana este mapa' : 'Ganador'">
+                    ✓
+                  </button>
+                }
+              </div>
+              <div
+                class="tbi-team"
+                [class.dim]="n.match.winnerId && n.match.winnerId !== n.match.team2Id"
+                draggable="true"
+                (dragstart)="onDragStart($event, n.match.id, 'team2')"
+                (dragover)="onDragOver($event)"
+                (drop)="onDrop($event, n.match.id, 'team2')">
+                <span>{{ n.match.team2Name || 'TBD' }}</span>
+                @if (editable() && t.status !== 'finished' && n.match.team1Id && n.match.team2Id && !n.match.winnerId) {
+                  <button
+                    type="button"
+                    class="tbi-win"
+                    (click)="pickWinner(n.match.id, n.match.team2Id!)"
+                    [title]="showBo3Ui(n.match) ? 'Gana este mapa' : 'Ganador'">
+                    ✓
+                  </button>
+                }
+              </div>
+              @if (showBo3Ui(n.match) && !n.match.winnerId) {
+                <div class="tbi-bo3-panel" aria-live="polite">
+                  <div class="tbi-bo3-maps-row">
+                    <span class="tbi-bo3-maps-label">{{ n.match.team1Name }}</span>
+                    @for (slot of [1, 2, 3]; track slot) {
+                      <span class="tbi-map-pip" [class.tbi-map-pip--on]="(n.match.score1 ?? 0) >= slot"></span>
+                    }
+                  </div>
+                  <div class="tbi-bo3-scoreline">{{ n.match.score1 ?? 0 }} – {{ n.match.score2 ?? 0 }}</div>
+                  <div class="tbi-bo3-maps-row">
+                    <span class="tbi-bo3-maps-label">{{ n.match.team2Name }}</span>
+                    @for (slot of [1, 2, 3]; track slot) {
+                      <span class="tbi-map-pip tbi-map-pip--b" [class.tbi-map-pip--on]="(n.match.score2 ?? 0) >= slot"></span>
+                    }
+                  </div>
+                  <p class="tbi-bo3-hint">Al mejor de 3 · primer equipo en 2 mapas</p>
+                </div>
+              }
+              @if (n.match.winnerId) {
+                <div class="tbi-done">Ganador: {{ n.match.winnerId === n.match.team1Id ? n.match.team1Name : n.match.team2Name }}</div>
+              }
+            </article>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+}

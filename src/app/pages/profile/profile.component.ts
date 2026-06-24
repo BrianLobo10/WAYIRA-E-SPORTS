@@ -1,15 +1,29 @@
-import { Component, signal, inject, OnInit, OnDestroy, computed } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { Component, signal, Signal, inject, OnInit, OnDestroy, computed } from '@angular/core';
+import { Subscription, forkJoin } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { FirebaseService, UserProfile, Post, Comment } from '../../services/firebase.service';
-import { RiotApiService, SummonerData } from '../../services/riot-api.service';
+import { RiotApiService, SummonerData, MatchData, ChampionMastery, LeagueEntry, ParticipantData } from '../../services/riot-api.service';
+import { ChampionService } from '../../services/champion.service';
+import { ProfileHeaderComponent } from '../../components/profile-header/profile-header.component';
+import { ProfilePerformanceComponent } from '../../components/profile-performance/profile-performance.component';
+import { ProfileTopChampionsComponent, type ChampionDisplay } from '../../components/profile-top-champions/profile-top-champions.component';
+import { ProfileActivityTimelineComponent, type ActivityTimelineData } from '../../components/profile-activity-timeline/profile-activity-timeline.component';
+import { readCachedUserProfile, writeCachedUserProfile } from '../../utils/profile-view-cache';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    ProfileHeaderComponent,
+    ProfilePerformanceComponent,
+    ProfileTopChampionsComponent,
+    ProfileActivityTimelineComponent
+  ],
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.css']
 })
@@ -53,9 +67,38 @@ export class ProfileComponent implements OnInit, OnDestroy {
   
   // LoL Summoner search
   private riotApiService = inject(RiotApiService);
+  private championService = inject(ChampionService);
   foundSummoner = signal<SummonerData | null>(null);
   searchingSummoner = signal(false);
   summonerError = signal<string | null>(null);
+
+  // Portada editable
+  editCoverFile = signal<File | null>(null);
+  editCoverPreview = signal<string | null>(null);
+  showCoverConfirm = signal(false);
+  uploadingCover = signal(false);
+
+  // Stats desde Riot API
+  riotStats = signal<{ winRate: number; wins: number; losses: number; kda: number; wayiraScore: number; totalGames: number } | null>(null);
+  topChampions = signal<{ championId: number; championName: string; points: number; level: number }[]>([]);
+  activityMap = signal<Map<string, number>>(new Map());
+  /** Partidas recientes (para última actividad y win rate por campeón) */
+  recentMatches = signal<MatchData[]>([]);
+  /** Estadísticas últimas 4 semanas (para comparación estilo Aurea) */
+  last4WeeksStats = signal<{ winRate: number; kda: number; games: number; wins: number; losses: number } | null>(null);
+  /** Por campeón: wins, games, winRate (desde partidas) */
+  championWinRatesFromMatches = signal<Map<number, { wins: number; games: number; winRate: number }>>(new Map());
+  /** Mejor rango Solo Q (desde leagues del summoner) */
+  soloQRank = signal<LeagueEntry | null>(null);
+  loadingRiot = signal(false);
+  // Vincular Riot en editar perfil
+  editGameName = signal('');
+  editTagLine = signal('');
+  editRegion = signal('la1');
+  searchingLinkSummoner = signal(false);
+  foundLinkSummoner = signal<SummonerData | null>(null);
+  linkSummonerError = signal<string | null>(null);
+  linkingRiot = signal(false);
 
   // Followers/Following modal
   showFollowersModal = signal(false);
@@ -139,35 +182,67 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   async loadProfile(userId: string) {
-    this.loading.set(true);
-    try {
-      const profile = await this.firebaseService.getUserProfile(userId);
-      this.profile.set(profile);
-      
-      // Suscribirse a cambios en tiempo real del perfil
+    const cached = readCachedUserProfile(userId);
+    if (cached) {
+      this.profile.set(cached);
+      this.loading.set(false);
       this.subscribeToProfileRealtime(userId);
-      
-      // Verificar y actualizar el nombre/tag del invocador si tiene PUUID
-      if (profile && profile.puuid && profile.region) {
+      if (cached.puuid && cached.region) {
         this.firebaseService.checkAndUpdateUserSummonerName(userId);
+        this.loadRiotWithCache(cached);
+      } else {
+        this.riotStats.set(null);
+        this.topChampions.set([]);
+        this.activityMap.set(new Map());
+        this.recentMatches.set([]);
+        this.last4WeeksStats.set(null);
+        this.championWinRatesFromMatches.set(new Map());
       }
-      
-      const currentUser = this.firebaseService.getCurrentUser();
-      if (currentUser && profile) {
-        // Verificar si el usuario actual está siguiendo al perfil objetivo
-        // Debemos verificar el 'following' del usuario actual, no los 'followers' del perfil objetivo
-        const currentUserProfile = await this.firebaseService.getUserProfile(currentUser.uid);
-        if (currentUserProfile) {
-          const following = currentUserProfile.following || [];
-          const isFollowingUser = following.includes(userId);
-          this.isFollowing.set(isFollowingUser);
-          console.log('Estado de seguimiento cargado:', isFollowingUser, 'Siguiendo:', following);
+    } else {
+      this.loading.set(true);
+    }
+
+    try {
+      const currentUid = this.firebaseService.getCurrentUser()?.uid;
+      const [profile, currentUserProfile] = await Promise.all([
+        this.firebaseService.getUserProfile(userId),
+        currentUid ? this.firebaseService.getUserProfile(currentUid) : Promise.resolve<UserProfile | null>(null)
+      ]);
+
+      if (profile) {
+        this.profile.set(profile);
+        writeCachedUserProfile(userId, profile);
+        if (!cached) {
+          this.subscribeToProfileRealtime(userId);
+          if (profile.puuid && profile.region) {
+            this.firebaseService.checkAndUpdateUserSummonerName(userId);
+            this.loadRiotWithCache(profile);
+          } else {
+            this.riotStats.set(null);
+            this.topChampions.set([]);
+            this.activityMap.set(new Map());
+            this.recentMatches.set([]);
+            this.last4WeeksStats.set(null);
+            this.championWinRatesFromMatches.set(new Map());
+          }
+        } else if (profile.puuid && profile.region) {
+          this.firebaseService.checkAndUpdateUserSummonerName(userId);
+          this.loadRiotWithCache(profile);
         }
+      } else if (!cached) {
+        this.profile.set(null);
+      }
+
+      if (currentUid && profile && currentUserProfile) {
+        const following = currentUserProfile.following || [];
+        this.isFollowing.set(following.includes(userId));
       }
     } catch (error) {
       console.error('Error cargando perfil:', error);
     } finally {
-      this.loading.set(false);
+      if (!cached) {
+        this.loading.set(false);
+      }
     }
   }
 
@@ -181,8 +256,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
   async loadCurrentUserProfile() {
     const currentUser = this.firebaseService.getCurrentUser();
     if (currentUser) {
+      const fromCache = readCachedUserProfile(currentUser.uid);
+      if (fromCache) this.currentUserProfile.set(fromCache);
       const profile = await this.firebaseService.getUserProfile(currentUser.uid);
-      this.currentUserProfile.set(profile);
+      if (profile) {
+        this.currentUserProfile.set(profile);
+        writeCachedUserProfile(currentUser.uid, profile);
+      }
     }
   }
 
@@ -211,10 +291,12 @@ export class ProfileComponent implements OnInit, OnDestroy {
       
       if (updatedProfile) {
         this.profile.set(updatedProfile);
+        writeCachedUserProfile(profile.uid, updatedProfile);
       }
-      
+
       if (updatedCurrentUserProfile) {
         this.currentUserProfile.set(updatedCurrentUserProfile);
+        writeCachedUserProfile(currentUser.uid, updatedCurrentUserProfile);
         // Verificar el estado de seguimiento basado en el following del usuario actual
         const following = updatedCurrentUserProfile.following || [];
         const isNowFollowing = following.includes(profile.uid);
@@ -450,13 +532,579 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.newPostVideo.set(null);
   }
 
+  /** Caché 30 min: al reabrir el perfil se muestra al instante y se actualiza en segundo plano. */
+  private readonly RIOT_CACHE_TTL_MS = 30 * 60 * 1000;
+
+  private getRiotCacheKey(uid: string): string {
+    return `wayira_riot_cache_${uid}`;
+  }
+
+  private applyRiotSnapshot(snapshot: {
+    stats?: { winRate: number; wins: number; losses: number; kda: number; wayiraScore: number; totalGames: number } | null;
+    champions?: { championId: number; championName: string; points: number; level: number }[];
+    activity?: Record<string, number>;
+    last4?: { winRate: number; kda: number; games: number; wins: number; losses: number } | null;
+    champWinRates?: [number, { wins: number; games: number; winRate: number }][];
+    soloQRank?: LeagueEntry | null;
+  }): boolean {
+    let applied = false;
+    if (snapshot.stats) {
+      this.riotStats.set(snapshot.stats);
+      applied = true;
+    }
+    if (snapshot.champions?.length) {
+      this.topChampions.set(snapshot.champions);
+      applied = true;
+    }
+    if (snapshot.activity && typeof snapshot.activity === 'object') {
+      this.activityMap.set(new Map(Object.entries(snapshot.activity).map(([k, v]) => [k, v])));
+      this.activityTimelineData = null;
+      applied = true;
+    }
+    if (snapshot.last4) {
+      this.last4WeeksStats.set(snapshot.last4);
+      applied = true;
+    }
+    if (snapshot.champWinRates?.length) {
+      this.championWinRatesFromMatches.set(new Map(snapshot.champWinRates));
+      applied = true;
+    }
+    if (snapshot.soloQRank && typeof snapshot.soloQRank === 'object') {
+      this.soloQRank.set(snapshot.soloQRank);
+      applied = true;
+    }
+    return applied;
+  }
+
+  private loadRiotSnapshotFromProfile(profile: UserProfile): boolean {
+    const raw = (profile as any)?.riotSnapshot;
+    if (!raw || typeof raw !== 'object') return false;
+    return this.applyRiotSnapshot(raw);
+  }
+
+  private loadRiotFromCache(uid: string): boolean {
+    try {
+      const raw = localStorage.getItem(this.getRiotCacheKey(uid));
+      if (!raw) return false;
+      const data = JSON.parse(raw) as {
+        stats: unknown;
+        champions: unknown[];
+        activity: Record<string, number>;
+        last4?: { winRate: number; kda: number; games: number; wins: number; losses: number };
+        champWinRates?: [number, { wins: number; games: number; winRate: number }][];
+        soloQRank?: LeagueEntry | null;
+        at: number;
+      };
+      if (!data || data.at + this.RIOT_CACHE_TTL_MS < Date.now()) return false;
+      return this.applyRiotSnapshot({
+        stats: data.stats as any,
+        champions: data.champions as any,
+        activity: data.activity,
+        last4: data.last4 || null,
+        champWinRates: data.champWinRates || [],
+        soloQRank: (data.soloQRank as LeagueEntry | null) || null
+      });
+    } catch {
+      return false;
+    }
+  }
+
+  private saveRiotToCache(
+    uid: string,
+    stats: typeof this.riotStats extends Signal<infer T> ? T : never,
+    champions: typeof this.topChampions extends Signal<infer T> ? T : never,
+    activity: Map<string, number>,
+    last4: { winRate: number; kda: number; games: number; wins: number; losses: number } | null,
+    champWinRates: Map<number, { wins: number; games: number; winRate: number }>,
+    soloQRank: LeagueEntry | null
+  ) {
+    try {
+      const obj = Object.fromEntries(activity);
+      const payload: Record<string, unknown> = {
+        stats,
+        champions,
+        activity: obj,
+        at: Date.now()
+      };
+      if (last4) payload['last4'] = last4;
+      payload['champWinRates'] = Array.from(champWinRates.entries());
+      if (soloQRank) payload['soloQRank'] = soloQRank;
+      localStorage.setItem(this.getRiotCacheKey(uid), JSON.stringify(payload));
+    } catch {}
+  }
+
+  private async saveRiotSnapshotToProfile(
+    uid: string,
+    stats: { winRate: number; wins: number; losses: number; kda: number; wayiraScore: number; totalGames: number } | null,
+    champions: { championId: number; championName: string; points: number; level: number }[],
+    activity: Map<string, number>,
+    last4: { winRate: number; kda: number; games: number; wins: number; losses: number } | null,
+    champWinRates: Map<number, { wins: number; games: number; winRate: number }>,
+    soloQRank: LeagueEntry | null
+  ) {
+    try {
+      await this.firebaseService.updateUserProfile(uid, {
+        riotSnapshot: {
+          stats,
+          champions,
+          activity: Object.fromEntries(activity),
+          last4,
+          champWinRates: Array.from(champWinRates.entries()),
+          soloQRank,
+          updatedAt: Date.now()
+        }
+      } as any);
+    } catch {
+      // Si falla guardar snapshot en Firestore, seguimos con la UX local sin bloquear.
+    }
+  }
+
+  /** Carga datos Riot: muestra caché al instante si existe y está reciente; actualiza en segundo plano. */
+  loadRiotWithCache(profile: UserProfile) {
+    const uid = profile.uid;
+    const fromCache = this.loadRiotFromCache(uid);
+    const fromProfileSnapshot = !fromCache ? this.loadRiotSnapshotFromProfile(profile) : false;
+    if (fromCache || fromProfileSnapshot) this.loadingRiot.set(false);
+    this.loadRiotProfileData(profile, true);
+  }
+
+  loadRiotProfileData(profile: UserProfile, backgroundRefresh = false) {
+    const region = profile.region!;
+    const puuid = profile.puuid!;
+    const uid = profile.uid;
+    if (!backgroundRefresh) {
+      this.loadingRiot.set(true);
+      this.riotStats.set(null);
+      this.topChampions.set([]);
+      this.activityMap.set(new Map());
+      this.recentMatches.set([]);
+      this.last4WeeksStats.set(null);
+      this.championWinRatesFromMatches.set(new Map());
+      this.soloQRank.set(null);
+    }
+
+    this.riotApiService.getSummoner(region, profile.gameName!, profile.tagLine!).subscribe({
+      next: (summoner) => {
+        let wins = 0, losses = 0;
+        const leagues = summoner.leagues || [];
+        leagues.forEach((l: LeagueEntry) => {
+          wins += l.wins || 0;
+          losses += l.losses || 0;
+        });
+        const soloQ = leagues.find((l: LeagueEntry) => l.queueType === 'RANKED_SOLO_5x5') ?? null;
+        this.soloQRank.set(soloQ);
+        const totalLeague = wins + losses;
+        const winRate = totalLeague > 0 ? Math.round((wins / totalLeague) * 1000) / 10 : 0;
+
+        forkJoin({
+          matches: this.riotApiService.getMatches(region, puuid, 250),
+          mastery: this.riotApiService.getChampionMastery(region, puuid, 6)
+        }).subscribe({
+          next: ({ matches, mastery }) => {
+            let k = 0, d = 0, a = 0;
+            const dayCount = new Map<string, number>();
+            const fourWeeksAgo = Date.now() - 4 * 7 * 24 * 60 * 60 * 1000;
+            let last4Wins = 0, last4Losses = 0, last4K = 0, last4D = 0, last4A = 0, last4Games = 0;
+            const champStats = new Map<number, { wins: number; games: number }>();
+
+            matches.forEach((m: MatchData) => {
+              const part = m.info?.participants?.find((p: any) => p.puuid === puuid);
+              if (part) {
+                k += part.kills || 0;
+                d += part.deaths || 0;
+                a += part.assists || 0;
+                const dateKey = this.formatDateKeyColombia(new Date(m.info?.gameCreation || 0));
+                dayCount.set(dateKey, (dayCount.get(dateKey) || 0) + 1);
+                const created = m.info?.gameCreation || 0;
+                if (created >= fourWeeksAgo) {
+                  last4Games++;
+                  if (part.win) last4Wins++; else last4Losses++;
+                  last4K += part.kills || 0;
+                  last4D += part.deaths || 0;
+                  last4A += part.assists || 0;
+                }
+                const cid = part.championId ?? 0;
+                if (cid) {
+                  const cur = champStats.get(cid) || { wins: 0, games: 0 };
+                  cur.games++;
+                  if (part.win) cur.wins++;
+                  champStats.set(cid, cur);
+                }
+              }
+            });
+
+            const games = matches.length;
+            const totalKda = games > 0 && d > 0 ? (k + a) / d : (k + a);
+            const kda = Math.round(totalKda * 100) / 100;
+            const wayiraScore = totalLeague > 0 ? Math.round((winRate * 0.4 + Math.min(totalKda * 10, 60)) * 10) / 10 : 0;
+            this.riotStats.set({
+              winRate: totalLeague > 0 ? winRate : 0,
+              wins,
+              losses,
+              kda,
+              wayiraScore: wayiraScore || 0,
+              totalGames: totalLeague || games
+            });
+            this.activityMap.set(dayCount);
+            this.activityTimelineData = null;
+            this.recentMatches.set(matches);
+
+            if (last4Games > 0) {
+              const last4WR = Math.round((last4Wins / last4Games) * 1000) / 10;
+              const last4Kda = last4D > 0 ? (last4K + last4A) / last4D : (last4K + last4A);
+              this.last4WeeksStats.set({
+                winRate: last4WR,
+                kda: Math.round(last4Kda * 100) / 100,
+                games: last4Games,
+                wins: last4Wins,
+                losses: last4Losses
+              });
+            } else {
+              this.last4WeeksStats.set(null);
+            }
+
+            const champWinRates = new Map<number, { wins: number; games: number; winRate: number }>();
+            champStats.forEach((v, cid) => {
+              champWinRates.set(cid, {
+                wins: v.wins,
+                games: v.games,
+                winRate: Math.round((v.wins / v.games) * 100)
+              });
+            });
+            this.championWinRatesFromMatches.set(champWinRates);
+
+            const list = mastery.map((m: ChampionMastery) => ({
+              championId: m.championId,
+              championName: this.championService.getChampionName(m.championId),
+              points: m.championPoints,
+              level: m.championLevel
+            }));
+            this.topChampions.set(list);
+            this.loadingRiot.set(false);
+            this.saveRiotToCache(
+              uid,
+              this.riotStats()!,
+              this.topChampions(),
+              this.activityMap(),
+              this.last4WeeksStats(),
+              this.championWinRatesFromMatches(),
+              this.soloQRank()
+            );
+            this.saveRiotSnapshotToProfile(
+              uid,
+              this.riotStats(),
+              this.topChampions(),
+              this.activityMap(),
+              this.last4WeeksStats(),
+              this.championWinRatesFromMatches(),
+              this.soloQRank()
+            );
+          },
+          error: () => {
+            if (!this.riotStats()) {
+              this.loadRiotSnapshotFromProfile(profile);
+            }
+            this.loadingRiot.set(false);
+          }
+        });
+      },
+      error: () => {
+        if (!this.riotStats()) {
+          this.loadRiotSnapshotFromProfile(profile);
+        }
+        this.loadingRiot.set(false);
+      }
+    });
+  }
+
+  onCoverSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files?.[0]) {
+      this.editCoverFile.set(input.files[0]);
+      const reader = new FileReader();
+      reader.onload = () => this.editCoverPreview.set(reader.result as string);
+      reader.readAsDataURL(input.files[0]);
+      this.showCoverConfirm.set(true);
+    }
+  }
+
+  cancelCoverChange() {
+    this.showCoverConfirm.set(false);
+    this.editCoverFile.set(null);
+    this.editCoverPreview.set(null);
+  }
+
+  async confirmCoverChange() {
+    const user = this.firebaseService.getCurrentUser();
+    const profile = this.profile();
+    const file = this.editCoverFile();
+    if (!user || !profile || !file || this.userId() !== user.uid) return;
+    this.uploadingCover.set(true);
+    try {
+      const url = await this.firebaseService.uploadImage(file, `covers/${user.uid}/${Date.now()}_${file.name}`);
+      await this.firebaseService.updateUserProfile(user.uid, { coverImageURL: url });
+      this.profile.set({ ...profile, coverImageURL: url });
+      this.cancelCoverChange();
+    } catch (e) {
+      console.error(e);
+      alert('Error al subir la portada.');
+    } finally {
+      this.uploadingCover.set(false);
+    }
+  }
+
+  getChampionImageUrl(championId: number): string {
+    const name = this.championService.getChampionName(championId);
+    const key = name === 'Unknown' ? '' : name;
+    return key ? `https://ddragon.leagueoflegends.com/cdn/14.24.1/img/champion/${key}.png` : '';
+  }
+
+  /** Nombre del tipo de cola (estilo Aurea). */
+  getQueueTypeName(queueId: number): string {
+    const names: Record<number, string> = {
+      420: 'Ranked Solo/Duo',
+      440: 'Flex 5v5',
+      400: 'Normal Draft',
+      1020: 'One For All',
+      1300: 'Nexus Blitz',
+      1400: 'Ultimate Spellbook',
+      1700: 'Arena'
+    };
+    return names[queueId] || (queueId >= 0 ? `Cola ${queueId}` : 'Partida');
+  }
+
+  /** Última partida con el participante del usuario para la tarjeta de actividad reciente. */
+  getLastMatchForCard(): { match: MatchData; participant: ParticipantData } | null {
+    const matches = this.recentMatches();
+    const puuid = this.profile()?.puuid;
+    if (!puuid || !matches?.length) return null;
+    const m = matches[0];
+    const part = m.info?.participants?.find((p: any) => p.puuid === puuid);
+    return part ? { match: m, participant: part as ParticipantData } : null;
+  }
+
+  /** Farm/10 para una partida (CS por 10 min). */
+  getFarmPer10(participant: ParticipantData, gameDurationSeconds: number): number {
+    if (!gameDurationSeconds) return 0;
+    const mins = gameDurationSeconds / 60;
+    const cs = participant.totalMinionsKilled ?? 0;
+    return Math.round((cs / mins) * 100) / 10;
+  }
+
+  getChampionWinRate(championId: number): number | null {
+    const map = this.championWinRatesFromMatches();
+    const v = map.get(championId);
+    return v ? v.winRate : null;
+  }
+
+  /** Zona horaria de Colombia para todo el activity timeline (enero–diciembre preciso). */
+  private readonly COLOMBIA_TZ = 'America/Bogota';
+
+  /** Dado un Date (timestamp), devuelve YYYY-MM-DD en zona Colombia. */
+  private formatDateKeyColombia(d: Date): string {
+    return d.toLocaleDateString('en-CA', { timeZone: this.COLOMBIA_TZ });
+  }
+
+  /** Día del año en Colombia: 0 = 1 ene, 1 = 2 ene, … (medianoche Colombia como instante UTC). */
+  private dateAtColombiaDayIndex(year: number, dayIndex: number): Date {
+    return new Date(Date.UTC(year, 0, 1, 5, 0, 0, 0) + dayIndex * 24 * 60 * 60 * 1000);
+  }
+
+  getActivityCount(dateKey: string): number {
+    return this.activityMap().get(dateKey) || 0;
+  }
+
+  getActivityLevel(dateKey: string): number {
+    const c = this.getActivityCount(dateKey);
+    if (c === 0) return 0;
+    if (c <= 2) return 1;
+    if (c <= 5) return 2;
+    if (c <= 9) return 3;
+    return 4;
+  }
+
+  getActivityGrid(): { dateKey: string; level: number }[] {
+    const out: { dateKey: string; level: number }[] = [];
+    const year = new Date().getFullYear();
+    const todayKey = this.formatDateKeyColombia(new Date());
+    const isLeap = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+    const numDays = isLeap(year) ? 366 : 365;
+    for (let i = 0; i < numDays; i++) {
+      const d = this.dateAtColombiaDayIndex(year, i);
+      const dateKey = this.formatDateKeyColombia(d);
+      if (dateKey > todayKey) break;
+      out.push({ dateKey, level: this.getActivityLevel(dateKey) });
+    }
+    return out;
+  }
+
+  getActivityTotal(): number {
+    return this.getTotalMatchesThisYear();
+  }
+
+  /** Timeline por mes × día: orden cronológico (1 ene, 2 ene, … 31 ene, 1 feb, …). */
+  private activityTimelineData: Map<string, { dateKey: string; level: number; count: number }> | null = null;
+
+  private buildActivityTimelineData(): void {
+    this.activityMap();
+    const year = new Date().getFullYear();
+    const map = new Map<string, { dateKey: string; level: number; count: number }>();
+    const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    if ((year % 4 !== 0) || (year % 100 === 0 && year % 400 !== 0)) daysInMonth[1] = 28;
+    for (let month = 0; month < 12; month++) {
+      for (let day = 1; day <= daysInMonth[month]; day++) {
+        const d = this.dateAtColombiaDayIndex(year, this.dayOfYear(month, day, year) - 1);
+        const dateKey = this.formatDateKeyColombia(d);
+        const count = this.getActivityCount(dateKey);
+        map.set(`${month}-${day}`, { dateKey, level: this.getActivityLevel(dateKey), count });
+      }
+    }
+    this.activityTimelineData = map;
+  }
+
+  private dayOfYear(month: number, day: number, year: number): number {
+    const daysBefore = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+    const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+    const offset = leap && month >= 2 ? 1 : 0;
+    return daysBefore[month] + offset + day;
+  }
+
+  getActivityTimelineMonths(): { monthIndex: number; monthLabel: string }[] {
+    const labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sept', 'Oct', 'Nov', 'Dic'];
+    return labels.map((monthLabel, monthIndex) => ({ monthIndex, monthLabel }));
+  }
+
+  getActivityTimelineDays(): number[] {
+    return Array.from({ length: 31 }, (_, i) => i + 1);
+  }
+
+  getActivityCellByMonthDay(monthIndex: number, dayNum: number): { dateKey: string; level: number; count: number } | null {
+    if (!this.activityTimelineData) this.buildActivityTimelineData();
+    return this.activityTimelineData!.get(`${monthIndex}-${dayNum}`) || null;
+  }
+
+  getActivityCellTooltip(cell: { dateKey: string; count: number }): string {
+    if (!cell || !cell.dateKey) return '';
+    const [, m, dayStr] = cell.dateKey.split('-');
+    const monthNames: Record<string, string> = { '01': 'enero', '02': 'febrero', '03': 'marzo', '04': 'abril', '05': 'mayo', '06': 'junio', '07': 'julio', '08': 'agosto', '09': 'septiembre', '10': 'octubre', '11': 'noviembre', '12': 'diciembre' };
+    const day = parseInt(dayStr, 10);
+    const month = monthNames[m] || m;
+    const partidas = cell.count || 0;
+    return `${day} ${month}: ${partidas} partida${partidas !== 1 ? 's' : ''}`;
+  }
+
+  /** Datos para el componente activity timeline (vista por mes). */
+  getActivityTimelineData(): ActivityTimelineData | null {
+    if (this.getActivityTimelineMonths().length === 0 || this.getActivityTimelineDays().length === 0) return null;
+    if (!this.activityTimelineData) this.buildActivityTimelineData();
+    const cells: Record<string, { level: number; count: number; dateKey?: string }> = {};
+    const monthlyTotals = new Array<number>(12).fill(0);
+    this.activityTimelineData!.forEach((v, k) => {
+      cells[k] = { level: v.level, count: v.count, dateKey: v.dateKey };
+      const monthIndex = parseInt(k.split('-')[0], 10);
+      if (monthIndex >= 0 && monthIndex < 12) monthlyTotals[monthIndex] += v.count;
+    });
+    return {
+      months: this.getActivityTimelineMonths(),
+      days: this.getActivityTimelineDays(),
+      cells,
+      total: this.getActivityTotal(),
+      monthlyTotals
+    };
+  }
+
+  /** Lista de campeones con imageUrl y winRate para el componente top-champions. */
+  getChampionsForDisplay(): ChampionDisplay[] {
+    return this.topChampions().map(champ => ({
+      championId: champ.championId,
+      championName: champ.championName,
+      points: champ.points,
+      level: champ.level,
+      winRate: this.getChampionWinRate(champ.championId) ?? undefined,
+      imageUrl: this.getChampionImageUrl(champ.championId)
+    }));
+  }
+
+  /** Tier en español para la tarjeta Solo Q. */
+  private formatSoloQRank(entry: LeagueEntry): string {
+    const tierMap: Record<string, string> = {
+      IRON: 'Hierro', BRONZE: 'Bronce', SILVER: 'Plata', GOLD: 'Oro', PLATINUM: 'Platino',
+      EMERALD: 'Esmeralda', DIAMOND: 'Diamante', MASTER: 'Maestro',
+      GRANDMASTER: 'Gran Maestro', CHALLENGER: 'Aspirante'
+    };
+    const tier = tierMap[entry.tier?.toUpperCase() || ''] || entry.tier || '';
+    if (entry.tier === 'MASTER' || entry.tier === 'GRANDMASTER' || entry.tier === 'CHALLENGER') {
+      return `${tier} ${entry.leaguePoints ?? 0} LP`;
+    }
+    return `${tier} ${entry.rank || ''}`.trim();
+  }
+
+  getSoloQRankLabel(): string | null {
+    const entry = this.soloQRank();
+    if (!entry) return null;
+    const label = this.formatSoloQRank(entry);
+    return label || null;
+  }
+
+  getSoloQRankIconUrl(): string | null {
+    const entry = this.soloQRank();
+    if (!entry?.tier) return null;
+    const tier = entry.tier.toLowerCase();
+    return `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-emblem/emblem-${tier}.png`;
+  }
+
+  /** Tarjeta Solo Q (mejor rango/elo) para el header (estilo Aurea). */
+  getProfileScoreCard(): { period: string; value: number | string; label: string } | null {
+    const entry = this.soloQRank();
+    if (!entry) return null;
+    return {
+      period: 'Solo Q',
+      value: this.formatSoloQRank(entry),
+      label: 'mejor rango'
+    };
+  }
+
+  getJoinDate(): string {
+    const p = this.profile();
+    if (!p?.createdAt?.toDate) return '';
+    return p.createdAt.toDate().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  }
+
+  getProfileHandle(): string {
+    const p = this.profile();
+    if (!p) return 'usuario';
+    if (p.gameName) return p.gameName.replace(/\s/g, '').toLowerCase();
+    return (p.displayName || 'usuario').replace(/\s/g, '').toLowerCase().slice(0, 20);
+  }
+
+  getActivitiesCount(): number {
+    const posts = this.getPostsCount();
+    const riotTotal = this.getTotalMatchesThisYear();
+    return posts + riotTotal;
+  }
+
+  getTotalMatchesThisYear(): number {
+    const map = this.activityMap();
+    const year = new Date().getFullYear().toString();
+    let total = 0;
+    map.forEach((count, dateKey) => {
+      if (dateKey.startsWith(year)) total += count;
+    });
+    return total;
+  }
+
   openEditModal() {
     const profile = this.profile();
     if (profile) {
       this.editDisplayName.set(profile.displayName);
       this.editBio.set(profile.bio || '');
       this.editPhotoPreview.set(profile.photoURL || null);
+      this.editGameName.set(profile.gameName || '');
+      this.editTagLine.set(profile.tagLine || '');
+      this.editRegion.set(profile.region || 'la1');
       this.filteredChampions.set(this.champions);
+      this.foundLinkSummoner.set(null);
+      this.linkSummonerError.set(null);
       this.showEditModal.set(true);
     }
   }
@@ -471,6 +1119,84 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.selectedChampion.set(null);
     this.foundSummoner.set(null);
     this.summonerError.set(null);
+    this.foundLinkSummoner.set(null);
+    this.linkSummonerError.set(null);
+  }
+
+  searchSummonerForLink() {
+    const gameName = this.editGameName().trim();
+    const tagLine = this.editTagLine().trim();
+    const region = this.editRegion();
+    if (!gameName || !tagLine) {
+      this.linkSummonerError.set('Ingresa nombre de invocador y tag.');
+      return;
+    }
+    this.linkSummonerError.set(null);
+    this.foundLinkSummoner.set(null);
+    this.searchingLinkSummoner.set(true);
+    this.riotApiService.getSummoner(region, gameName, tagLine).subscribe({
+      next: (data) => {
+        this.foundLinkSummoner.set(data);
+        this.searchingLinkSummoner.set(false);
+      },
+      error: (err) => {
+        this.searchingLinkSummoner.set(false);
+        if (err.status === 404) {
+          this.linkSummonerError.set('Invocador no encontrado. Revisa nombre, tag y región.');
+        } else {
+          this.linkSummonerError.set('Error al buscar. Intenta de nuevo.');
+        }
+      }
+    });
+  }
+
+  async linkRiotAccount() {
+    const user = this.firebaseService.getCurrentUser();
+    const profile = this.profile();
+    const found = this.foundLinkSummoner();
+    if (!user || !profile || !found || user.uid !== profile.uid) return;
+    this.linkingRiot.set(true);
+    try {
+      await this.firebaseService.updateUserProfile(user.uid, {
+        gameName: found.gameName,
+        tagLine: found.tagLine,
+        region: this.editRegion(),
+        puuid: found.puuid
+      });
+      this.foundLinkSummoner.set(null);
+      await this.loadProfile(user.uid);
+      if (this.profile()?.puuid && this.profile()?.region) {
+        this.loadRiotProfileData(this.profile()!);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error al vincular la cuenta.');
+    } finally {
+      this.linkingRiot.set(false);
+    }
+  }
+
+  async unlinkRiotAccount() {
+    if (!confirm('¿Desvincular cuenta Riot? Las estadísticas dejarán de mostrarse.')) return;
+    const user = this.firebaseService.getCurrentUser();
+    const profile = this.profile();
+    if (!user || !profile || user.uid !== profile.uid) return;
+    try {
+      await this.firebaseService.updateUserProfile(user.uid, {
+        gameName: undefined,
+        tagLine: undefined,
+        region: undefined,
+        puuid: undefined
+      });
+      await this.loadProfile(user.uid);
+      this.riotStats.set(null);
+      this.topChampions.set([]);
+      this.activityMap.set(new Map());
+      this.activityTimelineData = null;
+    } catch (e) {
+      console.error(e);
+      alert('Error al desvincular.');
+    }
   }
   
   async loadSummonerIcon() {
@@ -774,7 +1500,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       next: (updatedProfile) => {
         if (updatedProfile) {
           this.profile.set(updatedProfile);
-          // Los cambios se reflejarán automáticamente en la UI gracias al signal
+          writeCachedUserProfile(userId, updatedProfile);
         }
       },
       error: (error) => {

@@ -83,6 +83,12 @@
             <h2 class="summoner-name">
               {{ summoner()!.gameName }}
               <span class="tagline">#{{ summoner()!.tagLine }}</span>
+              @if (getCurrentLeague(); as league) {
+                <span class="inline-rank-badge" [style.border-color]="getTierColor(league.tier)">
+                  <img class="inline-rank-icon" [src]="getRankImageUrl(league.tier)" [alt]="league.tier">
+                  <span>{{ getLeagueDisplayName(league) }}</span>
+                </span>
+              }
             </h2>
             <div class="summoner-level">
               <span class="level-badge">Nivel {{ summoner()!.summonerLevel }}</span>
@@ -95,15 +101,30 @@
       <div class="stats-mastery-container">
         <div class="ranked-stats-section">
           <h3 class="section-title">Estadísticas Rankeadas</h3>
-          
-          <div class="development-message">
-            <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="dev-icon">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <h4>En Desarrollo</h4>
-            <p>Las estadísticas rankeadas están siendo mejoradas. Pronto tendrás acceso a información detallada de ranking, LP y historial de partidas.</p>
+          <div class="queue-toggle">
+            <button class="toggle-btn" [class.active]="selectedQueue() === 'RANKED_SOLO_5x5'" (click)="switchQueue('RANKED_SOLO_5x5')">Solo/Duo</button>
+            <button class="toggle-btn" [class.active]="selectedQueue() === 'RANKED_FLEX_SR'" (click)="switchQueue('RANKED_FLEX_SR')">Flex</button>
           </div>
+
+          @if (getCurrentLeague(); as league) {
+            <div class="rank-info">
+              <div class="rank-icon">
+                <img class="rank-image" [src]="getRankImageUrl(league.tier)" [alt]="league.tier">
+              </div>
+              <div class="rank-details">
+                <div class="rank-name" [style.color]="getTierColor(league.tier)">{{ getLeagueDisplayName(league) }}</div>
+                <div class="lp-amount">{{ league.leaguePoints }} LP</div>
+                <div class="rank-stats-row">
+                  <span class="wins-losses">{{ league.wins }}W / {{ league.losses }}L</span>
+                  <span class="winrate">{{ getWinRate(league) }}% WR</span>
+                </div>
+              </div>
+            </div>
+          } @else {
+            <div class="no-ranked">
+              <p>Este jugador no tiene clasificación en esta cola.</p>
+            </div>
+          }
         </div>
 
         <div class="mastery-section">

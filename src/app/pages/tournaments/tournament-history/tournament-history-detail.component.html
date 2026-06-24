@@ -1,0 +1,79 @@
+<div class="thd-page">
+  @if (loading()) {
+    <p class="thd-muted">Cargando…</p>
+  } @else if (error()) {
+    <div class="container thd-pad">
+      <p class="thd-error">{{ error() }}</p>
+      <a routerLink="/tournaments/historial" class="thd-link">← Volver al historial</a>
+    </div>
+  } @else if (tournament(); as t) {
+    <div class="thd-hero">
+      <div class="container">
+        <a routerLink="/tournaments/historial" class="thd-back">← Historial</a>
+        <h1>{{ t.name }}</h1>
+        <p class="thd-sub">Finalizado: {{ formatDate(t) }}</p>
+        <div class="thd-results">
+          @if (t.championTeamName) {
+            <div class="thd-pill thd-pill--gold">
+              <span class="thd-pill-label">1.º lugar</span>
+              <strong>{{ t.championTeamName }}</strong>
+            </div>
+          }
+          @if (t.format === 'double' && t.redemptionChampionTeamName) {
+            <div class="thd-pill thd-pill--rose">
+              <span class="thd-pill-label">2.º lugar (redención)</span>
+              <strong>{{ t.redemptionChampionTeamName }}</strong>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="container thd-body">
+      <h2 class="thd-h2">Equipos participantes</h2>
+      <p class="thd-hint">Pulsa un equipo para ver la información de los jugadores.</p>
+      <ul class="thd-teams">
+        @for (team of t.teams || []; track team.id) {
+          <li>
+            <button type="button" class="thd-team-btn" (click)="openTeam(team)">
+              <span class="thd-team-name">{{ team.name }}</span>
+              <span class="thd-team-wins" title="Torneos ganados (global)">🏆 {{ winsFor(team.id) }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+
+  @if (modalOpen()) {
+    <div class="thd-modal-overlay" (click)="closeModal()">
+      <div class="thd-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        @if (selectedTeam(); as tm) {
+          <div class="thd-modal-head">
+            <h3>{{ tm.name }}</h3>
+            <button type="button" class="thd-modal-close" (click)="closeModal()" aria-label="Cerrar">×</button>
+          </div>
+          <p class="thd-modal-caption">Capitán: {{ tm.captainName }}</p>
+          @if (playersList(tm).length === 0) {
+            <p class="thd-muted">No hay datos de jugadores registrados para este equipo.</p>
+          } @else {
+            <ul class="thd-players">
+              @for (p of playersList(tm); track $index) {
+                <li class="thd-player-card">
+                  <div class="thd-player-name">{{ p.name }}</div>
+                  <div class="thd-player-row"><span>Rol</span> {{ p.role || '—' }}</div>
+                  <div class="thd-player-row"><span>Invocador</span> {{ p.gameName }}#{{ p.tagLine }}</div>
+                  <div class="thd-player-row"><span>Email</span> {{ p.email || '—' }}</div>
+                  <div class="thd-player-row"><span>Tel.</span> {{ p.phone || '—' }}</div>
+                  @if (p.mainChampion) {
+                    <div class="thd-player-row"><span>Main</span> {{ p.mainChampion }}</div>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        }
+      </div>
+    </div>
+  }
+</div>

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { SectionHeaderComponent } from '../../components/section-header/section-header.component';
@@ -10,7 +10,8 @@ import { CardsGridComponent } from '../../components/cards-grid/cards-grid.compo
   standalone: true,
   imports: [CommonModule, SectionHeaderComponent, UniversalCardComponent, CardsGridComponent],
   templateUrl: './about.component.html',
-  styleUrls: ['./about.component.css']
+  styleUrls: ['./about.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AboutComponent {
   team = [

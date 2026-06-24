@@ -13,23 +13,18 @@ export class TwitchEmbedComponent implements OnInit {
   isLive = signal(false);
   iframeLoaded = signal(false);
   iframeError = signal(false);
-  channelName = 'wayiraesports';
-  twitchUrl = 'https://www.twitch.tv/wayiraesports';
+  channelName = 'elxokas';
+  twitchUrl = 'https://www.twitch.tv/elxokas';
   safeTwitchUrl: SafeResourceUrl;
 
   constructor(private sanitizer: DomSanitizer) {
+    const parent = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
     this.safeTwitchUrl = this.sanitizer.bypassSecurityTrustResourceUrl(
-      `https://player.twitch.tv/?channel=${this.channelName}&parent=wayiraesports.com&parent=localhost&parent=127.0.0.1&muted=true&autoplay=true`
+      `https://player.twitch.tv/?channel=${this.channelName}&parent=${encodeURIComponent(parent)}&parent=wayiraesports.com&parent=localhost&parent=127.0.0.1&muted=true`
     );
   }
 
-  ngOnInit() {
-    this.checkIfLive();
-  }
-
-  checkIfLive() {
-    this.isLive.set(false);
-  }
+  ngOnInit() {}
 
   onIframeLoad() {
     this.iframeLoaded.set(true);
