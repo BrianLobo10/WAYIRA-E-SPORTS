@@ -44,6 +44,33 @@
   padding: 0 2rem;
 }
 
+.section-header-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.section-header-row app-section-header {
+  margin-bottom: 0;
+}
+
+.btn-edit-projects {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(99, 102, 241, 0.5);
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.btn-edit-projects:hover {
+  background: rgba(99, 102, 241, 0.25);
+}
+
 app-section-header {
   display: block;
   margin-bottom: 2rem;
@@ -85,13 +112,139 @@ app-section-header {
   font-size: 0.875rem;
 }
 
+/* Modal edición proyectos */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.projects-edit-modal {
+  background: #1a2332;
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 900px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.projects-edit-modal h3 {
+  margin: 0 0 0.5rem 0;
+  color: #fff;
+}
+
+.modal-hint {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0 0 1rem 0;
+}
+
+.edit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.edit-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 2fr 90px 70px 36px;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.edit-row input {
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  font-size: 0.875rem;
+}
+
+.edit-row .edit-desc {
+  min-width: 0;
+}
+
+.btn-remove {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.btn-remove:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.modal-actions .btn-primary {
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  border: none;
+  background: #6366f1;
+  color: #fff;
+  cursor: pointer;
+}
+
+.modal-actions .btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.modal-actions .btn-secondary {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+}
+
+.modal-actions .btn-cancel {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+}
+
 @media (max-width: 768px) {
   .hero-content h1 {
     font-size: 2.5rem;
   }
-  
   .hero-content p {
     font-size: 1.1rem;
   }
+  .edit-row {
+    grid-template-columns: 1fr 1fr 36px;
+  }
+  .edit-row .edit-icon,
+  .edit-row .edit-desc,
+  .edit-row .edit-date {
+    display: none;
+  }
+  .edit-row .edit-title { grid-column: 1; }
+  .edit-row .edit-status { grid-column: 2; }
+  .edit-row .btn-remove { grid-column: 3; }
 }
 

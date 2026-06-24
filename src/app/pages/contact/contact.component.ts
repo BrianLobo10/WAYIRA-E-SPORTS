@@ -17,7 +17,7 @@ export class ContactComponent implements OnInit {
   email = signal('');
   subject = signal('');
   message = signal('');
-  contactType = signal('suggestion');
+  contactType = signal('general');
   
   isSubmitting = signal(false);
   submitSuccess = signal(false);
@@ -25,11 +25,9 @@ export class ContactComponent implements OnInit {
   currentUser = signal<UserProfile | null>(null);
 
   contactTypes = [
-    { value: 'suggestion', label: 'Sugerencia', icon: 'lightbulb' },
-    { value: 'bug', label: 'Reportar Bug', icon: 'bug' },
-    { value: 'feature', label: 'Solicitar Función', icon: 'sparkles' },
-    { value: 'partnership', label: 'Colaboración', icon: 'handshake' },
-    { value: 'other', label: 'Otro', icon: 'document' }
+    { value: 'general', label: 'Consulta general' },
+    { value: 'support', label: 'Soporte técnico' },
+    { value: 'other', label: 'Otro' }
   ];
 
   contactInfo = {

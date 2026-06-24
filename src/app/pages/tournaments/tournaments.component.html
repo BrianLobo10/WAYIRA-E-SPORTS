@@ -3,27 +3,42 @@
     <div class="container">
       <div class="hero-content">
         <h1>Torneos</h1>
-        <p>Participa en los torneos competitivos de WAYIRA E-SPORTS</p>
+        <p>Participa en los torneos competitivos de WAYIRA E-SPORTS. <a routerLink="/tournaments/historial" class="hero-historial-link">Ver historial de torneos finalizados</a></p>
       </div>
     </div>
   </section>
 
-  <section class="tournaments-content">
+  <section class="tournaments-content" id="clasificaciones">
     <div class="container">
+      <div class="clasificaciones-intro">
+        <h2 class="section-title">Clasificaciones y bracket</h2>
+        <p class="clasificaciones-text">
+          Cuando un torneo tenga el bracket confirmado, usa <strong>Vista interactiva</strong> para ver el cuadro completo (upper y redención) con líneas alineadas.
+          Desde aquí también puedes <strong>organizar llaves</strong> antes de confirmar.
+        </p>
+      </div>
       <div class="tournaments-header">
-        <h2 class="section-title">Torneos Disponibles</h2>
+        <h2 class="section-title section-title-sub">Torneos disponibles</h2>
         @if (isAdmin()) {
-          <button class="btn-create-test-tournament" (click)="createPracticeTournament()" [disabled]="creating()">
-            @if (creating()) {
-              <span class="spinner-small"></span>
-              <span>Creando...</span>
-            } @else {
+          <div class="tournaments-header-actions">
+            <button type="button" class="btn-create-tournament" (click)="openCreateModal()">
               <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
               </svg>
-              <span>Crear Torneo de Prueba</span>
-            }
-          </button>
+              <span>Crear Torneo</span>
+            </button>
+            <button type="button" class="btn-create-test-tournament" (click)="openPracticeModal()" [disabled]="creating()">
+              @if (creating()) {
+                <span class="spinner-small"></span>
+                <span>Creando...</span>
+              } @else {
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
+                <span>Torneo de Prueba</span>
+              }
+            </button>
+          </div>
         }
       </div>
       
@@ -35,7 +50,7 @@
       } @else if (tournaments().length === 0) {
         <div class="empty-state">
           <p>No hay torneos disponibles aún.</p>
-          <p class="empty-hint">Los administradores pueden crear torneos desde el menú del header.</p>
+          <p class="empty-hint">Los administradores pueden crear un torneo real con «Crear Torneo» o uno de prueba con «Torneo de Prueba».</p>
         </div>
       } @else {
         <div class="tournaments-grid">
@@ -89,6 +104,11 @@
                     </button>
                   }
                 }
+                @if (tournament.confirmed && tournament.bracket?.length && tournament.id) {
+                  <a class="btn-interactive-bracket" [routerLink]="['/tournaments', tournament.id, 'vista-interactiva']">
+                    Vista interactiva
+                  </a>
+                }
                 @if (isAdmin() && tournament.confirmed && tournament.status === 'confirmed') {
                   <button class="btn-start-tournament" (click)="startTournament(tournament)">
                     Iniciar Torneo
@@ -126,10 +146,42 @@
   </section>
 </div>
 
+<!-- Torneo de prueba: selector de equipos -->
+@if (showPracticeModal()) {
+  <div class="modal-overlay" (click)="closePracticeModal()">
+    <div class="tournament-modal practice-tournament-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Torneo de prueba</h3>
+        <button type="button" class="close-btn" (click)="closePracticeModal()" aria-label="Cerrar">
+          <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="practice-modal-hint">
+          Se crearán <strong>16 equipos</strong> ficticios (solo nombres), cuadro tipo octavos → final. Luego organiza el bracket, confírmalo y abre la vista interactiva.
+        </p>
+      </div>
+      <div class="modal-footer practice-modal-footer">
+        <button type="button" class="btn-cancel" (click)="closePracticeModal()">Cancelar</button>
+        <button type="button" class="btn-submit" (click)="createPracticeTournament()" [disabled]="creating()">
+          @if (creating()) {
+            <span class="spinner-small"></span>
+            <span>Creando…</span>
+          } @else {
+            <span>Crear torneo de prueba</span>
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
 <!-- Create Tournament Modal -->
 @if (showCreateModal()) {
   <div class="modal-overlay" (click)="closeModal()">
-    <div class="tournament-modal" (click)="$event.stopPropagation()">
+    <div class="tournament-modal create-tournament-modal" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h3>{{ selectedTournament() ? 'Editar Torneo' : 'Crear Nuevo Torneo' }}</h3>
         <button class="close-btn" (click)="closeModal()">
@@ -141,12 +193,15 @@
       
       <div class="modal-body">
         <form class="tournament-form">
+          <div class="form-section">
+            <h4 class="form-section-title">General</h4>
           <div class="form-group">
             <label for="tournamentName">Nombre del Torneo *</label>
             <input
               type="text"
               id="tournamentName"
-              [(ngModel)]="tournamentName"
+              [ngModel]="tournamentName()"
+              (ngModelChange)="tournamentName.set($event)"
               name="tournamentName"
               placeholder="Ej: Liga Wayira 2024"
               class="form-input"
@@ -158,7 +213,8 @@
             <label for="tournamentDescription">Descripción *</label>
             <textarea
               id="tournamentDescription"
-              [(ngModel)]="tournamentDescription"
+              [ngModel]="tournamentDescription()"
+              (ngModelChange)="tournamentDescription.set($event)"
               name="tournamentDescription"
               placeholder="Describe el torneo, premios, formato, etc."
               rows="4"
@@ -166,13 +222,17 @@
               [disabled]="creating()"
               required></textarea>
           </div>
+          </div>
 
+          <div class="form-section">
+            <h4 class="form-section-title">Formato y cupos</h4>
           <div class="form-row">
             <div class="form-group">
               <label for="tournamentGame">Juego *</label>
               <select
                 id="tournamentGame"
-                [(ngModel)]="tournamentGame"
+                [ngModel]="tournamentGame()"
+                (ngModelChange)="tournamentGame.set($event)"
                 name="tournamentGame"
                 class="form-select"
                 [disabled]="creating()">
@@ -186,26 +246,67 @@
               <label for="tournamentMaxTeams">Cantidad de Equipos *</label>
               <select
                 id="tournamentMaxTeams"
-                [(ngModel)]="tournamentMaxTeams"
+                [ngModel]="tournamentMaxTeams()"
+                (ngModelChange)="tournamentMaxTeams.set(+$event)"
                 name="tournamentMaxTeams"
                 class="form-select"
                 [disabled]="creating()">
-                @for (count of teamCounts; track count) {
+                @for (count of getAvailableTeamCounts(); track count) {
                   <option [value]="count">{{ count }} equipos</option>
                 }
               </select>
             </div>
           </div>
 
+          <div class="form-row form-row--rounds-format">
+            <div class="form-group">
+              <label for="tournamentConfiguredRounds">Número de Rondas *</label>
+              <select
+                id="tournamentConfiguredRounds"
+                [ngModel]="tournamentConfiguredRounds()"
+                (ngModelChange)="onConfiguredRoundsChange($event)"
+                name="tournamentConfiguredRounds"
+                class="form-select"
+                [disabled]="creating()">
+                @for (rounds of roundOptions; track rounds) {
+                  <option [value]="rounds">{{ rounds }} ronda{{ rounds > 1 ? 's' : '' }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="tournamentFormat">¿Bracket de redención?</label>
+              <select
+                id="tournamentFormat"
+                [ngModel]="tournamentFormat()"
+                (ngModelChange)="tournamentFormat.set($event === 'double' ? 'double' : 'single')"
+                name="tournamentFormat"
+                class="form-select"
+                [disabled]="creating()">
+                <option value="single">No — un solo cuadro (sin redención)</option>
+                <option value="double">Sí — cuadro inferior para perdedores</option>
+              </select>
+            </div>
+          </div>
+          <p class="form-helper-inline">
+            Con redención aparece un segundo cuadro debajo; la gran final sigue siendo la del cuadro superior.
+            Cupo máximo según rondas: <strong>{{ getBracketCapacityForRounds(tournamentConfiguredRounds()) }}</strong> equipos.
+          </p>
+          </div>
+
+          <div class="form-section">
+            <h4 class="form-section-title">Calendario</h4>
           <div class="form-row">
             <div class="form-group">
               <label for="tournamentStartDate">Fecha de Inicio *</label>
               <input
                 type="datetime-local"
                 id="tournamentStartDate"
-                [(ngModel)]="tournamentStartDate"
+                [ngModel]="tournamentStartDate()"
+                (ngModelChange)="tournamentStartDate.set($event)"
                 name="tournamentStartDate"
                 class="form-input"
+                [min]="getMinStartDateTime()"
                 [disabled]="creating()"
                 required>
             </div>
@@ -215,13 +316,43 @@
               <input
                 type="datetime-local"
                 id="tournamentEndDate"
-                [(ngModel)]="tournamentEndDate"
+                [ngModel]="tournamentEndDate()"
+                (ngModelChange)="tournamentEndDate.set($event)"
                 name="tournamentEndDate"
                 class="form-input"
+                [min]="getMinEndDateTime()"
                 [disabled]="creating()"
                 required>
             </div>
           </div>
+          </div>
+
+          @if (!selectedTournament()) {
+            <div class="form-section">
+              <h4 class="form-section-title">Inscripciones (opcional)</h4>
+            <div class="form-group registration-import-block">
+              <label for="registrationSheet">Excel / CSV</label>
+              <p class="form-helper registration-import-hint">
+                Mismas columnas que el registro manual (equipo, capitán, titulares, suplentes). <strong>.xlsx</strong> o <strong>CSV UTF-8</strong>. No más equipos que el cupo del torneo.
+              </p>
+              <div class="registration-import-row">
+                <input
+                  type="file"
+                  id="registrationSheet"
+                  class="form-input registration-file"
+                  accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+                  [disabled]="creating()"
+                  (change)="onRegistrationFileSelected($event)">
+                @if (registrationImportDraft(); as imp) {
+                  <span class="registration-import-badge">{{ imp.teams.length }} equipo(s) listos</span>
+                  <button type="button" class="btn-cancel btn-clear-import" (click)="clearRegistrationImport()" [disabled]="creating()">
+                    Quitar archivo
+                  </button>
+                }
+              </div>
+            </div>
+            </div>
+          }
 
           <div class="modal-footer">
             <button type="button" class="btn-cancel" (click)="closeModal()" [disabled]="creating()">
@@ -268,7 +399,8 @@
               <input
                 type="text"
                 id="teamName"
-                [(ngModel)]="teamName"
+                [ngModel]="teamName()"
+                (ngModelChange)="teamName.set($event)"
                 name="teamName"
                 placeholder="Ej: Team Wayira"
                 class="form-input"
@@ -513,7 +645,7 @@
   <div class="modal-overlay bracket-overlay" (click)="closeBracket()">
     <div class="bracket-modal" (click)="$event.stopPropagation()">
       <div class="modal-header">
-        <h3>Bracket - {{ selectedTournamentForBracket()!.name }}</h3>
+        <h3>Clasificaciones / Bracket — {{ selectedTournamentForBracket()!.name }}</h3>
         <button class="close-btn" (click)="closeBracket()">
           <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -548,75 +680,108 @@
               </div>
             </div>
             
-            <!-- Canvas del Bracket - Organizado por Enfrentamientos -->
+            <!-- Canvas del Bracket - Vista tipo bracket o lista -->
             <div class="bracket-canvas-container">
-              <h4>Organizar Enfrentamientos</h4>
-              <div class="bracket-matches-container" 
-                   (dragover)="onBracketDragOver($event)"
-                   (drop)="onBracketDrop($event)">
-                @for (match of getBracketMatches(); track match.matchIndex; let i = $index) {
-                  <div class="bracket-match-slot">
-                    <div class="match-label">Enfrentamiento {{ i + 1 }}</div>
-                    <div class="match-teams">
-                      <!-- Team 1 -->
-                      <div 
-                        class="match-team-slot"
-                        [class.filled]="match.team1"
-                        [class.empty]="!match.team1"
-                        (drop)="onMatchTeamDrop($event, i, 'team1')"
-                        (dragover)="onSlotDragOver($event)">
-                        @if (match.team1) {
-                          <div class="slot-team">
-                            @if (match.team1.logoUrl) {
-                              <img [src]="match.team1.logoUrl" [alt]="match.team1.name" class="team-logo-small">
-                            }
-                            <span>{{ match.team1.name }}</span>
-                            <button 
-                              class="remove-slot-btn"
-                              (click)="removeTeamFromMatch(i, 'team1')"
-                              title="Eliminar">
-                              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          </div>
-                        } @else {
-                          <div class="slot-placeholder">Equipo 1</div>
-                        }
-                      </div>
-                      
-                      <div class="match-vs">VS</div>
-                      
-                      <!-- Team 2 -->
-                      <div 
-                        class="match-team-slot"
-                        [class.filled]="match.team2"
-                        [class.empty]="!match.team2"
-                        (drop)="onMatchTeamDrop($event, i, 'team2')"
-                        (dragover)="onSlotDragOver($event)">
-                        @if (match.team2) {
-                          <div class="slot-team">
-                            @if (match.team2.logoUrl) {
-                              <img [src]="match.team2.logoUrl" [alt]="match.team2.name" class="team-logo-small">
-                            }
-                            <span>{{ match.team2.name }}</span>
-                            <button 
-                              class="remove-slot-btn"
-                              (click)="removeTeamFromMatch(i, 'team2')"
-                              title="Eliminar">
-                              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          </div>
-                        } @else {
-                          <div class="slot-placeholder">Equipo 2</div>
-                        }
+              <div class="bracket-canvas-header">
+                <h4>Organizar Enfrentamientos</h4>
+                <div class="bracket-view-toggle">
+                  <button 
+                    type="button" 
+                    class="toggle-btn"
+                    [class.active]="bracketViewCanvas()"
+                    (click)="bracketViewCanvas.set(true)">
+                    Bracket
+                  </button>
+                  <button 
+                    type="button" 
+                    class="toggle-btn"
+                    [class.active]="!bracketViewCanvas()"
+                    (click)="bracketViewCanvas.set(false)">
+                    Lista
+                  </button>
+                </div>
+                <button 
+                  type="button" 
+                  class="btn-auto-bracket"
+                  (click)="autoGenerateBracket()"
+                  [disabled]="!selectedTournamentForBracket()?.teams?.length || selectedTournamentForBracket()!.teams!.length < 2">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Generar automático
+                </button>
+              </div>
+
+              @if (bracketViewCanvas()) {
+                <div class="bracket-canvas-wrapper" (dragover)="onBracketDragOver($event)" (drop)="onBracketDrop($event)">
+                  <app-bracket-canvas
+                    [matches]="getBracketMatches()"
+                    [numTeams]="getCanvasNumTeams()"
+                    [editable]="true"
+                    [firstRoundOnly]="true"
+                    (slotDrop)="onCanvasSlotDrop($event)"
+                    (slotRemove)="onCanvasSlotRemove($event)">
+                  </app-bracket-canvas>
+                </div>
+              } @else {
+                <div class="bracket-matches-container" 
+                     (dragover)="onBracketDragOver($event)"
+                     (drop)="onBracketDrop($event)">
+                  @for (match of getBracketMatches(); track match.matchIndex; let i = $index) {
+                    <div class="bracket-match-slot">
+                      <div class="match-label">Enfrentamiento {{ i + 1 }}</div>
+                      <div class="match-teams">
+                        <div 
+                          class="match-team-slot"
+                          [class.filled]="match.team1"
+                          [class.empty]="!match.team1"
+                          (drop)="onMatchTeamDrop($event, i, 'team1')"
+                          (dragover)="onSlotDragOver($event)">
+                          @if (match.team1) {
+                            <div class="slot-team">
+                              @if (match.team1.logoUrl) {
+                                <img [src]="match.team1.logoUrl" [alt]="match.team1.name" class="team-logo-small">
+                              }
+                              <span>{{ match.team1.name }}</span>
+                              <button class="remove-slot-btn" (click)="removeTeamFromMatch(i, 'team1')" title="Eliminar">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          } @else {
+                            <div class="slot-placeholder">Equipo 1</div>
+                          }
+                        </div>
+                        <div class="match-vs">VS</div>
+                        <div 
+                          class="match-team-slot"
+                          [class.filled]="match.team2"
+                          [class.empty]="!match.team2"
+                          (drop)="onMatchTeamDrop($event, i, 'team2')"
+                          (dragover)="onSlotDragOver($event)">
+                          @if (match.team2) {
+                            <div class="slot-team">
+                              @if (match.team2.logoUrl) {
+                                <img [src]="match.team2.logoUrl" [alt]="match.team2.name" class="team-logo-small">
+                              }
+                              <span>{{ match.team2.name }}</span>
+                              <button class="remove-slot-btn" (click)="removeTeamFromMatch(i, 'team2')" title="Eliminar">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          } @else {
+                            <div class="slot-placeholder">Equipo 2</div>
+                          }
+                        </div>
                       </div>
                     </div>
-                  </div>
-                }
-              </div>
+                  }
+                </div>
+              }
+
               <div class="organizer-actions">
                 <button class="btn-cancel" (click)="closeBracket()">Cancelar</button>
                 <button 
@@ -653,16 +818,15 @@
                              [class.final-match]="round === 'final'">
                           <div class="match-team" [class.winner]="match.winnerId === match.team1Id">
                             <span class="team-name">{{ match.team1Name || 'TBD' }}</span>
-                            @if (match.score1 !== undefined) {
-                              <span class="team-score">{{ match.score1 }}</span>
-                            }
+                            <span class="team-score">{{ match.score1 ?? 0 }}</span>
                           </div>
-                          <div class="match-divider">VS</div>
+                          <div class="match-divider">
+                            <span class="match-bestof">{{ match.roundLabel || getRoundDisplayName(round) }}</span>
+                            <span class="match-vs">VS</span>
+                          </div>
                           <div class="match-team" [class.winner]="match.winnerId === match.team2Id">
                             <span class="team-name">{{ match.team2Name || 'TBD' }}</span>
-                            @if (match.score2 !== undefined) {
-                              <span class="team-score">{{ match.score2 }}</span>
-                            }
+                            <span class="team-score">{{ match.score2 ?? 0 }}</span>
                           </div>
                           @if (match.winnerId && round === 'final') {
                             <div class="match-winner">
@@ -672,14 +836,19 @@
                               <span>🏆 {{ match.winnerId === match.team1Id ? match.team1Name : match.team2Name }}</span>
                             </div>
                           }
-                          @if (isAdmin() && selectedTournamentForBracket()!.status === 'ongoing' && !match.winnerId) {
+                          @if (isAdmin() && (selectedTournamentForBracket()!.status === 'ongoing' || selectedTournamentForBracket()!.status === 'confirmed')) {
                             <div class="match-actions">
-                              <button class="btn-winner" (click)="updateMatchWinner(match.id, match.team1Id!)">
-                                {{ match.team1Name || 'TBD' }} Gana
-                              </button>
-                              <button class="btn-winner" (click)="updateMatchWinner(match.id, match.team2Id!)">
-                                {{ match.team2Name || 'TBD' }} Gana
-                              </button>
+                              @if (canAdvanceTeam(match, match.team1Id)) {
+                                <button class="btn-point" (click)="updateMatchWinner(match.id, match.team1Id!)">
+                                  {{ match.winnerId === match.team1Id ? 'Ganador actual' : 'Hacer pasar' }} {{ match.team1Name || 'TBD' }}
+                                </button>
+                              }
+                              @if (canAdvanceTeam(match, match.team2Id)) {
+                                <button class="btn-point" (click)="updateMatchWinner(match.id, match.team2Id!)">
+                                  {{ match.winnerId === match.team2Id ? 'Ganador actual' : 'Hacer pasar' }} {{ match.team2Name || 'TBD' }}
+                                </button>
+                              }
+                              <span class="match-completed-label">Ganador: {{ getWinnerName(match) }}</span>
                             </div>
                           }
                         </div>

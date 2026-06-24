@@ -1,0 +1,97 @@
+.profile-top-champions-card.aurea-card {
+  background: #1a2332;
+  border-radius: 12px;
+  padding: 1.5rem 1.25rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.aurea-container {
+  max-width: 935px;
+  margin: 0 auto;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+
+.champions-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+}
+
+.period-badge {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.champions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  justify-content: center;
+}
+
+.champion-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  min-width: 90px;
+}
+
+.champion-img-wrap {
+  position: relative;
+}
+
+.champion-img {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+}
+
+.champion-mastery-badge {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #a5b4fc;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.35rem;
+  border-radius: 6px;
+}
+
+.champion-winrate {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #a5b4fc;
+}
+
+.champion-points {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.champion-name {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.95);
+  text-align: center;
+}

@@ -3,6 +3,7 @@ import { RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { User } from '@angular/fire/auth';
 import { FirebaseService, UserProfile, Tournament } from '@/app/services/firebase.service';
+import { readCachedUserProfile, writeCachedUserProfile } from '@/app/utils/profile-view-cache';
 import { NotificationsComponent } from '../notifications/notifications.component';
 import { Subscription } from 'rxjs';
 
@@ -128,6 +129,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
       next: (profile) => {
         if (profile) {
           this.currentUser.set(profile);
+          writeCachedUserProfile(uid, profile);
           this.isAdmin.set(profile.role === 'admin');
         } else {
           this.currentUser.set(null);
@@ -143,33 +145,46 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.subscriptions.add(this.profileSubscription);
   }
 
+  /** Al volver a la pestaña, refrescar perfil por si cambiaron el role en Firestore. */
+  @HostListener('document:visibilitychange')
+  onVisibilityChange() {
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      const user = this.firebaseService.getCurrentUser();
+      if (user) this.loadUserProfile(user.uid);
+    }
+  }
+
   ngOnDestroy() {
     this.subscriptions.unsubscribe();
   }
 
   async loadUserProfile(uid: string) {
+    const cached = readCachedUserProfile(uid);
+    if (cached) {
+      this.currentUser.set(cached);
+      this.isAdmin.set(cached.role === 'admin');
+    }
     try {
-      console.log('Header: Loading profile for uid:', uid);
       const profile = await this.firebaseService.getUserProfile(uid);
-      console.log('Header: Profile loaded:', profile);
-      
+
       if (profile) {
         this.currentUser.set(profile);
-        // Verificar admin directamente desde el perfil en lugar de hacer otra consulta
+        writeCachedUserProfile(uid, profile);
         const admin = profile.role === 'admin';
         this.isAdmin.set(admin);
-        console.log('Header: Admin status:', admin, 'Profile role:', profile.role, 'UID:', profile.uid);
+        if (!admin) {
+          console.log('Header: No admin. Para ver "Crear Torneo" pon role: "admin" en Firestore → users →', uid);
+        }
       } else {
-        console.warn('Header: Profile is null for uid:', uid);
-        console.warn('Header: This might mean the user profile does not exist in Firestore for this Firebase Auth uid.');
-        console.warn('Header: Please check if the user was registered correctly or if the uid matches.');
         this.currentUser.set(null);
         this.isAdmin.set(false);
       }
     } catch (error) {
       console.error('Header: Error loading user profile:', error);
-      this.currentUser.set(null);
-      this.isAdmin.set(false);
+      if (!cached) {
+        this.currentUser.set(null);
+        this.isAdmin.set(false);
+      }
     }
   }
 

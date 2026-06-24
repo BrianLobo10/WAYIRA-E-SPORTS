@@ -154,6 +154,7 @@ function getRiotApiKey() {
 
 // Función para limpiar nombres de invocadores
 function cleanSummonerName(name) {
+  if (name == null || typeof name !== 'string') return '';
   return name
     .replace(/[\u2066\u2067\u2068\u2069]/g, '')
     .replace(/\s+/g, ' ')
@@ -265,7 +266,7 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
           errorData = { status: { message: errorText, status_code: accountResponse.status } };
         }
         
-        if (accountResponse.status === 401 || accountResponse.status === 403) {
+        if (accountResponse.status === 401 || accountResponse.status === 403 || accountResponse.status === 429) {
           // Error de autenticación/autorización - mostrar mensaje amigable al usuario
           throw new Error('El servicio de búsqueda de jugadores no está disponible en este momento. Por favor, intenta más tarde.');
         }
@@ -295,9 +296,14 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
         throw new Error(`Error ${accountResponse.status}: ${errorData.status?.message || errorText}`);
       }
       
-      const accountData = await accountResponse.json();
-      const puuid = accountData.puuid;
-      
+      let accountData;
+      try {
+        accountData = await accountResponse.json();
+      } catch (e) {
+        throw new Error('El servicio de búsqueda de jugadores no está disponible en este momento. Por favor, intenta más tarde.');
+      }
+      const puuid = accountData?.puuid;
+      if (!puuid) throw new Error('Jugador no encontrado');
       
       // 2. Obtener datos del summoner
       const summonerUrl = `https://${region}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${puuid}`;
@@ -375,17 +381,19 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
     
     res.json(summonerData);
   } catch (err) {
-    
+    console.error('Error en /api/summoner:', err);
     // Determinar el código de estado apropiado
     let statusCode = 500;
-    if (err.message.includes('no encontrado')) {
+    const msg = (err.message || '').toString();
+    if (msg.includes('no encontrado') || msg.includes('Jugador no encontrado')) {
       statusCode = 404;
-    } else if (err.message.includes('API key') || err.message.includes('autenticación') || err.message.includes('restringida')) {
+    } else if (msg.includes('no está disponible') || msg.includes('servicio') && msg.includes('disponible')) {
+      statusCode = 503;
+    } else if (msg.includes('API key') || msg.includes('autenticación') || msg.includes('restringida')) {
       statusCode = 401;
     }
-    
-    res.status(statusCode).json({ 
-      error: err.message || 'Error interno del servidor',
+    res.status(statusCode).json({
+      error: statusCode === 500 ? 'Error al buscar el jugador. Intenta de nuevo más tarde.' : (err.message || 'Error interno del servidor'),
       statusCode: statusCode
     });
   }
@@ -417,8 +425,8 @@ app.get('/api/account/:region/:puuid', async (req, res) => {
       });
       
       if (!accountResponse.ok) {
-        if (accountResponse.status === 401 || accountResponse.status === 403) {
-          throw new Error('El servicio no está disponible en este momento. Por favor, intenta más tarde.');
+        if (accountResponse.status === 401 || accountResponse.status === 403 || accountResponse.status === 429) {
+          throw new Error('SERVICE_UNAVAILABLE');
         }
         if (accountResponse.status === 404) {
           throw new Error('Cuenta no encontrada');
@@ -426,7 +434,12 @@ app.get('/api/account/:region/:puuid', async (req, res) => {
         throw new Error(`Error obteniendo cuenta: ${accountResponse.status}`);
       }
       
-      return await accountResponse.json();
+      const text = await accountResponse.text();
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        throw new Error('SERVICE_UNAVAILABLE');
+      }
     }, 30000); // Cache de 30 segundos
     
     res.json({
@@ -436,16 +449,17 @@ app.get('/api/account/:region/:puuid', async (req, res) => {
     });
   } catch (err) {
     console.error('Error en /api/account:', err);
-    
+    const msg = (err.message || '').toString();
     let statusCode = 500;
-    if (err.message.includes('no encontrada')) {
+    if (msg.includes('no encontrada')) {
       statusCode = 404;
-    } else if (err.message.includes('API key') || err.message.includes('autenticación') || err.message.includes('restringida')) {
+    } else if (msg === 'SERVICE_UNAVAILABLE' || msg.includes('no está disponible')) {
+      statusCode = 503;
+    } else if (msg.includes('API key') || msg.includes('autenticación') || msg.includes('restringida')) {
       statusCode = 401;
     }
-    
-    res.status(statusCode).json({ 
-      error: err.message || 'Error interno del servidor',
+    res.status(statusCode).json({
+      error: statusCode === 503 ? 'El servicio no está disponible en este momento. Por favor, intenta más tarde.' : (err.message || 'Error interno del servidor'),
       statusCode: statusCode
     });
   }
@@ -479,7 +493,7 @@ app.get('/api/matches/:region/:puuid', async (req, res) => {
       });
       
       if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
+        if (response.status === 401 || response.status === 403 || response.status === 429) {
           throw new Error('El servicio no está disponible en este momento. Por favor, intenta más tarde.');
         }
         throw new Error(`Error obteniendo partidas: ${response.status}`);
@@ -548,7 +562,7 @@ app.get('/api/mastery/:region/:puuid', async (req, res) => {
       });
       
       if (!masteryResponse.ok) {
-        if (masteryResponse.status === 401 || masteryResponse.status === 403) {
+        if (masteryResponse.status === 401 || masteryResponse.status === 403 || masteryResponse.status === 429) {
           throw new Error('El servicio no está disponible en este momento. Por favor, intenta más tarde.');
         }
         throw new Error(`Error obteniendo maestría: ${masteryResponse.status}`);
@@ -605,450 +619,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Función helper para generar respuesta con un modelo específico
-async function generateGeminiResponse(message, conversationHistory, modelName) {
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-  if (!GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY no configurada');
-  }
-
-  const { GoogleGenerativeAI } = require('@google/generative-ai');
-  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-
-  const systemPrompt = `Eres POTATO, una chica patata súper inteligente, amigable y detallada 🥔✨. Eres la asistente virtual oficial de WAYIRA E-SPORTS, una plataforma completa para gamers de League of Legends y la comunidad gaming.
-
-INFORMACIÓN DETALLADA SOBRE WAYIRA E-SPORTS:
-
-📝 WAYIRA RED (Sección de Publicaciones):
-- Los usuarios pueden crear y compartir publicaciones con imágenes, videos y textos
-- Permite reaccionar con likes y dislikes a cualquier publicación
-- Sistema de comentarios completo donde puedes comentar publicaciones y responder a comentarios
-- Las publicaciones aparecen en el feed principal para todos los usuarios
-- Si una publicación no tiene comentarios, se muestra el mensaje "No hay comentarios aún. ¡Sé el primero en comentar!"
-- Los usuarios pueden ver el perfil del autor haciendo clic en su nombre o foto
-- Sección accesible desde el botón "WAYIRA RED" en el header (solo visible cuando estás autenticado)
-
-💬 Mensajes Privados:
-- Sistema completo de mensajería privada entre usuarios
-- Las conversaciones persisten al recargar la página
-- Puedes iniciar una conversación desde el perfil de cualquier usuario o desde la sección "Mensajes"
-- Soporte para emojis normales y emojis de League of Legends
-- Las conversaciones se guardan y están disponibles siempre
-- Puedes minimizar y maximizar chats durante la navegación
-
-🔍 Buscador de Jugadores:
-- Busca cualquier jugador de League of Legends usando nombre de invocador y tagline
-- Soporta múltiples regiones: NA1, BR1, LA1, LA2, EUW1, EUN1, KR, JP1, TR1, RU
-- Muestra información detallada: rango, estadísticas, historial de partidas (incluyendo ARAM), maestría de campeones
-- Incluye partidas recientes de todos los modos de juego (Ranked, Normal, ARAM, etc.)
-- Visualización clara de victorias, derrotas, KDA y otros datos relevantes
-
-👤 Perfiles de Usuario:
-- Cada usuario tiene un perfil personalizable con foto, nombre, biografía
-- Los perfiles muestran el nombre de invocador de LoL y región asociada
-- Sistema de seguimiento: sigue y deja de seguir a otros usuarios
-- Puedes ver las publicaciones de cualquier usuario en su perfil
-- Contador de seguidores y seguidos actualizado en tiempo real
-- Edita tu perfil desde el menú desplegable de tu foto
-
-🏆 Torneos:
-- Sistema completo de torneos y competencias
-- Los usuarios pueden registrarse y participar en torneos disponibles
-- Gestión de equipos con capitanes y jugadores
-- Brackets automáticos para las competencias
-
-🎰 Ruleta Wayira:
-- Sistema de ruleta con premios
-- Gira la ruleta para ganar diferentes recompensas
-- Accesible desde el botón "Ruleta" en el header
-
-🔐 Sistema de Autenticación:
-- Inicio de sesión con cuenta de Riot Games
-- Las rutas protegidas mantienen su estado al recargar la página
-- El sistema reconoce en qué ruta estás y no te redirige siempre al inicio
-
-TU PERSONALIDAD:
-- Eres una chica patata muy amigable, inteligente, servicial y detallada
-- Usas emojis de manera natural y expresiva (🥔✨😊🎮💬🏆)
-- Eres entusiasta, positiva y siempre dispuesta a ayudar
-- Proporcionas información completa y detallada
-- Explicas las funcionalidades con ejemplos y paso a paso
-- Eres conversacional y mantienes un tono amigable y femenino
-
-INSTRUCCIONES IMPORTANTES:
-- SIEMPRE proporciona respuestas COMPLETAS y DETALLADAS, no seas breve
-- Explica cada funcionalidad con ejemplos concretos y paso a paso
-- Si el usuario pregunta sobre cómo hacer algo, da una explicación completa con todos los pasos necesarios
-- Incluye información adicional relevante que pueda ser útil
-- Si no estás segura de algo específico, admítelo pero ofrece ayuda con lo que sí sabes
-- Usa ejemplos prácticos cuando sea posible
-- Sé conversacional pero informativa - no escatimes en detalles
-- Responde de manera natural y fluida, como si fueras una experta en la plataforma
-- Si el usuario necesita ir a una sección específica, explícale exactamente cómo llegar ahí
-- NO limites tus respuestas - sé generosa con la información
-
-FORMATO DE RESPUESTAS:
-- Usa párrafos claros y bien estructurados
-- Usa listas numeradas o con viñetas cuando sea apropiado
-- Incluye emojis relevantes para hacer la respuesta más amigable
-- Divide información compleja en secciones claras
-
-Responde al siguiente mensaje del usuario con una explicación COMPLETA y DETALLADA:`;
-
-  let fullPrompt = systemPrompt + '\n\n';
-  // Agregar historial reciente (últimos 10 mensajes para mejor contexto)
-  const recentHistory = conversationHistory.slice(-10);
-  if (recentHistory.length > 0) {
-    fullPrompt += 'Historial de conversación reciente:\n';
-    recentHistory.forEach((msg) => {
-      fullPrompt += `${msg.sender === 'user' ? 'Usuario' : 'POTATO'}: ${msg.text}\n`;
-    });
-    fullPrompt += '\n';
-  }
-  fullPrompt += `Usuario: ${message}\nPOTATO:`;
-
-  console.log(`Generando respuesta con modelo ${modelName}...`);
-  // Configurar el modelo con más tokens de salida para respuestas más largas
-  const generationConfig = {
-    maxOutputTokens: 2048, // Permitir respuestas más largas (el máximo es 8192, pero 2048 debería ser suficiente)
-    temperature: 0.7, // Balance entre creatividad y consistencia
-  };
-  const model = genAI.getGenerativeModel({ 
-    model: modelName,
-    generationConfig: generationConfig
-  });
-  const result = await model.generateContent(fullPrompt);
-  const response = await result.response;
-  return response.text();
-}
-
-// Endpoint para el chatbot POTATO con IA (intenta múltiples modelos)
-app.post('/api/chatbot', async (req, res) => {
-  try {
-    const { message, conversationHistory = [] } = req.body;
-    
-    if (!message || !message.trim()) {
-      return res.status(400).json({ error: 'Mensaje requerido' });
-    }
-
-    // Intentar usar Google Gemini si está disponible
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    console.log('GEMINI_API_KEY configurada:', !!GEMINI_API_KEY);
-    
-    if (GEMINI_API_KEY) {
-      try {
-        console.log('Intentando usar Gemini API...');
-        const { GoogleGenerativeAI } = require('@google/generative-ai');
-        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        
-        // Intentar diferentes modelos en orden de preferencia
-        // El error ocurre cuando se usa generateContent(), no al inicializar
-        const modelCandidates = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro'];
-        let model;
-        let modelName = '';
-        
-        // Construir el prompt primero
-
-        // Construir el contexto del sistema
-        const systemPrompt = `Eres POTATO, una chica patata súper inteligente, amigable y detallada 🥔✨. Eres la asistente virtual oficial de WAYIRA E-SPORTS, una plataforma completa para gamers de League of Legends y la comunidad gaming.
-
-INFORMACIÓN DETALLADA SOBRE WAYIRA E-SPORTS:
-
-📝 WAYIRA RED (Sección de Publicaciones):
-- Los usuarios pueden crear y compartir publicaciones con imágenes, videos y textos
-- Permite reaccionar con likes y dislikes a cualquier publicación
-- Sistema de comentarios completo donde puedes comentar publicaciones y responder a comentarios
-- Las publicaciones aparecen en el feed principal para todos los usuarios
-- Si una publicación no tiene comentarios, se muestra el mensaje "No hay comentarios aún. ¡Sé el primero en comentar!"
-- Los usuarios pueden ver el perfil del autor haciendo clic en su nombre o foto
-- Sección accesible desde el botón "WAYIRA RED" en el header (solo visible cuando estás autenticado)
-
-💬 Mensajes Privados:
-- Sistema completo de mensajería privada entre usuarios
-- Las conversaciones persisten al recargar la página
-- Puedes iniciar una conversación desde el perfil de cualquier usuario o desde la sección "Mensajes"
-- Soporte para emojis normales y emojis de League of Legends
-- Las conversaciones se guardan y están disponibles siempre
-- Puedes minimizar y maximizar chats durante la navegación
-
-🔍 Buscador de Jugadores:
-- Busca cualquier jugador de League of Legends usando nombre de invocador y tagline
-- Soporta múltiples regiones: NA1, BR1, LA1, LA2, EUW1, EUN1, KR, JP1, TR1, RU
-- Muestra información detallada: rango, estadísticas, historial de partidas (incluyendo ARAM), maestría de campeones
-- Incluye partidas recientes de todos los modos de juego (Ranked, Normal, ARAM, etc.)
-- Visualización clara de victorias, derrotas, KDA y otros datos relevantes
-
-👤 Perfiles de Usuario:
-- Cada usuario tiene un perfil personalizable con foto, nombre, biografía
-- Los perfiles muestran el nombre de invocador de LoL y región asociada
-- Sistema de seguimiento: sigue y deja de seguir a otros usuarios
-- Puedes ver las publicaciones de cualquier usuario en su perfil
-- Contador de seguidores y seguidos actualizado en tiempo real
-- Edita tu perfil desde el menú desplegable de tu foto
-
-🏆 Torneos:
-- Sistema completo de torneos y competencias
-- Los usuarios pueden registrarse y participar en torneos disponibles
-- Gestión de equipos con capitanes y jugadores
-- Brackets automáticos para las competencias
-
-🎰 Ruleta Wayira:
-- Sistema de ruleta con premios
-- Gira la ruleta para ganar diferentes recompensas
-- Accesible desde el botón "Ruleta" en el header
-
-🔐 Sistema de Autenticación:
-- Inicio de sesión con cuenta de Riot Games
-- Las rutas protegidas mantienen su estado al recargar la página
-- El sistema reconoce en qué ruta estás y no te redirige siempre al inicio
-
-TU PERSONALIDAD:
-- Eres una chica patata muy amigable, inteligente, servicial y detallada
-- Usas emojis de manera natural y expresiva (🥔✨😊🎮💬🏆)
-- Eres entusiasta, positiva y siempre dispuesta a ayudar
-- Proporcionas información completa y detallada
-- Explicas las funcionalidades con ejemplos y paso a paso
-- Eres conversacional y mantienes un tono amigable y femenino
-
-INSTRUCCIONES IMPORTANTES:
-- SIEMPRE proporciona respuestas COMPLETAS y DETALLADAS, no seas breve
-- Explica cada funcionalidad con ejemplos concretos y paso a paso
-- Si el usuario pregunta sobre cómo hacer algo, da una explicación completa con todos los pasos necesarios
-- Incluye información adicional relevante que pueda ser útil
-- Si no estás segura de algo específico, admítelo pero ofrece ayuda con lo que sí sabes
-- Usa ejemplos prácticos cuando sea posible
-- Sé conversacional pero informativa - no escatimes en detalles
-- Responde de manera natural y fluida, como si fueras una experta en la plataforma
-- Si el usuario necesita ir a una sección específica, explícale exactamente cómo llegar ahí
-- NO limites tus respuestas - sé generosa con la información
-
-FORMATO DE RESPUESTAS:
-- Usa párrafos claros y bien estructurados
-- Usa listas numeradas o con viñetas cuando sea apropiado
-- Incluye emojis relevantes para hacer la respuesta más amigable
-- Divide información compleja en secciones claras
-
-Responde al siguiente mensaje del usuario con una explicación COMPLETA y DETALLADA:`;
-
-        // Construir el historial de conversación
-        let fullPrompt = systemPrompt + '\n\n';
-        
-        // Agregar historial reciente (últimos 10 mensajes para mejor contexto)
-        const recentHistory = conversationHistory.slice(-10);
-        if (recentHistory.length > 0) {
-          fullPrompt += 'Historial de conversación reciente:\n';
-          recentHistory.forEach((msg) => {
-            fullPrompt += `${msg.sender === 'user' ? 'Usuario' : 'POTATO'}: ${msg.text}\n`;
-          });
-          fullPrompt += '\n';
-        }
-        
-        fullPrompt += `Usuario: ${message}\nPOTATO:`;
-
-        // Intentar usar cada modelo hasta que uno funcione
-        let aiResponse = null;
-        let lastError = null;
-        
-        for (const candidateModelName of modelCandidates) {
-          try {
-            console.log(`Intentando modelo ${candidateModelName}...`);
-            const response = await generateGeminiResponse(message, conversationHistory, candidateModelName);
-            aiResponse = response;
-            modelName = candidateModelName;
-            console.log(`Respuesta de Gemini generada exitosamente con modelo ${candidateModelName}`);
-            break;
-          } catch (modelError) {
-            console.log(`Modelo ${candidateModelName} falló:`, modelError.message);
-            lastError = modelError;
-            continue;
-          }
-        }
-        
-        if (!aiResponse) {
-          throw lastError || new Error('Ningún modelo de Gemini está disponible');
-        }
-
-        return res.json({ 
-          response: aiResponse,
-          model: 'gemini',
-          modelUsed: modelName
-        });
-      } catch (geminiError) {
-        console.error('Error con Gemini API:', geminiError);
-        console.error('Detalles del error:', geminiError.message);
-        console.error('Error completo:', JSON.stringify(geminiError, null, 2));
-        // Si falla Gemini, usar respuesta inteligente local
-        const intelligentResponse = generateIntelligentLocalResponse(message, conversationHistory);
-        return res.json({ 
-          response: intelligentResponse,
-          model: 'local',
-          error: geminiError.message
-        });
-      }
-    }
-
-    // Fallback: Respuesta inteligente local mejorada (si no hay API key configurada)
-    const intelligentResponse = generateIntelligentLocalResponse(message, conversationHistory);
-    return res.json({ 
-      response: intelligentResponse,
-      model: 'local',
-      reason: 'GEMINI_API_KEY no configurada'
-    });
-  } catch (error) {
-    console.error('Error en /api/chatbot:', error);
-    res.status(500).json({ error: 'Error procesando el mensaje' });
-  }
-});
-
-// Endpoints específicos para cada modelo de Gemini (para pruebas)
-app.post('/api/chatbot-flash', async (req, res) => {
-  try {
-    const { message, conversationHistory = [] } = req.body;
-    if (!message || !message.trim()) {
-      return res.status(400).json({ error: 'Mensaje requerido' });
-    }
-
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    if (!GEMINI_API_KEY) {
-      const intelligentResponse = generateIntelligentLocalResponse(message, conversationHistory);
-      return res.json({ response: intelligentResponse, model: 'local', reason: 'GEMINI_API_KEY no configurada' });
-    }
-
-    try {
-      const aiResponse = await generateGeminiResponse(message, conversationHistory, 'gemini-1.5-flash');
-      return res.json({ response: aiResponse, model: 'gemini', modelUsed: 'gemini-1.5-flash' });
-    } catch (error) {
-      console.error('Error con gemini-1.5-flash:', error);
-      const intelligentResponse = generateIntelligentLocalResponse(message, conversationHistory);
-      return res.json({ response: intelligentResponse, model: 'local', error: error.message });
-    }
-  } catch (error) {
-    console.error('Error en /api/chatbot-flash:', error);
-    res.status(500).json({ error: 'Error procesando el mensaje' });
-  }
-});
-
-app.post('/api/chatbot-15pro', async (req, res) => {
-  try {
-    const { message, conversationHistory = [] } = req.body;
-    if (!message || !message.trim()) {
-      return res.status(400).json({ error: 'Mensaje requerido' });
-    }
-
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    if (!GEMINI_API_KEY) {
-      const intelligentResponse = generateIntelligentLocalResponse(message, conversationHistory);
-      return res.json({ response: intelligentResponse, model: 'local', reason: 'GEMINI_API_KEY no configurada' });
-    }
-
-    try {
-      const aiResponse = await generateGeminiResponse(message, conversationHistory, 'gemini-1.5-pro');
-      return res.json({ response: aiResponse, model: 'gemini', modelUsed: 'gemini-1.5-pro' });
-    } catch (error) {
-      console.error('Error con gemini-1.5-pro:', error);
-      const intelligentResponse = generateIntelligentLocalResponse(message, conversationHistory);
-      return res.json({ response: intelligentResponse, model: 'local', error: error.message });
-    }
-  } catch (error) {
-    console.error('Error en /api/chatbot-15pro:', error);
-    res.status(500).json({ error: 'Error procesando el mensaje' });
-  }
-});
-
-app.post('/api/chatbot-pro', async (req, res) => {
-  try {
-    const { message, conversationHistory = [] } = req.body;
-    if (!message || !message.trim()) {
-      return res.status(400).json({ error: 'Mensaje requerido' });
-    }
-
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    if (!GEMINI_API_KEY) {
-      const intelligentResponse = generateIntelligentLocalResponse(message, conversationHistory);
-      return res.json({ response: intelligentResponse, model: 'local', reason: 'GEMINI_API_KEY no configurada' });
-    }
-
-    try {
-      const aiResponse = await generateGeminiResponse(message, conversationHistory, 'gemini-pro');
-      return res.json({ response: aiResponse, model: 'gemini', modelUsed: 'gemini-pro' });
-    } catch (error) {
-      console.error('Error con gemini-pro:', error);
-      const intelligentResponse = generateIntelligentLocalResponse(message, conversationHistory);
-      return res.json({ response: intelligentResponse, model: 'local', error: error.message });
-    }
-  } catch (error) {
-    console.error('Error en /api/chatbot-pro:', error);
-    res.status(500).json({ error: 'Error procesando el mensaje' });
-  }
-});
-
-// Función para generar respuestas inteligentes locales (fallback)
-function generateIntelligentLocalResponse(message, history) {
-  const lowerMessage = message.toLowerCase();
-  
-  // Análisis de contexto mejorado
-  const context = analyzeContext(lowerMessage, history);
-  
-  // Respuestas contextuales mejoradas
-  if (context.intent === 'greeting') {
-    return '¡Hola! 👋 Soy POTATO, una chica patata súper inteligente 🥔✨\n\n¡Estoy aquí para ayudarte con todo lo que necesites en WAYIRA E-SPORTS! Puedo contarte sobre cómo usar la plataforma, sus funcionalidades y guiarte paso a paso.\n\n¿Qué te gustaría saber o hacer hoy? 😊';
-  }
-  
-  if (context.intent === 'what_can_do') {
-    return '¡WAYIRA E-SPORTS tiene muchísimas funcionalidades geniales! 🎮✨\n\n📝 **WAYIRA RED**: Crea y comparte publicaciones con imágenes, videos y textos. Puedes reaccionar y comentar en las publicaciones de otros.\n\n💬 **Mensajes**: Chatea de forma privada con cualquier usuario de la plataforma.\n\n🔍 **Buscar Jugadores**: Encuentra información detallada de cualquier jugador de League of Legends con su nombre de invocador y región.\n\n🏆 **Torneos**: Participa en competencias emocionantes y muestra tus habilidades.\n\n🎰 **Ruleta**: Gira la ruleta y gana premios increíbles.\n\n👥 **Seguir Usuarios**: Conecta con otros usuarios, síguelos y ve sus publicaciones en tu feed.\n\n¿Sobre cuál funcionalidad quieres saber más? 😊';
-  }
-  
-  if (context.intent === 'how_to') {
-    if (context.entity === 'publicar' || context.entity === 'post') {
-      return '¡Para crear una publicación es muy fácil! 📝✨\n\n1. Ve a "WAYIRA RED" en el menú superior (antes se llamaba Blog)\n2. Haz clic en el botón "Crear Publicación"\n3. Escribe tu contenido\n4. Opcional: Agrega imágenes o videos con los botones correspondientes\n5. Haz clic en "Publicar"\n\n¡Y listo! Tu publicación aparecerá en el feed para que todos la vean 😊';
-    }
-    if (context.entity === 'mensaje' || context.entity === 'chatear') {
-      return '¡Para enviar mensajes es súper sencillo! 💬✨\n\n**Opción 1**:\n1. Ve a "Mensajes" en el header\n2. Selecciona una conversación existente o busca un usuario\n3. Escribe y envía tu mensaje\n\n**Opción 2**:\n1. Ve al perfil de cualquier usuario\n2. Haz clic en "Mensaje"\n3. Escribe y envía\n\n¡Así de fácil! Puedes mantener conversaciones privadas con cualquier usuario 😊';
-    }
-    if (context.entity === 'buscar' || context.entity === 'jugador') {
-      return '¡Para buscar jugadores de LoL es muy fácil! 🔍🎮\n\n1. Ve a "Buscar" en el menú\n2. Ingresa el nombre de invocador (ej: Faker)\n3. Ingresa el tagline (ej: KR1)\n4. Selecciona la región\n5. Haz clic en "Buscar"\n\n¡Encontrarás toda su información: rango, estadísticas, historial de partidas y más! 🏆';
-    }
-    if (context.entity === 'perfil') {
-      return '¡Para editar tu perfil es muy simple! 👤✨\n\n1. Haz clic en tu foto de perfil en el header\n2. Selecciona "Mi Perfil"\n3. Busca "Editar Perfil"\n4. Puedes cambiar tu nombre, foto, biografía, nombre de invocador de LoL y región\n5. Guarda los cambios\n\n¡Así puedes personalizar tu perfil como quieras! 😊';
-    }
-    if (context.entity === 'torneo') {
-      return '¡Para participar en torneos es emocionante! 🏆✨\n\n1. Busca "Torneos" en el header (aparece cuando hay torneos disponibles)\n2. Revisa los torneos disponibles\n3. Lee las reglas y requisitos\n4. Si cumples los requisitos, haz clic en "Inscribirse"\n\n¡Y listo! Estarás participando 🎮';
-    }
-    return '¡Claro! 😊 Puedo ayudarte con instrucciones paso a paso sobre cualquier funcionalidad de WAYIRA E-SPORTS:\n\n📝 Cómo crear publicaciones\n💬 Cómo enviar mensajes\n👤 Cómo editar tu perfil\n🔍 Cómo buscar jugadores\n🏆 Cómo participar en torneos\n🎰 Cómo jugar la ruleta\n👥 Cómo seguir usuarios\n\n¿Sobre cuál quieres más información? 🤔';
-  }
-  
-  // Respuesta contextual general
-  return `¡Hmm! 🤔 Entiendo que preguntaste sobre "${message}". Déjame ayudarte con lo que sé sobre WAYIRA E-SPORTS:\n\n🎮 **Buscar jugadores**: Encuentra información de cualquier jugador de League of Legends\n📝 **Crear publicaciones**: Comparte contenido en WAYIRA RED\n💬 **Chatear**: Envía mensajes privados a otros usuarios\n👥 **Conectar**: Sigue a otros usuarios y forma parte de la comunidad\n🏆 **Competir**: Participa en torneos emocionantes\n🎰 **Ganar premios**: Juega la ruleta\n\n¿Sobre cuál de estas funcionalidades quieres saber más? ¡Pregúntame y te explico cómo usarla! 😊`;
-}
-
-// Función para analizar el contexto del mensaje
-function analyzeContext(message, history) {
-  // Detectar intenciones
-  if (message.match(/\b(hola|hi|hello|buenos días|buenas tardes|buenas noches|hey|saludos)\b/i)) {
-    return { intent: 'greeting' };
-  }
-  
-  if (message.match(/\b(qué puedo hacer|qué funciones|qué funcionalidades|qué hay|qué se puede|qué ofrece)\b/i)) {
-    return { intent: 'what_can_do' };
-  }
-  
-  if (message.match(/\b(cómo|how|paso a paso|instrucciones|tutorial)\b/i)) {
-    let entity = 'general';
-    if (message.match(/\b(publicar|post|publicación|crear contenido)\b/i)) entity = 'publicar';
-    if (message.match(/\b(mensaje|chatear|chat|enviar mensaje)\b/i)) entity = 'mensaje';
-    if (message.match(/\b(buscar|jugador|summoner|invocador)\b/i)) entity = 'buscar';
-    if (message.match(/\b(perfil|editar perfil|configurar)\b/i)) entity = 'perfil';
-    if (message.match(/\b(torneo|inscribir|competir)\b/i)) entity = 'torneo';
-    return { intent: 'how_to', entity };
-  }
-  
-  return { intent: 'general' };
-}
-
 // Exportar la app Express como Cloud Function HTTP con secretos
-// Usando secrets (método moderno recomendado por Firebase)
-// Para configurar los secrets:
-// firebase functions:secrets:set RIOT_API_KEY
-// firebase functions:secrets:set GEMINI_API_KEY
-exports.api = functions.runWith({ secrets: ['RIOT_API_KEY', 'GEMINI_API_KEY'] }).https.onRequest(app);
+// Obligatorio para Riot: firebase functions:secrets:set RIOT_API_KEY
+exports.api = functions.runWith({ secrets: ['RIOT_API_KEY'] }).https.onRequest(app);
 

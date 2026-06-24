@@ -3,8 +3,8 @@
 }
 
 .about-hero {
-  background: linear-gradient(135deg, #1a2332 0%, #2d3748 100%);
-  padding: 8rem 0 4rem;
+  background: linear-gradient(135deg, rgba(21, 32, 42, 0.92) 0%, rgba(26, 35, 50, 0.9) 50%, rgba(37, 45, 58, 0.88) 100%);
+  padding: 4rem 0 2.5rem;
   position: relative;
   overflow: hidden;
 }
@@ -34,8 +34,8 @@
 
 
 .about-content {
-  padding: 4rem 2rem;
-  background: #0f1419;
+  padding: 2.5rem 2rem;
+  background: rgba(15, 20, 25, 0.85);
 }
 
 .container {
@@ -46,49 +46,55 @@
 
 .about-intro {
   max-width: 900px;
-  margin: 0 auto 4rem;
+  margin: 0 auto 2.5rem;
   padding: 0 2rem;
   text-align: center;
 }
 
 .about-intro h2 {
-  font-size: 2.5rem;
+  font-size: 2.25rem;
   font-weight: 700;
-  margin-bottom: 2rem;
-  margin-top: 2rem;
+  margin-bottom: 1.25rem;
+  margin-top: 1.25rem;
   color: #ffffff;
 }
 
 .about-intro p {
-  font-size: 1.1rem;
-  line-height: 1.8;
-  color: rgba(255, 255, 255, 0.7);
-  margin-bottom: 1.5rem;
+  font-size: 1.05rem;
+  line-height: 1.75;
+  color: rgba(255, 255, 255, 0.75);
+  margin-bottom: 1rem;
 }
 
 .mission-vision {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
-  margin: 4rem auto;
+  gap: 1.5rem;
+  margin: 2.5rem auto;
   max-width: 1200px;
   padding: 0 2rem;
 }
 
 .mission-vision-card {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 16px;
-  padding: 2.5rem;
+  padding: 2rem;
   text-align: center;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  backdrop-filter: blur(8px);
+  opacity: 0.98;
 }
 
 .mission-vision-card:hover {
-  transform: translateY(-8px);
-  border-color: rgba(99, 102, 241, 0.3);
-  box-shadow: 0 20px 40px rgba(99, 102, 241, 0.1);
+  transform: translateY(-6px);
+  border-color: var(--border-accent-strong, rgba(1, 108, 108, 0.5));
+  box-shadow: 0 16px 36px rgba(1, 108, 108, 0.1);
+}
+
+.mission-vision-card:focus-within {
+  outline: 2px solid var(--border-accent-strong, rgba(1, 108, 108, 0.5));
+  outline-offset: 2px;
 }
 
 .card-icon {
@@ -119,17 +125,17 @@
 .achievements-grid,
 .services-grid,
 .team-grid {
-  margin-top: 3rem;
-  margin-bottom: 4rem;
+  margin-top: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 app-section-header {
   display: block;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 .services-grid {
-  margin-bottom: 4rem;
+  margin-bottom: 2rem;
 }
 
 @media (max-width: 768px) {
@@ -163,6 +169,49 @@ app-section-header {
 
   .mission-vision-card h3 {
     font-size: 1.5rem;
+  }
+
+  /* Logros en móvil: 2 columnas y tarjetas más pequeñas */
+  ::ng-deep app-cards-grid.achievements-grid .cards-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem;
+  }
+  ::ng-deep app-cards-grid.achievements-grid .universal-card {
+    padding: 0.75rem;
+    min-height: 140px;
+  }
+  ::ng-deep app-cards-grid.achievements-grid .universal-card .card-icon {
+    margin-bottom: 0.5rem;
+  }
+  ::ng-deep app-cards-grid.achievements-grid .universal-card .card-icon svg {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+  ::ng-deep app-cards-grid.achievements-grid .universal-card .card-title {
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+  }
+  ::ng-deep app-cards-grid.achievements-grid .universal-card .card-description {
+    font-size: 0.75rem;
+    line-height: 1.35;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Mantener 2 columnas en logros también en pantallas muy pequeñas */
+  ::ng-deep app-cards-grid.achievements-grid .cards-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem;
+  }
+  ::ng-deep app-cards-grid.achievements-grid .universal-card {
+    padding: 0.5rem;
+    min-height: 120px;
+  }
+  ::ng-deep app-cards-grid.achievements-grid .universal-card .card-title {
+    font-size: 0.8125rem;
+  }
+  ::ng-deep app-cards-grid.achievements-grid .universal-card .card-description {
+    font-size: 0.6875rem;
   }
 }
 

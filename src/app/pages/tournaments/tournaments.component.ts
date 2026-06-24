@@ -1,15 +1,21 @@
 import { Component, signal, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FirebaseService, Tournament, UserProfile, Team, BracketMatch, PlayerInfo } from '../../services/firebase.service';
 import { Timestamp } from '@angular/fire/firestore';
 import { Subscription } from 'rxjs';
+import { BracketCanvasComponent } from '../../components/bracket-canvas/bracket-canvas.component';
+import {
+  parseRegistrationRows,
+  readSpreadsheetFile,
+  type RegistrationImportResult
+} from '../../utils/tournament-registration-import';
 
 @Component({
   selector: 'app-tournaments',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, BracketCanvasComponent, RouterLink],
   templateUrl: './tournaments.component.html',
   styleUrls: ['./tournaments.component.css']
 })
@@ -47,6 +53,12 @@ export class TournamentsComponent implements OnInit, OnDestroy {
   
   // Delete tournament
   deletingTournamentId = signal<string | null>(null);
+
+  /** Modal torneo de prueba: siempre 16 equipos ficticios */
+  showPracticeModal = signal(false);
+
+  /** Borrador de equipos importados desde Excel/CSV (solo al crear torneo, no al editar) */
+  registrationImportDraft = signal<RegistrationImportResult | null>(null);
   
   // Bracket view
   selectedTournamentForBracket = signal<Tournament | null>(null);
@@ -55,7 +67,9 @@ export class TournamentsComponent implements OnInit, OnDestroy {
   bracketTeams = signal<Team[]>([]); // Equipos organizados para el bracket
   draggedTeam: Team | null = null;
   bracketSlots: Array<{ team: Team | null; position: number }> = [];
-  bracketMatches: Array<{ team1: Team | null; team2: Team | null; matchIndex: number }> = []; // Enfrentamientos por parejas
+  bracketMatches: Array<{ team1: Team | null; team2: Team | null; matchIndex: number }> = [];
+  /** true = vista canvas tipo bracket, false = vista lista de enfrentamientos */
+  bracketViewCanvas = signal(true);
   
   // Form fields
   tournamentName = signal('');
@@ -64,6 +78,8 @@ export class TournamentsComponent implements OnInit, OnDestroy {
   tournamentStartDate = signal('');
   tournamentEndDate = signal('');
   tournamentMaxTeams = signal(16);
+  tournamentConfiguredRounds = signal(4);
+  tournamentFormat = signal<'single' | 'double'>('double');
 
   games = [
     'League of Legends',
@@ -79,30 +95,43 @@ export class TournamentsComponent implements OnInit, OnDestroy {
   ];
 
   teamCounts = [2, 4, 8, 16, 32, 64]; // Incluir 2 para versus
+  roundOptions = [1, 2, 3, 4];
 
-  async ngOnInit() {
-    await this.checkAdminStatus();
+  ngOnInit() {
     this.loadTournaments();
-    
-    // Verificar si hay queryParams para abrir el modal de creación
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('create') === 'true' && this.isAdmin()) {
-      this.openCreateModal();
-      // Limpiar el query param
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-    
+    // Suscribirse a cambios de auth: cuando llegue el usuario, comprobar admin (evita que getCurrentUser() sea null al cargar)
+    this.subscriptions.add(
+      this.firebaseService.currentUser.subscribe((user) => {
+        if (user) {
+          this.checkAdminStatus();
+        } else {
+          this.isAdmin.set(false);
+          this.currentUser.set(null);
+        }
+      })
+    );
+    // Comprobar ya por si auth estaba listo al montar
+    this.checkAdminStatus();
+    // Verificar queryParams después de un tick por si checkAdminStatus es async
+    setTimeout(() => {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('create') === 'true' && this.isAdmin()) {
+        this.openCreateModal();
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }, 300);
   }
 
   async checkAdminStatus() {
     const user = this.firebaseService.getCurrentUser();
-    if (user) {
+    if (!user) return;
+    try {
       const profile = await this.firebaseService.getUserProfile(user.uid);
       this.currentUser.set(profile);
-      if (profile) {
-        const admin = await this.firebaseService.isAdmin(user.uid);
-        this.isAdmin.set(admin);
-      }
+      const admin = await this.firebaseService.isAdmin(user.uid);
+      this.isAdmin.set(admin);
+    } catch {
+      this.isAdmin.set(false);
     }
   }
 
@@ -139,6 +168,78 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     this.tournamentStartDate.set('');
     this.tournamentEndDate.set('');
     this.tournamentMaxTeams.set(16);
+    this.tournamentConfiguredRounds.set(4);
+    this.tournamentFormat.set('double');
+    this.registrationImportDraft.set(null);
+  }
+
+  private getCurrentDateTimeLocal(): Date {
+    const now = new Date();
+    now.setSeconds(0, 0);
+    return now;
+  }
+
+  private formatDateTimeLocal(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
+  getMinStartDateTime(): string {
+    return this.formatDateTimeLocal(this.getCurrentDateTimeLocal());
+  }
+
+  getMinEndDateTime(): string {
+    const selectedStart = this.tournamentStartDate();
+    if (selectedStart) {
+      return selectedStart;
+    }
+    return this.getMinStartDateTime();
+  }
+
+  getBracketCapacityForRounds(rounds: number): number {
+    return Math.pow(2, Math.max(1, rounds));
+  }
+
+  /**
+   * Cupos del cuadro en el organizador: al menos lo que marcan las rondas del torneo,
+   * pero nunca menos que una potencia de 2 que cubra a todos los equipos ya registrados
+   * (si hay 16 equipos y las rondas decían 8 cupos, el cuadro pasa a 16).
+   */
+  getOrganizerBracketPower(tournament: Tournament | null | undefined): number {
+    if (!tournament) return 16;
+    const fromRounds = this.getBracketCapacityForRounds(this.getTournamentConfiguredRounds(tournament));
+    const n = (tournament.teams || []).length;
+    if (n <= 0) return Math.min(64, fromRounds);
+    const needed = Math.pow(2, Math.ceil(Math.log2(Math.max(2, n))));
+    return Math.min(64, Math.max(fromRounds, needed));
+  }
+
+  getAvailableTeamCounts(): number[] {
+    const capacity = this.getBracketCapacityForRounds(this.tournamentConfiguredRounds());
+    return this.teamCounts.filter(count => count <= capacity);
+  }
+
+  onConfiguredRoundsChange(rounds: number | string) {
+    const n = typeof rounds === 'string' ? parseInt(rounds, 10) : rounds;
+    if (Number.isNaN(n)) return;
+    this.tournamentConfiguredRounds.set(n);
+    const availableCounts = this.getAvailableTeamCounts();
+    if (!availableCounts.includes(this.tournamentMaxTeams())) {
+      this.tournamentMaxTeams.set(availableCounts[availableCounts.length - 1] ?? 2);
+    }
+  }
+
+  getTournamentConfiguredRounds(tournament: Tournament | null | undefined): number {
+    if (!tournament) return this.tournamentConfiguredRounds();
+    if (typeof tournament.configuredRounds === 'number' && tournament.configuredRounds > 0) {
+      return tournament.configuredRounds;
+    }
+    const basis = Math.max((tournament.teams || []).length, tournament.maxTeams || 2, 2);
+    return Math.min(4, Math.max(1, Math.ceil(Math.log2(basis))));
   }
 
   async createTournament() {
@@ -157,8 +258,38 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const bracketCapacity = this.getBracketCapacityForRounds(this.tournamentConfiguredRounds());
+    if (this.tournamentMaxTeams() > bracketCapacity) {
+      alert(`La cantidad de equipos no puede superar los ${bracketCapacity} cupos para ${this.tournamentConfiguredRounds()} rondas.`);
+      return;
+    }
+
+    const imp = this.registrationImportDraft();
+    if (imp?.teams?.length) {
+      if (imp.errors.length) {
+        alert(`Importación: ${imp.errors.join(' ')}`);
+        return;
+      }
+      if (imp.teams.length > this.tournamentMaxTeams()) {
+        alert(
+          `El archivo tiene ${imp.teams.length} equipos y el torneo admite como máximo ${this.tournamentMaxTeams()}. Aumenta el cupo o quita filas del Excel.`
+        );
+        return;
+      }
+      if (imp.teams.length > bracketCapacity) {
+        alert(`El archivo tiene más equipos (${imp.teams.length}) que el cupo del bracket (${bracketCapacity} con ${this.tournamentConfiguredRounds()} rondas).`);
+        return;
+      }
+    }
+
     const startDate = new Date(this.tournamentStartDate());
     const endDate = new Date(this.tournamentEndDate());
+    const minStartDate = this.getCurrentDateTimeLocal();
+
+    if (startDate < minStartDate) {
+      alert('La fecha de inicio debe ser desde la fecha y hora actual en adelante');
+      return;
+    }
 
     if (endDate <= startDate) {
       alert('La fecha de finalización debe ser posterior a la fecha de inicio');
@@ -170,34 +301,71 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       const tournamentToEdit = this.selectedTournament();
       
       if (tournamentToEdit && tournamentToEdit.id) {
-        // Actualizar torneo existente
-        await this.firebaseService.updateTournament(tournamentToEdit.id, {
+        const newMax = this.tournamentMaxTeams();
+        const payload: Record<string, unknown> = {
           name: this.tournamentName(),
           description: this.tournamentDescription(),
           game: this.tournamentGame(),
           startDate: Timestamp.fromDate(startDate),
           endDate: Timestamp.fromDate(endDate),
-          maxTeams: this.tournamentMaxTeams()
-        });
-        
+          maxTeams: newMax,
+          format: this.tournamentFormat(),
+          configuredRounds: this.tournamentConfiguredRounds()
+        };
+
+        if (this.isPracticeTournament(tournamentToEdit)) {
+          payload['teams'] = this.syncPracticeTeamsForEdit(tournamentToEdit, newMax);
+          if (newMax !== tournamentToEdit.maxTeams) {
+            payload['confirmed'] = false;
+            payload['bracket'] = [];
+            payload['lowerBracket'] = [];
+            payload['status'] = 'upcoming';
+          }
+        }
+
+        await this.firebaseService.updateTournament(tournamentToEdit.id, payload as Partial<Tournament>);
+
         this.closeModal();
         this.loadTournaments();
-        alert('Torneo actualizado exitosamente');
+        alert(
+          this.isPracticeTournament(tournamentToEdit) && newMax !== tournamentToEdit.maxTeams
+            ? `Torneo actualizado: ${newMax} equipos ficticios. El bracket anterior se anuló; vuelve a organizarlo si hacía falta.`
+            : 'Torneo actualizado exitosamente'
+        );
       } else {
-        // Crear nuevo torneo
-        await this.firebaseService.createTournament({
+        const tournamentId = await this.firebaseService.createTournament({
           name: this.tournamentName(),
           description: this.tournamentDescription(),
           game: this.tournamentGame(),
           startDate: Timestamp.fromDate(startDate),
           endDate: Timestamp.fromDate(endDate),
           maxTeams: this.tournamentMaxTeams(),
+          format: this.tournamentFormat(),
+          configuredRounds: this.tournamentConfiguredRounds(),
           createdBy: user.uid
         });
-        
-        this.closeModal();
-        this.loadTournaments();
-        alert('Torneo creado exitosamente');
+
+        const importRes = this.registrationImportDraft();
+        if (importRes?.teams?.length && !importRes.errors.length) {
+          const teams: Team[] = importRes.teams.map((draft, index) => ({
+            ...draft,
+            id: `team-${tournamentId}-${index}`,
+            registeredAt: Timestamp.now()
+          }));
+          await this.firebaseService.updateTournament(tournamentId, {
+            teams,
+            confirmed: false,
+            status: 'upcoming'
+          });
+          const warn = importRes.warnings.length ? `\n\nAvisos: ${importRes.warnings.slice(0, 5).join(' ')}` : '';
+          this.closeModal();
+          this.loadTournaments();
+          alert(`Torneo creado con ${teams.length} equipo(s) importados desde la hoja.${warn}`);
+        } else {
+          this.closeModal();
+          this.loadTournaments();
+          alert('Torneo creado exitosamente');
+        }
       }
     } catch (error) {
       console.error('Error creating/updating tournament:', error);
@@ -635,9 +803,12 @@ export class TournamentsComponent implements OnInit, OnDestroy {
 
         // Generar bracket automáticamente cuando todos los equipos estén completos
         if (allTeamsComplete && !updatedTournament.confirmed && !updatedTournament.bracket) {
-          const bracket = this.firebaseService.generateBracket(updatedTournament.teams);
+          const bracket = this.firebaseService.generateBracket(
+            updatedTournament.teams,
+            this.getTournamentConfiguredRounds(updatedTournament)
+          );
           await this.firebaseService.updateTournament(tournament.id!, {
-            bracket: bracket
+            bracket: this.sanitizeBracketForFirestore(bracket)
           });
         }
       }
@@ -686,6 +857,10 @@ export class TournamentsComponent implements OnInit, OnDestroy {
   }
 
   loadTeamsIntoSlots(teams: Team[]) {
+    const tournament = this.selectedTournamentForBracket();
+    const power = tournament ? this.getOrganizerBracketPower(tournament) : 16;
+    const expectedMatches = power / 2;
+
     // Cargar equipos en los slots basándose en su orden en el array
     teams.forEach((team, index) => {
       if (index < this.bracketSlots.length) {
@@ -694,8 +869,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     });
     
     // Cargar equipos en enfrentamientos (parejas)
-    const numMatches = Math.floor(teams.length / 2);
-    for (let i = 0; i < numMatches; i++) {
+    for (let i = 0; i < expectedMatches; i++) {
       if (i < this.bracketMatches.length) {
         this.bracketMatches[i].team1 = teams[i * 2] || null;
         this.bracketMatches[i].team2 = teams[i * 2 + 1] || null;
@@ -716,33 +890,28 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     // Si el bracket ya está confirmado, usar los equipos del bracket confirmado
     if (tournament.confirmed && tournament.teams && tournament.teams.length > 0) {
       const confirmedTeams = tournament.teams;
-      const numMatches = Math.floor(confirmedTeams.length / 2);
+      const power = this.getOrganizerBracketPower(tournament);
+      const numMatches = power / 2;
       this.bracketMatches = Array(numMatches).fill(null).map((_, i) => ({
         team1: confirmedTeams[i * 2] || null,
         team2: confirmedTeams[i * 2 + 1] || null,
         matchIndex: i
       }));
+      this.bracketSlots = Array(numMatches * 2).fill(null).map((_, i) => ({
+        team: confirmedTeams[i] || null,
+        position: i
+      }));
       return;
     }
-    
-    // Si no está confirmado, inicializar dinámicamente según equipos registrados
-    // Calcular número de enfrentamientos basado en equipos registrados
-    // Si hay equipos registrados, usar esa cantidad; si no, usar maxTeams
-    const teamsForBracket = numRegisteredTeams > 0 ? numRegisteredTeams : tournament.maxTeams;
-    
-    // Asegurar que sea par para los enfrentamientos (redondear hacia arriba si es impar)
-    // Pero mínimo 2 equipos (versus)
-    const actualTeamCount = Math.max(teamsForBracket, 2);
-    
-    // Inicializar slots individuales (para compatibilidad)
-    this.bracketSlots = Array(actualTeamCount).fill(null).map((_, i) => ({
+
+    const power = this.getOrganizerBracketPower(tournament);
+    const numMatches = power / 2;
+
+    this.bracketSlots = Array(power).fill(null).map((_, i) => ({
       team: null,
       position: i
     }));
-    
-    // Inicializar enfrentamientos VACÍOS - dinámico e inteligente
-    // Los equipos se arrastrarán desde la lista
-    const numMatches = Math.ceil(actualTeamCount / 2);
+
     this.bracketMatches = Array(numMatches).fill(null).map((_, i) => ({
       team1: null,
       team2: null,
@@ -855,8 +1024,37 @@ export class TournamentsComponent implements OnInit, OnDestroy {
   }
 
   allSlotsFilled(): boolean {
-    // Verificar que todos los enfrentamientos tengan ambos equipos
-    return this.bracketMatches.every(match => match.team1 !== null && match.team2 !== null);
+    const tournament = this.selectedTournamentForBracket();
+    const requiredTeams = tournament?.teams || [];
+    if (requiredTeams.length < 2) return false;
+
+    const assignedIds = this.bracketMatches.flatMap(match => [
+      match.team1?.id,
+      match.team2?.id
+    ]).filter((id): id is string => !!id);
+
+    const uniqueAssigned = new Set(assignedIds);
+    return uniqueAssigned.size === requiredTeams.length;
+  }
+
+  /** Genera el bracket automáticamente: orden aleatorio de equipos en los enfrentamientos */
+  autoGenerateBracket() {
+    const tournament = this.selectedTournamentForBracket();
+    if (!tournament || !tournament.teams || tournament.teams.length < 2) {
+      alert('Se necesitan al menos 2 equipos registrados para generar el bracket');
+      return;
+    }
+    const teams = [...tournament.teams].sort(() => Math.random() - 0.5);
+    const numMatches = Math.floor(teams.length / 2);
+    for (let i = 0; i < numMatches && i < this.bracketMatches.length; i++) {
+      this.bracketMatches[i].team1 = teams[i * 2] || null;
+      this.bracketMatches[i].team2 = teams[i * 2 + 1] || null;
+    }
+    for (let i = numMatches; i < this.bracketMatches.length; i++) {
+      this.bracketMatches[i].team1 = null;
+      this.bracketMatches[i].team2 = null;
+    }
+    this.syncMatchesToSlots();
   }
 
   // Manejar drop en enfrentamientos (parejas)
@@ -903,10 +1101,34 @@ export class TournamentsComponent implements OnInit, OnDestroy {
   }
 
   removeTeamFromMatch(matchIndex: number, teamPosition: 'team1' | 'team2') {
-    // El equipo vuelve a la lista automáticamente al quitarse del enfrentamiento
     this.bracketMatches[matchIndex][teamPosition] = null;
     this.syncMatchesToSlots();
-    // La lista se actualiza automáticamente gracias a getAvailableTeams()
+  }
+
+  /** Cuando se suelta un equipo en un slot del canvas del bracket */
+  onCanvasSlotDrop(payload: { matchIndex: number; slot: 'team1' | 'team2' }) {
+    if (!this.draggedTeam) return;
+    const { matchIndex, slot } = payload;
+    if (matchIndex >= 0 && matchIndex < this.bracketMatches.length) {
+      for (let i = 0; i < this.bracketMatches.length; i++) {
+        if (this.bracketMatches[i].team1?.id === this.draggedTeam!.id) this.bracketMatches[i].team1 = null;
+        if (this.bracketMatches[i].team2?.id === this.draggedTeam!.id) this.bracketMatches[i].team2 = null;
+      }
+      this.bracketMatches[matchIndex][slot] = this.draggedTeam;
+      this.syncMatchesToSlots();
+    }
+    this.draggedTeam = null;
+  }
+
+  onCanvasSlotRemove(payload: { matchIndex: number; slot: 'team1' | 'team2' }) {
+    this.removeTeamFromMatch(payload.matchIndex, payload.slot);
+  }
+
+  /** Número de equipos para el layout del canvas (potencia de 2) */
+  getCanvasNumTeams(): number {
+    const t = this.selectedTournamentForBracket();
+    if (!t) return 16;
+    return this.getOrganizerBracketPower(t);
   }
 
   // Sincronizar enfrentamientos con slots para compatibilidad
@@ -929,6 +1151,34 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     this.updateBracketTeams();
   }
 
+  private sanitizeBracketForFirestore(bracket: BracketMatch[]): any[] {
+    return bracket.map(match => ({
+      id: match.id,
+      round: match.round,
+      roundIndex: match.roundIndex ?? null,
+      roundLabel: match.roundLabel ?? null,
+      slotIndex: match.slotIndex ?? null,
+      team1Id: match.team1Id ?? null,
+      team1Name: match.team1Name ?? null,
+      team2Id: match.team2Id ?? null,
+      team2Name: match.team2Name ?? null,
+      score1: match.score1 ?? 0,
+      score2: match.score2 ?? 0,
+      bestOf: match.bestOf ?? 1,
+      winnerId: match.winnerId ?? null,
+      loserId: match.loserId ?? null,
+      loserGoesToMatchId: match.loserGoesToMatchId ?? null,
+      loserGoesToMatchSlot: match.loserGoesToMatchSlot ?? null,
+      nextMatchId: match.nextMatchId ?? null,
+      nextMatchSlot: match.nextMatchSlot ?? null,
+      team1SourceMatchId: match.team1SourceMatchId ?? null,
+      team2SourceMatchId: match.team2SourceMatchId ?? null,
+      autoAdvance: !!match.autoAdvance,
+      matchDate: match.matchDate ?? null,
+      bracketType: match.bracketType ?? 'upper'
+    }));
+  }
+
   closeBracket() {
     this.showBracket.set(false);
     this.selectedTournamentForBracket.set(null);
@@ -943,18 +1193,20 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       return;
     }
     
-    // Verificar que todos los enfrentamientos estén completos
-    const incompleteMatches = this.bracketMatches.filter(m => !m.team1 || !m.team2);
-    if (incompleteMatches.length > 0) {
-      alert(`Debes completar todos los enfrentamientos. Faltan ${incompleteMatches.length} enfrentamientos.`);
+    const assignedTeams = this.bracketMatches.flatMap(match => [match.team1, match.team2]).filter((team): team is Team => !!team);
+    const uniqueAssignedTeams = new Map(assignedTeams.map(team => [team.id, team]));
+    const registeredTeamCount = (tournament.teams || []).length;
+
+    if (uniqueAssignedTeams.size !== registeredTeamCount) {
+      alert('Debes ubicar todos los equipos registrados dentro de la llave antes de confirmarla.');
       return;
     }
     
     // Obtener equipos desde los enfrentamientos, en orden de los enfrentamientos
     const teams: Team[] = [];
     this.bracketMatches.forEach(match => {
-      if (match.team1) teams.push(match.team1);
-      if (match.team2) teams.push(match.team2);
+      if (match.team1 && !teams.some(team => team.id === match.team1!.id)) teams.push(match.team1);
+      if (match.team2 && !teams.some(team => team.id === match.team2!.id)) teams.push(match.team2);
     });
     
     // Validar que haya al menos 2 equipos (versus mínimo)
@@ -971,13 +1223,18 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     
     try {
       // Generar bracket con el orden de los equipos (en parejas)
-      const bracket = this.firebaseService.generateBracketWithOrder(teams);
+      const generated = this.firebaseService.generateTournamentBrackets(
+        teams,
+        this.getTournamentConfiguredRounds(tournament),
+        tournament.format || 'single'
+      );
       
       // Actualizar el torneo en Firebase
       await this.firebaseService.updateTournament(tournament.id!, {
         confirmed: true,
         confirmedAt: Timestamp.now(),
-        bracket: bracket,
+        bracket: this.sanitizeBracketForFirestore(generated.bracket),
+        lowerBracket: this.sanitizeBracketForFirestore(generated.lowerBracket),
         teams: teams
       });
       
@@ -989,7 +1246,8 @@ export class TournamentsComponent implements OnInit, OnDestroy {
         ...tournament,
         confirmed: true,
         confirmedAt: Timestamp.now(),
-        bracket: bracket,
+        bracket: generated.bracket,
+        lowerBracket: generated.lowerBracket,
         teams: teams
       };
       
@@ -997,8 +1255,12 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       
       // Cambiar a vista del bracket visual (no organizar)
       this.organizingBracket.set(false);
-      
-      alert('Bracket confirmado exitosamente. Mostrando tabla de clasificaciones.');
+
+      if (tournament.id) {
+        this.router.navigate(['/tournaments', tournament.id, 'vista-interactiva']);
+      } else {
+        alert('Bracket confirmado exitosamente.');
+      }
     } catch (error) {
       console.error('Error al confirmar bracket:', error);
       alert('Error al confirmar el bracket. Por favor intenta nuevamente.');
@@ -1011,10 +1273,10 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     }
     
     try {
-      const bracket = this.firebaseService.generateBracket(tournament.teams);
       await this.firebaseService.updateTournament(tournament.id!, {
         status: 'ongoing',
-        bracket: bracket
+        bracket: this.sanitizeBracketForFirestore(tournament.bracket || []),
+        lowerBracket: this.sanitizeBracketForFirestore(tournament.lowerBracket || [])
       });
       this.loadTournaments();
       alert('Torneo iniciado exitosamente');
@@ -1024,80 +1286,53 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Selecciona manualmente el ganador y lo avanza a la siguiente ronda */
   async updateMatchWinner(matchId: string, winnerId: string) {
     const tournament = this.selectedTournamentForBracket();
-    if (!tournament || !tournament.bracket) return;
-    
-    // Encontrar el partido actual
-    const currentMatch = tournament.bracket.find(m => m.id === matchId);
-    if (!currentMatch) return;
-    
-    // Obtener información del ganador
-    const winnerName = winnerId === currentMatch.team1Id ? currentMatch.team1Name : currentMatch.team2Name;
-    const winnerScore = winnerId === currentMatch.team1Id ? currentMatch.score1 : currentMatch.score2;
-    const loserScore = winnerId === currentMatch.team1Id ? currentMatch.score2 : currentMatch.score1;
-    
-    // Actualizar el partido actual
-    const updatedBracket = tournament.bracket.map(match => {
-      if (match.id === matchId) {
-        return { 
-          ...match, 
-          winnerId,
-          score1: winnerId === match.team1Id ? (match.score1 || 1) : (match.score1 || 0),
-          score2: winnerId === match.team2Id ? (match.score2 || 1) : (match.score2 || 0)
-        };
-      }
-      return match;
-    });
-    
-    // Avanzar el ganador a la siguiente ronda automáticamente
-    const nextRoundMatches = this.getNextRoundMatches(currentMatch.round, updatedBracket);
-    
-    if (nextRoundMatches.length > 0) {
-      // Obtener todos los partidos de la ronda actual ordenados
-      const currentRoundMatches = updatedBracket
-        .filter(m => m.round === currentMatch.round)
-        .sort((a, b) => a.id.localeCompare(b.id));
-      
-      const currentIndex = currentRoundMatches.findIndex(m => m.id === matchId);
-      
-      // Calcular a qué partido de la siguiente ronda debe avanzar
-      const targetNextIndex = Math.floor(currentIndex / 2);
-      
-      if (targetNextIndex < nextRoundMatches.length) {
-        const targetNextMatch = nextRoundMatches[targetNextIndex];
-        const matchIndex = updatedBracket.findIndex(m => m.id === targetNextMatch.id);
-        
-        if (matchIndex !== -1) {
-          // Determinar si va en team1 (primera mitad) o team2 (segunda mitad)
-          const isFirstHalf = currentIndex % 2 === 0;
-          
-          if (isFirstHalf) {
-            // Reemplazar team1 si es TBD o está vacío
-            if (!targetNextMatch.team1Name || targetNextMatch.team1Name === 'TBD') {
-              updatedBracket[matchIndex] = {
-                ...updatedBracket[matchIndex],
-                team1Id: winnerId,
-                team1Name: winnerName
-              };
-            }
-          } else {
-            // Reemplazar team2 si es TBD o está vacío
-            if (!targetNextMatch.team2Name || targetNextMatch.team2Name === 'TBD') {
-              updatedBracket[matchIndex] = {
-                ...updatedBracket[matchIndex],
-                team2Id: winnerId,
-                team2Name: winnerName
-              };
-            }
-          }
-        }
-      }
+    if (!tournament) return;
+
+    const currentMatch = tournament.bracket?.find(m => m.id === matchId) || tournament.lowerBracket?.find(m => m.id === matchId);
+    if (!currentMatch || !winnerId) return;
+    if (!this.canAdvanceTeam(currentMatch, winnerId)) {
+      return;
     }
-    
+    const winnerName = winnerId === currentMatch.team1Id ? currentMatch.team1Name : currentMatch.team2Name;
+    const loserId = winnerId === currentMatch.team1Id ? currentMatch.team2Id : currentMatch.team1Id;
+    const score1 = winnerId === currentMatch.team1Id ? 1 : 0;
+    const score2 = winnerId === currentMatch.team2Id ? 1 : 0;
+
+    let updatedBracket = (tournament.bracket || []).map(match => ({ ...match }));
+    let updatedLowerBracket = (tournament.lowerBracket || []).map(match => ({ ...match }));
+    const isLowerMatch = updatedLowerBracket.some(match => match.id === matchId);
+
+    const cleared = this.clearDependentMatches(updatedBracket, updatedLowerBracket, currentMatch.id);
+    updatedBracket = cleared.bracket;
+    updatedLowerBracket = cleared.lowerBracket;
+
+    const targetList = isLowerMatch ? updatedLowerBracket : updatedBracket;
+    const currentMatchIndex = targetList.findIndex(match => match.id === matchId);
+    if (currentMatchIndex === -1) return;
+    targetList[currentMatchIndex] = {
+      ...targetList[currentMatchIndex],
+      winnerId,
+      loserId,
+      score1,
+      score2
+    };
+    if (isLowerMatch) {
+      updatedLowerBracket = targetList;
+    } else {
+      updatedBracket = targetList;
+    }
+
+    const propagated = this.propagateWinner(updatedBracket, updatedLowerBracket, currentMatch, winnerId, winnerName ?? 'TBD', loserId);
+    updatedBracket = propagated.bracket;
+    updatedLowerBracket = propagated.lowerBracket;
+
     try {
       await this.firebaseService.updateTournament(tournament.id!, {
-        bracket: updatedBracket
+        bracket: this.sanitizeBracketForFirestore(updatedBracket),
+        lowerBracket: this.sanitizeBracketForFirestore(updatedLowerBracket)
       });
       this.loadTournaments();
       
@@ -1118,46 +1353,121 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     }
   }
 
-  private getNextRoundMatches(currentRound: string, bracket: BracketMatch[]): BracketMatch[] {
-    const roundOrder = ['round16', 'quarter', 'semi', 'final'];
-    const currentIndex = roundOrder.indexOf(currentRound);
-    if (currentIndex === -1 || currentIndex === roundOrder.length - 1) return [];
-    
-    const nextRound = roundOrder[currentIndex + 1];
-    return bracket
-      .filter(m => m.round === nextRound)
-      .sort((a, b) => a.id.localeCompare(b.id)); // Ordenar por ID para mantener consistencia
+  private clearDependentMatches(
+    bracket: BracketMatch[],
+    lowerBracket: BracketMatch[],
+    sourceMatchId: string
+  ): { bracket: BracketMatch[]; lowerBracket: BracketMatch[] } {
+    let updatedUpper = bracket.map(match => ({ ...match }));
+    let updatedLower = lowerBracket.map(match => ({ ...match }));
+    const combined = [...updatedUpper, ...updatedLower];
+    const dependents = combined.filter(
+      match => match.team1SourceMatchId === sourceMatchId || match.team2SourceMatchId === sourceMatchId
+    );
+
+    for (const dependent of dependents) {
+      const collection = updatedUpper.some(match => match.id === dependent.id) ? updatedUpper : updatedLower;
+      const index = collection.findIndex(match => match.id === dependent.id);
+      if (index === -1) continue;
+      const cleared = { ...collection[index], winnerId: undefined, loserId: undefined, score1: 0, score2: 0 };
+      if (cleared.team1SourceMatchId === sourceMatchId) {
+        cleared.team1Id = undefined;
+        cleared.team1Name = 'TBD';
+      }
+      if (cleared.team2SourceMatchId === sourceMatchId) {
+        cleared.team2Id = undefined;
+        cleared.team2Name = 'TBD';
+      }
+      collection[index] = cleared;
+      const next = this.clearDependentMatches(updatedUpper, updatedLower, cleared.id);
+      updatedUpper = next.bracket;
+      updatedLower = next.lowerBracket;
+    }
+
+    return { bracket: updatedUpper, lowerBracket: updatedLower };
   }
 
-  private shouldAdvanceWinnerToMatch(currentMatch: BracketMatch, nextMatch: BracketMatch, bracket: BracketMatch[]): boolean {
-    // Obtener todos los partidos de la ronda actual y siguiente
-    const currentRoundMatches = bracket.filter(m => m.round === currentMatch.round).sort((a, b) => a.id.localeCompare(b.id));
-    const nextRoundMatches = bracket.filter(m => m.round === nextMatch.round).sort((a, b) => a.id.localeCompare(b.id));
-    
-    const currentIndex = currentRoundMatches.findIndex(m => m.id === currentMatch.id);
-    const nextIndex = nextRoundMatches.findIndex(m => m.id === nextMatch.id);
-    
-    // Calcular a qué partido de la siguiente ronda debe avanzar
-    const expectedNextIndex = Math.floor(currentIndex / 2);
-    
-    // Verificar si este es el partido correcto y si tiene espacio
-    if (nextIndex === expectedNextIndex) {
-      // Verificar si el partido tiene espacio (TBD o sin equipo)
-      const isFirstHalf = currentIndex % 2 === 0;
-      if (isFirstHalf) {
-        return !nextMatch.team1Name || nextMatch.team1Name === 'TBD';
-      } else {
-        return !nextMatch.team2Name || nextMatch.team2Name === 'TBD';
+  private propagateWinner(
+    bracket: BracketMatch[],
+    lowerBracket: BracketMatch[],
+    currentMatch: BracketMatch,
+    winnerId: string,
+    winnerName: string,
+    loserId?: string
+  ): { bracket: BracketMatch[]; lowerBracket: BracketMatch[] } {
+    let updatedUpper = [...bracket];
+    let updatedLower = [...lowerBracket];
+
+    if (loserId && currentMatch.loserGoesToMatchId && currentMatch.loserGoesToMatchSlot) {
+      const loserName = loserId === currentMatch.team1Id ? currentMatch.team1Name : currentMatch.team2Name;
+      const loserTargetIndex = updatedLower.findIndex(match => match.id === currentMatch.loserGoesToMatchId);
+      if (loserTargetIndex !== -1) {
+        const loserTarget = { ...updatedLower[loserTargetIndex] };
+        if (currentMatch.loserGoesToMatchSlot === 'team1') {
+          loserTarget.team1Id = loserId;
+          loserTarget.team1Name = loserName ?? 'TBD';
+        } else {
+          loserTarget.team2Id = loserId;
+          loserTarget.team2Name = loserName ?? 'TBD';
+        }
+        updatedLower[loserTargetIndex] = loserTarget;
       }
     }
-    
-    return false;
+
+    if (!currentMatch?.nextMatchId || !currentMatch.nextMatchSlot) {
+      return { bracket: updatedUpper, lowerBracket: updatedLower };
+    }
+
+    const upperNextIndex = updatedUpper.findIndex(match => match.id === currentMatch.nextMatchId);
+    const lowerNextIndex = updatedLower.findIndex(match => match.id === currentMatch.nextMatchId);
+    const nextIsUpper = upperNextIndex !== -1;
+    const nextIndex = nextIsUpper ? upperNextIndex : lowerNextIndex;
+    if (nextIndex === -1) return { bracket: updatedUpper, lowerBracket: updatedLower };
+
+    const targetCollection = nextIsUpper ? updatedUpper : updatedLower;
+    const nextMatch = { ...targetCollection[nextIndex] };
+
+    if (currentMatch.nextMatchSlot === 'team1') {
+      nextMatch.team1Id = winnerId;
+      nextMatch.team1Name = winnerName;
+    } else {
+      nextMatch.team2Id = winnerId;
+      nextMatch.team2Name = winnerName;
+    }
+
+    nextMatch.winnerId = undefined;
+    nextMatch.loserId = undefined;
+    nextMatch.score1 = 0;
+    nextMatch.score2 = 0;
+    targetCollection[nextIndex] = nextMatch;
+
+    const hasTeam1 = !!nextMatch.team1Id;
+    const hasTeam2 = !!nextMatch.team2Id;
+    if (hasTeam1 !== hasTeam2) {
+      const autoWinnerId = nextMatch.team1Id ?? nextMatch.team2Id;
+      const autoWinnerName = nextMatch.team1Id ? nextMatch.team1Name : nextMatch.team2Name;
+      if (autoWinnerId && autoWinnerName) {
+        nextMatch.winnerId = autoWinnerId;
+        nextMatch.score1 = nextMatch.team1Id ? 1 : 0;
+        nextMatch.score2 = nextMatch.team2Id ? 1 : 0;
+        targetCollection[nextIndex] = nextMatch;
+        return this.propagateWinner(updatedUpper, updatedLower, nextMatch, autoWinnerId, autoWinnerName);
+      }
+    }
+
+    return { bracket: updatedUpper, lowerBracket: updatedLower };
   }
 
-  private isFirstHalfMatch(match: BracketMatch, bracket: BracketMatch[]): boolean {
-    const sameRoundMatches = bracket.filter(m => m.round === match.round).sort((a, b) => a.id.localeCompare(b.id));
-    const matchIndex = sameRoundMatches.findIndex(m => m.id === match.id);
-    return matchIndex % 2 === 0; // Primera mitad si es par
+  canAdvanceTeam(match: BracketMatch, teamId?: string): boolean {
+    if (!teamId) return false;
+    if (match.team1Name === 'BYE' || match.team2Name === 'BYE') return false;
+    return teamId === match.team1Id || teamId === match.team2Id;
+  }
+
+  getWinnerName(match: BracketMatch): string {
+    if (match.winnerId === match.team1Id) return match.team1Name || 'TBD';
+    if (match.winnerId === match.team2Id) return match.team2Name || 'TBD';
+    return 'Pendiente';
   }
 
   getRoundName(round: string): string {
@@ -1170,7 +1480,14 @@ export class TournamentsComponent implements OnInit, OnDestroy {
         return 'Cuartos';
       case 'round16':
         return 'Octavos';
+      case 'lower':
+        return 'Recuperación';
+      case 'lowerFinal':
+        return 'Final Recuperación';
       default:
+        if (round.startsWith('lower-')) {
+          return `Redención ${round.split('-')[1] || ''}`.trim();
+        }
         return round;
     }
   }
@@ -1183,19 +1500,25 @@ export class TournamentsComponent implements OnInit, OnDestroy {
 
   getRoundMatches(round: string) {
     const tournament = this.selectedTournamentForBracket();
-    if (!tournament || !tournament.bracket) return [];
-    return tournament.bracket.filter(m => m.round === round);
+    if (!tournament) return [];
+    if (round.startsWith('lower')) {
+      return (tournament.lowerBracket || []).filter(m => m.round === round);
+    }
+    return (tournament.bracket || []).filter(m => m.round === round);
   }
 
   getBracketRounds(): string[] {
     const tournament = this.selectedTournamentForBracket();
     if (!tournament || !tournament.bracket) return [];
-    
-    const rounds = ['round16', 'quarter', 'semi', 'final'];
-    const existingRounds = rounds.filter(round => 
-      tournament.bracket!.some(m => m.round === round)
-    );
-    return existingRounds;
+    const upperRounds = [...new Set((tournament.bracket || []).sort((a, b) => (a.roundIndex ?? 0) - (b.roundIndex ?? 0)).map(m => m.round))];
+    const lowerRounds = [...new Set((tournament.lowerBracket || []).sort((a, b) => (a.roundIndex ?? 0) - (b.roundIndex ?? 0)).map(m => m.round))];
+    if (!lowerRounds.length) {
+      return upperRounds;
+    }
+
+    const finalRound = upperRounds[upperRounds.length - 1];
+    const upperWithoutFinal = upperRounds.slice(0, -1);
+    return [...upperWithoutFinal, ...lowerRounds, finalRound];
   }
 
   getRoundDisplayName(round: string): string {
@@ -1287,116 +1610,168 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     return normalized;
   }
 
+  openPracticeModal() {
+    if (!this.isAdmin()) {
+      alert('Solo los administradores pueden crear torneos');
+      return;
+    }
+    this.showPracticeModal.set(true);
+  }
+
+  closePracticeModal() {
+    this.showPracticeModal.set(false);
+  }
+
+  /** Rondas del bracket = log2(equipos); torneo de prueba fijo a 16 → 4 rondas */
+  private readonly practiceTeamTotal = 16;
+
+  /** Nombres de equipos bot para torneos de prueba (misma lista que al crear). */
+  private readonly practiceBotTeamNames = [
+    'Dragones Wayira',
+    'Leones del Norte',
+    'Águilas Doradas',
+    'Tigres Rojos',
+    'Lobos Plateados',
+    'Halcones Azules',
+    'Osos Poderosos',
+    'Serpientes Venenosas',
+    'Fénix Carmesí',
+    'Krakens del Sur',
+    'Vikingos de Hielo',
+    'Sombras Nocturnas',
+    'Rayos Veloces',
+    'Titanes Urbanos',
+    'Caballeros del Valle',
+    'Guardianes Élite'
+  ];
+
+  /** Creados con «Torneo de Prueba (…)» — al editar cupo se sincronizan equipos ficticios. */
+  private isPracticeTournament(t: Tournament): boolean {
+    return (t.name || '').trim().startsWith('Torneo de Prueba');
+  }
+
+  /** Ajusta la lista de equipos bot al nuevo cupo: recorta o añade con los mismos nombres por índice. */
+  private syncPracticeTeamsForEdit(t: Tournament, targetCount: number): Team[] {
+    const tid = t.id!;
+    const existing = t.teams || [];
+    const names = this.practiceBotTeamNames;
+    const out: Team[] = [];
+    for (let i = 0; i < targetCount; i++) {
+      if (i < existing.length) {
+        out.push({ ...existing[i] });
+      } else {
+        const name = names[i] ?? `Equipo ${i + 1}`;
+        out.push({
+          id: `team-${tid}-${i}`,
+          name,
+          captainId: `bot-captain-${i}`,
+          captainName: `Bot ${name}`,
+          players: [],
+          playerInfo: [],
+          substitutes: [],
+          registeredAt: Timestamp.now()
+        });
+      }
+    }
+    return out;
+  }
+
+  clearRegistrationImport() {
+    this.registrationImportDraft.set(null);
+  }
+
+  async onRegistrationFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+
+    const lower = file.name.toLowerCase();
+    if (!lower.endsWith('.csv') && !lower.endsWith('.xlsx') && !lower.endsWith('.xls')) {
+      alert('Usa un archivo .csv, .xlsx o .xls (desde Excel: «Guardar como» → CSV UTF-8 o .xlsx).');
+      return;
+    }
+
+    try {
+      const rows = await readSpreadsheetFile(file);
+      const result = parseRegistrationRows(rows);
+      if (result.errors.length) {
+        alert(result.errors.join('\n'));
+        this.registrationImportDraft.set(null);
+        return;
+      }
+      this.registrationImportDraft.set(result);
+      const w = result.warnings.length ? `\n\n${result.warnings.slice(0, 8).join('\n')}` : '';
+      alert(`Listo: ${result.teams.length} equipo(s) detectados en «${file.name}». Se cargarán al crear el torneo.${w}`);
+    } catch (e: any) {
+      console.error(e);
+      alert(`No se pudo leer el archivo: ${e?.message || e}`);
+      this.registrationImportDraft.set(null);
+    }
+  }
+
   async createPracticeTournament() {
     if (!this.isAdmin()) {
       alert('Solo los administradores pueden crear torneos');
       return;
     }
-    
-    if (!confirm('¿Crear un torneo de prueba completo con equipos ficticios y bracket para ver las clasificaciones?')) {
+
+    const teamTotal = this.practiceTeamTotal;
+    if (!confirm(`¿Crear un torneo de prueba con ${teamTotal} equipos ficticios? Podrás organizar el bracket y usar la vista interactiva al confirmarlo.`)) {
       return;
     }
-    
+
     const user = this.firebaseService.getCurrentUser();
     if (!user) return;
-    
+
     this.creating.set(true);
+    this.closePracticeModal();
     try {
       const startDate = new Date();
-      startDate.setDate(startDate.getDate() + 1); // Mañana
+      startDate.setDate(startDate.getDate() + 1);
       const endDate = new Date(startDate);
-      endDate.setDate(endDate.getDate() + 7); // 7 días después
-      
-      // Crear el torneo
+      endDate.setDate(endDate.getDate() + 7);
+
+      const configuredRounds = 4;
+
       const tournamentId = await this.firebaseService.createTournament({
-        name: 'Torneo de Prueba - Wayira E-Sports',
-        description: 'Torneo de prueba con equipos ficticios (bots) y bracket completo para visualizar el organigrama y clasificaciones',
+        name: `Torneo de Prueba (${teamTotal} equipos) - Wayira E-Sports`,
+        description:
+          'Torneo de prueba con equipos ficticios: organiza las llaves, confirma el bracket y usa la vista interactiva para ganadores y redención.',
         game: 'League of Legends',
         startDate: Timestamp.fromDate(startDate),
         endDate: Timestamp.fromDate(endDate),
-        maxTeams: 8,
+        maxTeams: teamTotal,
+        format: 'double',
+        configuredRounds,
         createdBy: user.uid
       });
-      
-      // Crear equipos ficticios (solo nombres, sin jugadores reales)
-      const teamNames = [
-        'Dragones Wayira',
-        'Leones del Norte',
-        'Águilas Doradas',
-        'Tigres Rojos',
-        'Lobos Plateados',
-        'Halcones Azules',
-        'Osos Poderosos',
-        'Serpientes Venenosas'
-      ];
-      
+
+      const teamNames = this.practiceBotTeamNames.slice(0, teamTotal);
+
       const teams: Team[] = teamNames.map((name, index) => ({
         id: `team-${tournamentId}-${index}`,
-        name: name,
-        captainId: `bot-captain-${index}`, // IDs ficticios
+        name,
+        captainId: `bot-captain-${index}`,
         captainName: `Bot ${name}`,
-        players: [], // Sin jugadores reales, solo para visualización
-        playerInfo: [], // Array vacío para compatibilidad
-        substitutes: [], // Array vacío para suplentes
+        players: [],
+        playerInfo: [],
+        substitutes: [],
         registeredAt: Timestamp.now()
       }));
-      
-      // Generar bracket
-      const bracket = this.firebaseService.generateBracket(teams);
-      
-      // Agregar algunos resultados de ejemplo para mostrar el marcador
-      // Cuartos de final - algunos con resultados
-      const quarterFinals = bracket.filter(m => m.round === 'quarter');
-      if (quarterFinals.length >= 2) {
-        // Primer cuarto de final - completado con marcador
-        quarterFinals[0].score1 = 2;
-        quarterFinals[0].score2 = 1;
-        quarterFinals[0].winnerId = quarterFinals[0].team1Id;
-        
-        // Segundo cuarto de final - completado con marcador
-        quarterFinals[1].score1 = 0;
-        quarterFinals[1].score2 = 2;
-        quarterFinals[1].winnerId = quarterFinals[1].team2Id;
-      }
-      
-      // Semifinales - una con resultado
-      const semiFinals = bracket.filter(m => m.round === 'semi');
-      if (semiFinals.length >= 1) {
-        semiFinals[0].score1 = 2;
-        semiFinals[0].score2 = 0;
-        semiFinals[0].winnerId = semiFinals[0].team1Id;
-      }
-      
-      // Limpiar valores undefined del bracket para Firestore
-      const cleanBracket = bracket.map(match => {
-        const cleanMatch: any = {
-          id: match.id,
-          round: match.round,
-          team1Id: match.team1Id || null,
-          team1Name: match.team1Name || null,
-          team2Id: match.team2Id || null,
-          team2Name: match.team2Name || null
-        };
-        
-        if (match.score1 !== undefined) cleanMatch.score1 = match.score1;
-        if (match.score2 !== undefined) cleanMatch.score2 = match.score2;
-        if (match.winnerId) cleanMatch.winnerId = match.winnerId;
-        if (match.matchDate) cleanMatch.matchDate = match.matchDate;
-        
-        return cleanMatch;
-      });
-      
-      // Actualizar el torneo con equipos, bracket y confirmarlo
+
       await this.firebaseService.updateTournament(tournamentId, {
-        teams: teams,
-        bracket: cleanBracket,
-        confirmed: true,
-        confirmedAt: Timestamp.now(),
-        status: 'ongoing' // Marcar como en curso para poder ver el bracket
+        teams,
+        maxTeams: teamTotal,
+        configuredRounds,
+        confirmed: false,
+        status: 'upcoming'
       });
-      
+
       this.loadTournaments();
-      alert('Torneo de prueba creado exitosamente con 8 equipos ficticios y bracket completo. Puedes ver el organigrama y clasificaciones.');
+      alert(
+        `Torneo de prueba creado con ${teams.length} equipos. Abre «Organizar Bracket», confirma y luego usa «Vista interactiva» para clasificaciones.`
+      );
     } catch (error: any) {
       console.error('Error creating practice tournament:', error);
       const errorMessage = error?.message || error?.toString() || 'Error desconocido';
@@ -1417,23 +1792,15 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     this.tournamentDescription.set(tournament.description);
     this.tournamentGame.set(tournament.game);
     this.tournamentMaxTeams.set(tournament.maxTeams);
+    this.tournamentFormat.set(tournament.format || 'single');
+    this.tournamentConfiguredRounds.set(this.getTournamentConfiguredRounds(tournament));
     
     // Convertir timestamps a formato datetime-local
     const startDate = tournament.startDate.toDate();
     const endDate = tournament.endDate.toDate();
     
-    // Formatear para input datetime-local (YYYY-MM-DDTHH:mm)
-    const formatDate = (date: Date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      return `${year}-${month}-${day}T${hours}:${minutes}`;
-    };
-    
-    this.tournamentStartDate.set(formatDate(startDate));
-    this.tournamentEndDate.set(formatDate(endDate));
+    this.tournamentStartDate.set(this.formatDateTimeLocal(startDate));
+    this.tournamentEndDate.set(this.formatDateTimeLocal(endDate));
     
     // Guardar el ID del torneo a editar
     this.selectedTournament.set(tournament);

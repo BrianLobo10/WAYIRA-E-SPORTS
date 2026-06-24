@@ -19,7 +19,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </a>
-        <a href="#about" class="btn btn-secondary">Conocer más</a>
+        <a routerLink="/about" class="btn btn-secondary">Conocer más</a>
       </div>
     </div>
     <div class="hero-image">
@@ -33,62 +33,6 @@
 <section class="twitch-section">
   <div class="container">
     <app-twitch-embed></app-twitch-embed>
-  </div>
-</section>
-
-<section id="about" class="about-section">
-  <div class="container">
-    <app-section-header title="Quiénes Somos"></app-section-header>
-
-    <app-cards-grid [columns]="2" gap="large" [responsive]="true" class="about-cards">
-      <app-universal-card 
-        icon="target"
-        title="Misión"
-        description="Ser líderes en el ecosistema de los deportes electrónicos en La Guajira y referentes destacados en Colombia, ofreciendo plataformas competitivas, oportunidades de desarrollo profesional y experiencias digitales de calidad."
-        type="about"
-        size="large">
-      </app-universal-card>
-      
-      <app-universal-card 
-        icon="rocket"
-        title="Visión"
-        description="En los próximos 5 años, ser reconocidos nacional e internacionalmente como organización referente en e-Sports por nuestra innovación, calidad de torneos y aporte al desarrollo de la industria digital y cultural."
-        type="about"
-        size="large">
-      </app-universal-card>
-    </app-cards-grid>
-
-    <div class="valores-section">
-      <app-cards-grid [columns]="4" gap="medium" [responsive]="true" class="valores-cards">
-        @for (valor of valores; track valor.title) {
-          <app-universal-card 
-            [icon]="valor.icon" 
-            [title]="valor.title" 
-            [description]="valor.description"
-            type="valor"
-            size="small">
-          </app-universal-card>
-        }
-      </app-cards-grid>
-    </div>
-  </div>
-</section>
-
-<section id="services" class="services-section">
-  <div class="container">
-    <app-section-header title="Nuestros Servicios"></app-section-header>
-
-    <app-cards-grid [columns]="4" gap="medium" [responsive]="true" class="services-cards">
-      @for (servicio of servicios; track servicio.title) {
-        <app-universal-card 
-          [icon]="servicio.icon" 
-          [title]="servicio.title" 
-          [description]="servicio.description"
-          type="service"
-          size="medium">
-        </app-universal-card>
-      }
-    </app-cards-grid>
   </div>
 </section>
 

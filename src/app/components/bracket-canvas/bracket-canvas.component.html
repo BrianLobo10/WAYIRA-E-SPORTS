@@ -1,0 +1,154 @@
+<section
+  class="bracket-canvas"
+  [class.bracket-canvas--first-round-only]="firstRoundOnly()"
+  [attr.data-teams]="powerTeams()">
+  <header class="bracket-header">
+    <div class="bracket-title-wrap">
+      <span class="bracket-title">{{
+        firstRoundOnly() ? 'Colocación — primera ronda' : 'Bracket de Enfrentamientos'
+      }}</span>
+      <span class="bracket-subtitle">{{
+        firstRoundOnly()
+          ? powerTeams() + ' equipos · solo enfrentamientos iniciales'
+          : powerTeams() + ' equipos | ' + totalRounds() + ' rondas'
+      }}</span>
+    </div>
+    <div class="bracket-round-labels">
+      @for (label of roundHeaders(); track $index) {
+        <span class="round-pill" [style.animationDelay]="getRoundAnimationDelay($index)">{{ label }}</span>
+      }
+    </div>
+  </header>
+
+  <div class="bracket-stage">
+    <svg class="bracket-connections" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      @for (path of bracketPaths(); track path.id) {
+        <path
+          class="bracket-path"
+          [attr.d]="path.d"
+          [style.animationDelay]="getRoundAnimationDelay(path.round)">
+        </path>
+      }
+    </svg>
+
+    @for (match of bracketRender().left; track match.id) {
+      <article
+        class="match-card side-left"
+        [class.editable]="isEditableMatch(match)"
+        [class.pending]="getMatchState(match) === 'Vacío'"
+        [style.left.%]="match.x"
+        [style.top.%]="match.y"
+        [style.animationDelay]="getRoundAnimationDelay(match.round)">
+        <div class="match-meta">
+          <span class="match-round">{{ getRoundLabel(powerTeams() / Math.pow(2, match.round)) }}</span>
+          <span class="match-state">{{ getMatchState(match) }}</span>
+        </div>
+
+        <div
+          class="team-slot"
+          [class.empty]="!getMatch(match.sourceMatchIndex ?? -1)?.team1"
+          (drop)="onDrop(match, 'team1', $event)"
+          (dragover)="onDragOver($event)">
+          <span class="team-name">{{ getDisplayTeamName(match, 'team1') }}</span>
+          <button
+            type="button"
+            class="remove-btn"
+            [disabled]="!isEditableMatch(match) || !getMatch(match.sourceMatchIndex ?? -1)?.team1"
+            (click)="onRemove(match, 'team1')">
+            x
+          </button>
+        </div>
+
+        <div
+          class="team-slot"
+          [class.empty]="!getMatch(match.sourceMatchIndex ?? -1)?.team2"
+          (drop)="onDrop(match, 'team2', $event)"
+          (dragover)="onDragOver($event)">
+          <span class="team-name">{{ getDisplayTeamName(match, 'team2') }}</span>
+          <button
+            type="button"
+            class="remove-btn"
+            [disabled]="!isEditableMatch(match) || !getMatch(match.sourceMatchIndex ?? -1)?.team2"
+            (click)="onRemove(match, 'team2')">
+            x
+          </button>
+        </div>
+
+        <footer class="match-footer">
+          <span class="score">{{ getDisplayScore(match) }}</span>
+        </footer>
+      </article>
+    }
+
+    @for (match of bracketRender().right; track match.id) {
+      <article
+        class="match-card side-right"
+        [class.editable]="isEditableMatch(match)"
+        [class.pending]="getMatchState(match) === 'Vacío'"
+        [style.left.%]="match.x"
+        [style.top.%]="match.y"
+        [style.animationDelay]="getRoundAnimationDelay(match.round)">
+        <div class="match-meta">
+          <span class="match-round">{{ getRoundLabel(powerTeams() / Math.pow(2, match.round)) }}</span>
+          <span class="match-state">{{ getMatchState(match) }}</span>
+        </div>
+
+        <div
+          class="team-slot"
+          [class.empty]="!getMatch(match.sourceMatchIndex ?? -1)?.team1"
+          (drop)="onDrop(match, 'team1', $event)"
+          (dragover)="onDragOver($event)">
+          <span class="team-name">{{ getDisplayTeamName(match, 'team1') }}</span>
+          <button
+            type="button"
+            class="remove-btn"
+            [disabled]="!isEditableMatch(match) || !getMatch(match.sourceMatchIndex ?? -1)?.team1"
+            (click)="onRemove(match, 'team1')">
+            x
+          </button>
+        </div>
+
+        <div
+          class="team-slot"
+          [class.empty]="!getMatch(match.sourceMatchIndex ?? -1)?.team2"
+          (drop)="onDrop(match, 'team2', $event)"
+          (dragover)="onDragOver($event)">
+          <span class="team-name">{{ getDisplayTeamName(match, 'team2') }}</span>
+          <button
+            type="button"
+            class="remove-btn"
+            [disabled]="!isEditableMatch(match) || !getMatch(match.sourceMatchIndex ?? -1)?.team2"
+            (click)="onRemove(match, 'team2')">
+            x
+          </button>
+        </div>
+
+        <footer class="match-footer">
+          <span class="score">{{ getDisplayScore(match) }}</span>
+        </footer>
+      </article>
+    }
+
+    @for (match of bracketRender().center; track match.id) {
+      <article
+        class="match-card side-center final-card"
+        [style.left.%]="match.x"
+        [style.top.%]="match.y"
+        [style.animationDelay]="getRoundAnimationDelay(totalRounds())">
+        <div class="match-meta">
+          <span class="match-round">Final</span>
+          <span class="match-state">Pendiente</span>
+        </div>
+        <div class="team-slot empty">
+          <span class="team-name">{{ getDisplayTeamName(match, 'team1') }}</span>
+        </div>
+        <div class="team-slot empty">
+          <span class="team-name">{{ getDisplayTeamName(match, 'team2') }}</span>
+        </div>
+        <footer class="match-footer">
+          <span class="score">{{ getDisplayScore(match) }}</span>
+        </footer>
+      </article>
+    }
+  </div>
+</section>

@@ -1,33 +1,33 @@
 .roulette-page {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #0a0f0f 0%, #00363D 50%, #0a0f0f 100%);
+  min-height: auto;
+  background: linear-gradient(160deg, #0a0e17 0%, #0f1623 25%, #0d1520 50%, #0a0e17 100%);
   font-family: 'Inter', 'Arial', sans-serif;
   position: relative;
   overflow-x: hidden;
   width: 100%;
   margin: 0;
   padding: 0;
-  scroll-behavior: smooth;
-  overscroll-behavior: contain;
+  padding-bottom: 1rem;
   box-sizing: border-box;
 }
 
 .roulette-hero {
-  background: linear-gradient(135deg, #00363D 0%, #014C4A 50%, #016C6C 100%);
-  padding: 4rem 0 2rem;
+  background: linear-gradient(180deg, #0d1520 0%, #1a2332 45%, #0f1419 100%);
+  padding: 2.5rem 0 1.25rem;
   text-align: center;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(1, 108, 108, 0.08);
   margin: 0;
   width: 100%;
   box-sizing: border-box;
+  border-bottom: 1px solid rgba(1, 108, 108, 0.25);
 }
 
 .container {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0 2rem;
   position: relative;
   z-index: 2;
   box-sizing: border-box;
@@ -40,54 +40,76 @@
 }
 
 .hero-title {
-  font-size: 4rem;
+  font-size: 3.5rem;
   font-weight: 800;
-  color: #ffffff;
-  margin-bottom: 1rem;
-  letter-spacing: -0.02em;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  color: #f0e6d2;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4), 0 0 20px rgba(1, 108, 108, 0.15);
 }
 
 .hero-subtitle {
-  font-size: 1.5rem;
-  color: #e0e0e0;
+  font-size: 1.35rem;
+  color: #00b4a8;
   font-weight: 500;
   margin: 0;
+  opacity: 0.95;
   text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 .roulette-section {
-  padding: 2rem 0 3rem 0;
-  background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #0f0f23 100%);
+  padding: 3rem 0 3rem;
+  background: linear-gradient(160deg, #0a0e17 0%, #0f1623 50%, #0a0e17 100%);
   position: relative;
   z-index: 1;
   margin: 0;
   width: 100%;
   box-sizing: border-box;
-  overflow-x: hidden;
+  overflow: visible;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: min(65vh, 600px);
+}
+
+.roulette-section .container {
+  width: 100%;
 }
 
 .roulette-content {
   display: flex;
-  gap: 1rem;
-  align-items: flex-start;
+  flex-direction: row;
+  align-items: center;
   justify-content: center;
-  max-width: 1200px;
+  gap: 2.5rem;
+  max-width: 100%;
   margin: 0 auto;
   position: relative;
   z-index: 2;
   width: 100%;
   box-sizing: border-box;
+  padding: 0;
+}
+
+/* PC: cuadro a la izquierda, ruleta a la derecha y más grande */
+.roulette-content .input-section {
+  order: 1;
+  flex-shrink: 0;
+}
+
+.roulette-content .roulette-display {
+  order: 2;
 }
 
 .input-section {
-  background: rgba(0, 0, 0, 0.6);
-  padding: 1rem;
-  border-radius: 15px;
-  border: 2px solid rgba(1, 108, 108, 0.4);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+  background: linear-gradient(180deg, rgba(13, 21, 32, 0.95) 0%, rgba(10, 14, 23, 0.98) 100%);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-accent, rgba(1, 108, 108, 0.35));
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(1, 108, 108, 0.08);
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
   position: relative;
   margin: 0;
 }
@@ -95,18 +117,20 @@
 .section-header {
   text-align: center;
   margin-bottom: 1rem;
+  margin-top: 0;
 }
 
 .section-header h2 {
-  color: #00d4ff;
+  color: #00b4a8;
   font-size: 1.8rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
-  text-shadow: 0 2px 10px rgba(0, 212, 255, 0.3);
+  text-shadow: 0 2px 10px rgba(1, 108, 108, 0.2);
+  letter-spacing: 0.03em;
 }
 
 .section-subtitle {
-  color: #e0e0e0;
+  color: #a09b8c;
   font-size: 1rem;
   margin: 0;
   font-weight: 500;
@@ -115,10 +139,10 @@
 .options-input-container {
   width: 100%;
   height: 200px;
-  border: 2px solid #00d4ff;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.4);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-accent, rgba(1, 108, 108, 0.35));
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
   position: relative;
   overflow: hidden;
 }
@@ -145,8 +169,8 @@
 }
 
 .options-input-container:focus-within {
-  border-color: #ffffff;
-  box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+  border-color: rgba(1, 108, 108, 0.5);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(1, 108, 108, 0.2);
 }
 
 .options-input::placeholder {
@@ -158,13 +182,13 @@
 .options-count {
   text-align: center;
   margin-top: 1rem;
-  color: #00d4ff;
+  color: #00b4a8;
   font-weight: 600;
   font-size: 1rem;
-  background: rgba(0, 212, 255, 0.1);
+  background: rgba(1, 108, 108, 0.1);
   padding: 0.8rem 1.5rem;
-  border-radius: 20px;
-  border: 1px solid rgba(0, 212, 255, 0.3);
+  border-radius: 8px;
+  border: 1px solid var(--border-accent, rgba(1, 108, 108, 0.35));
 }
 
 .count-icon {
@@ -176,18 +200,22 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3rem;
+  gap: 1.5rem;
   position: relative;
+  flex-shrink: 0;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
 }
 
 .roulette-display::before {
   content: '';
   position: absolute;
-  top: -50px;
-  left: -50px;
-  right: -50px;
-  bottom: -50px;
-  background: radial-gradient(circle, rgba(0, 212, 255, 0.1) 0%, transparent 70%);
+  top: -30px;
+  left: -30px;
+  right: -30px;
+  bottom: -30px;
+  background: radial-gradient(circle, rgba(1, 108, 108, 0.06) 0%, rgba(99, 102, 241, 0.03) 50%, transparent 70%);
   border-radius: 50%;
   pointer-events: none;
   animation: rouletteAreaGlow 4s ease-in-out infinite;
@@ -208,19 +236,20 @@
   position: relative;
   display: inline-block;
   width: 100%;
-  max-width: 550px;
+  max-width: 520px;
   box-sizing: border-box;
+  margin: 0;
 }
 
 #canvas {
-  border: 4px solid #016C6C;
+  border: 3px solid rgba(1, 108, 108, 0.45);
   border-radius: 50%;
   box-shadow: 
-    0 0 50px rgba(1, 108, 108, 0.4),
-    0 0 0 4px rgba(1, 108, 108, 0.6),
-    0 0 0 8px rgba(1, 108, 108, 0.3),
-    inset 0 0 30px rgba(0, 0, 0, 0.2);
-  background: linear-gradient(135deg, #00363D 0%, #014C4A 100%);
+    0 0 40px rgba(1, 108, 108, 0.15),
+    0 0 0 1px rgba(1, 108, 108, 0.2),
+    0 0 0 4px rgba(255, 255, 255, 0.06),
+    inset 0 0 30px rgba(0, 0, 0, 0.25);
+  background: linear-gradient(135deg, #0d1520 0%, #1a2332 50%, #0f1419 100%);
   transition: all 0.3s ease;
   cursor: pointer;
   display: block;
@@ -230,17 +259,39 @@
   touch-action: manipulation;
   width: 100%;
   height: auto;
-  max-width: 550px;
+  max-width: 520px;
   box-sizing: border-box;
 }
 
 #canvas:hover {
   box-shadow: 
-    0 0 60px rgba(1, 108, 108, 0.6),
-    0 0 0 4px rgba(1, 108, 108, 0.8),
-    0 0 0 8px rgba(1, 108, 108, 0.5),
+    0 0 50px rgba(1, 108, 108, 0.22),
+    0 0 0 1px rgba(1, 108, 108, 0.4),
+    0 0 0 4px rgba(255, 255, 255, 0.08),
     inset 0 0 30px rgba(0, 0, 0, 0.3);
   transform: scale(1.02);
+}
+
+/* Móvil / pantallas pequeñas: ruleta arriba, cuadro abajo */
+@media (max-width: 1024px) {
+  .roulette-section {
+    min-height: auto;
+    padding: 2rem 0 2rem;
+  }
+
+  .roulette-content {
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .roulette-content .input-section {
+    order: 2;
+  }
+
+  .roulette-content .roulette-display {
+    order: 1;
+  }
 }
 
 .roulette-glow {
@@ -249,7 +300,7 @@
   left: -10px;
   right: -10px;
   bottom: -10px;
-  background: radial-gradient(circle, rgba(1, 108, 108, 0.3) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
   border-radius: 50%;
   opacity: 0;
   animation: rouletteGlow 3s ease-in-out infinite;
@@ -271,40 +322,40 @@
 
 .spinning-text {
   background: rgba(0, 0, 0, 0.8);
-  color: #016C6C;
+  color: #00b4a8;
   padding: 0.8rem 1.5rem;
   border-radius: 20px;
   font-size: 1.1rem;
   font-weight: 700;
   text-align: center;
-  border: 2px solid #016C6C;
-  box-shadow: 0 0 20px rgba(1, 108, 108, 0.4);
-  text-shadow: 0 0 10px rgba(1, 108, 108, 0.6);
+  border: 2px solid rgba(1, 108, 108, 0.5);
+  box-shadow: 0 0 20px rgba(1, 108, 108, 0.2);
+  text-shadow: 0 0 10px rgba(1, 108, 108, 0.3);
   animation: textPulse 0.5s ease-in-out infinite;
 }
 
 .spin-button-container {
-  margin: 1rem 0 2rem 0; /* Agregado margen inferior */
+  margin: 0;
+  padding: 0;
   position: relative;
 }
 
 .spin-button {
-  background: linear-gradient(135deg, #016C6C 0%, #00d4ff 30%, #9146ff 60%, #016C6C 100%);
-  color: white;
-  border: 3px solid #ffffff;
+  background: linear-gradient(135deg, #0d1520 0%, #1a2332 30%, #252d3a 70%, #0d1520 100%);
+  color: #f0e6d2;
+  border: 2px solid rgba(1, 108, 108, 0.5);
   padding: 1.5rem 3rem;
   font-size: 1.3rem;
   font-weight: 800;
-  border-radius: 60px;
+  border-radius: 8px;
   cursor: pointer;
   box-shadow: 
-    0 0 40px rgba(0, 212, 255, 0.5),
-    0 0 0 2px rgba(0, 212, 255, 0.8),
-    0 0 60px rgba(145, 70, 255, 0.4),
-    0 0 80px rgba(1, 108, 108, 0.3);
+    0 0 30px rgba(1, 108, 108, 0.2),
+    0 0 0 1px rgba(1, 108, 108, 0.2),
+    inset 0 1px 0 rgba(1, 108, 108, 0.1);
   transition: all 0.3s ease;
   text-transform: uppercase;
-  letter-spacing: 3px;
+  letter-spacing: 2px;
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -316,28 +367,25 @@
 @keyframes buttonGlow {
   0%, 100% {
     box-shadow: 
-      0 0 40px rgba(0, 212, 255, 0.5),
-      0 0 0 2px rgba(0, 212, 255, 0.8),
-      0 0 60px rgba(145, 70, 255, 0.4),
-      0 0 80px rgba(1, 108, 108, 0.3);
+      0 0 30px rgba(1, 108, 108, 0.2),
+      0 0 0 1px rgba(1, 108, 108, 0.2),
+      inset 0 1px 0 rgba(1, 108, 108, 0.1);
   }
   50% {
     box-shadow: 
-      0 0 50px rgba(0, 212, 255, 0.7),
-      0 0 0 2px rgba(0, 212, 255, 1),
-      0 0 70px rgba(145, 70, 255, 0.6),
-      0 0 90px rgba(1, 108, 108, 0.5);
+      0 0 40px rgba(1, 108, 108, 0.3),
+      0 0 0 1px rgba(1, 108, 108, 0.3),
+      inset 0 1px 0 rgba(1, 108, 108, 0.12);
   }
 }
 
 .spin-button:hover:not(:disabled) {
-  transform: translateY(-5px) scale(1.05);
+  transform: translateY(-3px);
+  border-color: rgba(1, 108, 108, 0.7);
   box-shadow: 
-    0 0 60px rgba(0, 212, 255, 0.8),
-    0 0 0 3px rgba(0, 212, 255, 1),
-    0 0 80px rgba(145, 70, 255, 0.6),
-    0 0 100px rgba(1, 108, 108, 0.5),
-    0 10px 30px rgba(0, 0, 0, 0.4);
+    0 0 45px rgba(1, 108, 108, 0.25),
+    0 0 0 1px rgba(1, 108, 108, 0.4),
+    0 6px 20px rgba(0, 0, 0, 0.35);
   animation: none;
 }
 
@@ -373,15 +421,16 @@
 }
 
 .winner-display {
-  background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+  background: linear-gradient(180deg, #0d1520 0%, #1a2332 50%, #0d1520 100%);
   padding: 3rem;
-  border-radius: 20px;
+  border-radius: 12px;
   text-align: center;
   box-shadow: 
-    0 0 50px rgba(1, 108, 108, 0.4),
-    inset 0 1px 0 rgba(240, 230, 210, 0.1);
+    0 0 50px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(1, 108, 108, 0.3),
+    inset 0 1px 0 rgba(1, 108, 108, 0.08);
   animation: slideIn 0.5s ease;
-  border: 3px solid #016C6C;
+  border: 2px solid rgba(1, 108, 108, 0.4);
   position: relative;
   overflow: hidden;
   max-width: 500px;
@@ -398,14 +447,15 @@
 .winner-crown {
   font-size: 4rem;
   margin-bottom: 1rem;
+  color: #00b4a8;
   animation: crownFloat 2s ease-in-out infinite;
 }
 
 .winner-display h1 {
-  color: #016C6C;
+  color: #00b4a8;
   font-size: 3rem;
   margin: 0 0 1rem 0;
-  text-shadow: 0 0 30px rgba(1, 108, 108, 0.5);
+  text-shadow: 0 0 20px rgba(1, 108, 108, 0.4);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -413,13 +463,14 @@
 }
 
 .winner-timer {
-  background: linear-gradient(135deg, #016C6C, #00d4ff);
-  color: #000;
+  background: linear-gradient(135deg, rgba(1, 108, 108, 0.25), rgba(99, 102, 241, 0.2));
+  color: #f0e6d2;
   padding: 0.5rem 1.5rem;
-  border-radius: 20px;
+  border-radius: 8px;
   font-weight: 700;
   font-size: 1.1rem;
-  box-shadow: 0 0 20px rgba(1, 108, 108, 0.4);
+  border: 1px solid rgba(1, 108, 108, 0.4);
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.15);
   animation: timerPulse 1s ease-in-out infinite;
   display: flex;
   align-items: center;
@@ -440,13 +491,13 @@
 }
 
 .winner-name {
-  color: #ffffff;
+  color: #f0e6d2;
   font-size: 2.5rem;
   font-weight: 800;
   text-shadow: 
     -2px -2px 0 rgba(0, 0, 0, 0.8),
     2px 2px 0 rgba(0, 0, 0, 0.8),
-    0 0 30px rgba(1, 108, 108, 0.6);
+    0 0 25px rgba(1, 108, 108, 0.3);
   animation: winnerPulse 1.5s infinite;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -454,10 +505,10 @@
 }
 
 .winner-subtitle {
-  color: #b0b0b0;
+  color: #a09b8c;
   font-size: 1.2rem;
   font-style: italic;
-  text-shadow: 0 0 10px rgba(1, 108, 108, 0.5);
+  text-shadow: 0 0 10px rgba(1, 108, 108, 0.15);
 }
 
 .winner-actions {
@@ -467,17 +518,15 @@
 }
 
 .close-button {
-  background: linear-gradient(135deg, #E74C3C, #FF4444);
-  color: white;
-  border: 3px solid #F0E6D2;
+  background: linear-gradient(135deg, #0d1520, #1a2332);
+  color: #f0e6d2;
+  border: 1px solid rgba(1, 108, 108, 0.4);
   padding: 1rem 2rem;
-  border-radius: 25px;
+  border-radius: 8px;
   font-weight: 700;
   font-size: 1.1rem;
   cursor: pointer;
-  box-shadow: 
-    0 0 20px rgba(231, 76, 60, 0.4),
-    inset 0 2px 4px rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 1px 0 rgba(1, 108, 108, 0.08);
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
@@ -488,7 +537,8 @@
 
 .close-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 0 25px rgba(231, 76, 60, 0.6);
+  border-color: rgba(1, 108, 108, 0.6);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
 }
 
 .close-icon {
@@ -555,23 +605,23 @@
     text-shadow: 
       -2px -2px 0 rgba(0, 0, 0, 0.8),
       2px 2px 0 rgba(0, 0, 0, 0.8),
-      0 0 30px rgba(1, 108, 108, 0.6);
+      0 0 25px rgba(1, 108, 108, 0.3);
   }
   50% { 
     transform: none;
     text-shadow: 
       -2px -2px 0 rgba(0, 0, 0, 0.8),
       2px 2px 0 rgba(0, 0, 0, 0.8),
-      0 0 40px rgba(1, 108, 108, 0.8);
+      0 0 35px rgba(1, 108, 108, 0.5);
   }
 }
 
 @keyframes titleGlow {
   0%, 100% {
-    text-shadow: 0 0 30px rgba(1, 108, 108, 0.5);
+    text-shadow: 0 0 20px rgba(1, 108, 108, 0.3);
   }
   50% {
-    text-shadow: 0 0 50px rgba(1, 108, 108, 0.8);
+    text-shadow: 0 0 35px rgba(1, 108, 108, 0.5);
   }
 }
 
@@ -612,39 +662,49 @@
 @keyframes timerPulse {
   0%, 100% {
     transform: none;
-    box-shadow: 0 0 20px rgba(1, 108, 108, 0.4);
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.15);
   }
   50% {
     transform: none;
-    box-shadow: 0 0 30px rgba(1, 108, 108, 0.6);
+    box-shadow: 0 0 22px rgba(99, 102, 241, 0.22);
   }
 }
 
 @keyframes textPulse {
   0%, 100% {
-    box-shadow: 0 0 20px rgba(1, 108, 108, 0.4);
+    box-shadow: 0 0 20px rgba(1, 108, 108, 0.2);
   }
   50% {
-    box-shadow: 0 0 25px rgba(1, 108, 108, 0.6);
+    box-shadow: 0 0 25px rgba(1, 108, 108, 0.35);
   }
 }
 
 @media (max-width: 1024px) {
   .container {
-    padding: 0 1rem;
+    padding: 0 1.5rem;
+  }
+
+  .roulette-section {
+    padding: 1.75rem 0 2.5rem;
   }
 
   .roulette-content {
     flex-direction: column;
     align-items: center;
-    gap: 2rem;
+    gap: 2.5rem;
   }
-  
-  .input-section {
+
+  .roulette-display {
+    padding: 0;
+    width: 100%;
     max-width: 100%;
+  }
+
+  .input-section {
+    max-width: 420px;
     width: 100%;
   }
-  
+
   #canvas {
     max-width: 400px;
     width: 100%;
@@ -658,31 +718,36 @@
 
 @media (max-width: 768px) {
   .roulette-hero {
-    padding: 3rem 0 1.5rem;
+    padding: 2.5rem 0 1.25rem;
   }
 
   .container {
-    padding: 0 1rem;
+    padding: 0 1.25rem;
   }
-  
+
   .roulette-section {
-    padding: 1.5rem 0 2rem 0;
+    padding: 1.5rem 0 2rem;
   }
-  
+
   .hero-title {
     font-size: 2.5rem;
   }
-  
+
   .hero-subtitle {
     font-size: 1.1rem;
   }
-  
+
   .roulette-content {
-    gap: 1.5rem;
+    gap: 2rem;
     flex-direction: column;
     align-items: center;
   }
-  
+
+  .roulette-display {
+    padding: 0;
+    gap: 1.25rem;
+  }
+
   #canvas {
     max-width: 300px;
     width: 100%;
@@ -692,29 +757,29 @@
   .roulette-wrapper {
     max-width: 300px;
   }
-  
+
   .input-section {
-    padding: 1rem;
+    padding: 1.25rem;
     margin: 0;
   }
 
   .spin-button-container {
-    margin: 1rem 0 1rem 0;
+    margin: 0;
   }
 
   .spin-button {
-    padding: 1.2rem 2rem;
-    font-size: 1.1rem;
+    padding: 1.1rem 1.75rem;
+    font-size: 1.05rem;
   }
-  
+
   .winner-display h1 {
     font-size: 2.5rem;
   }
-  
+
   .winner-name {
     font-size: 2rem;
   }
-  
+
   .winner-crown {
     font-size: 3rem;
   }
@@ -724,24 +789,29 @@
   .roulette-hero {
     padding: 2rem 0 1rem;
   }
-  
+
   .roulette-section {
-    padding: 1rem 0 1.5rem 0;
+    padding: 1.25rem 0 1.5rem;
   }
-  
+
   .container {
-    padding: 0 0.75rem;
+    padding: 0 1rem;
   }
-  
+
   .hero-title {
     font-size: 2rem;
   }
-  
+
   .hero-subtitle {
     font-size: 0.95rem;
   }
-  
+
   .roulette-content {
+    gap: 1.5rem;
+  }
+
+  .roulette-display {
+    padding: 0;
     gap: 1rem;
   }
 
@@ -754,9 +824,9 @@
   .roulette-wrapper {
     max-width: 280px;
   }
-  
+
   .input-section {
-    padding: 0.75rem;
+    padding: 1rem;
     margin: 0;
   }
 
@@ -778,24 +848,24 @@
   }
 
   .spin-button {
-    padding: 1rem 1.5rem;
-    font-size: 1rem;
-    letter-spacing: 2px;
+    padding: 1rem 1.25rem;
+    font-size: 0.95rem;
+    letter-spacing: 1px;
   }
-  
+
   .winner-display {
     padding: 1.5rem;
     margin: 0 1rem;
   }
-  
+
   .winner-display h1 {
     font-size: 1.75rem;
   }
-  
+
   .winner-name {
     font-size: 1.5rem;
   }
-  
+
   .winner-crown {
     font-size: 2.5rem;
   }

@@ -1,0 +1,10 @@
+# WAYIRA E-SPORTS - Security Policy
+# Report vulnerabilities responsibly
+
+Contact: mailto:contacto@wayiraesports.com
+Expires: 2027-12-31T23:59:59.000Z
+Preferred-Languages: es, en
+Canonical: https://wayira-e-sports.web.app/security.txt
+
+# Please report security issues to the contact above.
+# We will acknowledge and respond as soon as possible.

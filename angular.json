@@ -30,6 +30,7 @@
           },
           "configurations": {
             "production": {
+              "baseHref": "/",
               "budgets": [
                 {
                   "type": "initial",
@@ -43,6 +44,9 @@
                 }
               ],
               "outputHashing": "all",
+              "sourceMap": false,
+              "optimization": { "scripts": true, "styles": true },
+              "namedChunks": false,
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",

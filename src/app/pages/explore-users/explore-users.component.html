@@ -1,0 +1,59 @@
+<div class="explore-page">
+  <div class="container">
+    <h1 class="page-title">Explorar usuarios</h1>
+    <p class="page-subtitle">Sigue a más usuarios para ver sus publicaciones en Sigues. Los que tengan amigos en común contigo aparecen primero.</p>
+
+    @if (loading()) {
+      <div class="loading-state">
+        <span class="spinner"></span>
+        <span>Cargando usuarios...</span>
+      </div>
+    } @else if (users().length === 0) {
+      <div class="empty-state">
+        <p>No hay más usuarios por ahora.</p>
+        <a routerLink="/feed" class="btn-back">Volver al feed</a>
+      </div>
+    } @else {
+      <div class="users-grid">
+        @for (user of users(); track user.uid) {
+          <article class="user-card">
+            <a [routerLink]="['/profile', user.uid]" class="user-card-link">
+              @if (user.photoURL) {
+                <img [src]="user.photoURL" [alt]="user.displayName" class="user-avatar" (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
+              } @else {
+                <div class="user-avatar-placeholder">{{ (user.displayName || 'U').charAt(0).toUpperCase() }}</div>
+              }
+              <div class="user-info">
+                <h3 class="user-name">{{ user.displayName || 'Usuario' }}</h3>
+                <span class="user-handle">{{ getHandle(user) }}</span>
+                <div class="user-stats">
+                  <span>{{ (user.followers || []).length }} seguidores</span>
+                  <span>{{ (user.following || []).length }} siguiendo</span>
+                </div>
+              </div>
+            </a>
+            <button
+              type="button"
+              class="btn-follow"
+              [class.following]="isFollowing(user)"
+              (click)="follow(user.uid); $event.preventDefault()">
+              {{ isFollowing(user) ? 'Siguiendo' : 'Seguir' }}
+            </button>
+          </article>
+        }
+      </div>
+      @if (hasMore()) {
+        <div class="load-more">
+          <button type="button" class="btn-load-more" (click)="loadMore()" [disabled]="loadingMore()">
+            @if (loadingMore()) {
+              <span class="spinner small"></span>
+              Cargando...
+            } @else {
+              Cargar más
+            }
+          </button>
+        </div>
+      }
+    }
+  </div>
+</div>

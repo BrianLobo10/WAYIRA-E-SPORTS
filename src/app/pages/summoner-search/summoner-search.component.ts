@@ -1,6 +1,7 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { RiotApiService, SummonerData, LeagueEntry, MatchData, ChampionMastery } from '../../services/riot-api.service';
 import { ChampionService } from '../../services/champion.service';
 
@@ -10,8 +11,9 @@ import { ChampionService } from '../../services/champion.service';
   templateUrl: './summoner-search.component.html',
   styleUrl: './summoner-search.component.css'
 })
-export class SummonerSearchComponent {
+export class SummonerSearchComponent implements OnInit {
   private riotApiService = inject(RiotApiService);
+  private route = inject(ActivatedRoute);
   protected championService = inject(ChampionService);
 
   gameName = '';
@@ -27,6 +29,23 @@ export class SummonerSearchComponent {
   error = signal<string | null>(null);
   selectedQueue = signal<'RANKED_SOLO_5x5' | 'RANKED_FLEX_SR'>('RANKED_SOLO_5x5');
   selectedMatch = signal<MatchData | null>(null);
+
+  /** Cache en sesión: misma búsqueda no vuelve a llamar a la API */
+  private searchCache: { key: string; data: SummonerData; matches: MatchData[]; mastery: ChampionMastery[] } | null = null;
+
+  ngOnInit() {
+    this.route.queryParams.subscribe((params) => {
+      const region = params['region'];
+      const gameName = params['gameName'];
+      const tagLine = params['tagLine'];
+      if (region) this.selectedRegion = region;
+      if (gameName) this.gameName = gameName;
+      if (tagLine) this.tagLine = tagLine;
+      if (this.gameName?.trim() && this.tagLine?.trim()) {
+        setTimeout(() => this.searchSummoner(), 0);
+      }
+    });
+  }
 
   regions = [
     { code: 'na1', name: 'NA - América del Norte' },
@@ -45,12 +64,25 @@ export class SummonerSearchComponent {
       return;
     }
 
+    const cacheKey = `${this.selectedRegion}:${this.gameName.trim().toLowerCase()}:${this.tagLine.trim().toLowerCase()}`;
+    if (this.searchCache?.key === cacheKey) {
+      this.summoner.set(this.searchCache.data);
+      this.summonerData.set(this.searchCache.data);
+      this.matches.set(this.searchCache.matches);
+      this.championMastery.set(this.searchCache.mastery);
+      this.error.set(null);
+      this.loading.set(false);
+      this.loadingMatches.set(false);
+      return;
+    }
+
     this.loading.set(true);
     this.error.set(null);
     this.summoner.set(null);
     this.summonerData.set(null);
     this.matches.set([]);
     this.championMastery.set([]);
+    this.searchCache = null;
 
     this.riotApiService.getSummoner(this.selectedRegion, this.gameName.trim(), this.tagLine.trim())
       .subscribe({
@@ -58,8 +90,7 @@ export class SummonerSearchComponent {
           this.summoner.set(data);
           this.summonerData.set(data);
           this.loading.set(false);
-          
-          this.loadAdditionalData(data.puuid);
+          this.loadAdditionalData(data.puuid, cacheKey, data);
         },
         error: (err) => {
           this.loading.set(false);
@@ -82,20 +113,26 @@ export class SummonerSearchComponent {
       });
   }
 
-  loadAdditionalData(puuid: string) {
+  loadAdditionalData(puuid: string, cacheKey?: string, summonerData?: SummonerData) {
     this.loadingMatches.set(true);
     let matchesLoaded = false;
     let masteryLoaded = false;
-    
+    let matchesResult: MatchData[] = [];
+    let masteryResult: ChampionMastery[] = [];
+
     const checkComplete = () => {
       if (matchesLoaded && masteryLoaded) {
         this.loadingMatches.set(false);
+        if (cacheKey && summonerData) {
+          this.searchCache = { key: cacheKey, data: summonerData, matches: matchesResult, mastery: masteryResult };
+        }
       }
     };
-    
+
     // Obtener partidas recientes (20 para mostrar)
     this.riotApiService.getMatches(this.selectedRegion, puuid, 20).subscribe({
       next: (matches) => {
+        matchesResult = matches;
         this.matches.set(matches);
         matchesLoaded = true;
         checkComplete();
@@ -109,6 +146,7 @@ export class SummonerSearchComponent {
 
     this.riotApiService.getChampionMastery(this.selectedRegion, puuid, 5).subscribe({
       next: (mastery) => {
+        masteryResult = mastery;
         this.championMastery.set(mastery);
         masteryLoaded = true;
         checkComplete();
@@ -157,7 +195,7 @@ export class SummonerSearchComponent {
       'GRANDMASTER': '#e03131',
       'CHALLENGER': '#f7b731'
     };
-    return colors[tier] || '#016C6C';
+    return colors[tier] || '#6366f1';
   }
 
   getChampionImageUrl(championId: number): string {
@@ -231,6 +269,16 @@ export class SummonerSearchComponent {
     if (!data?.leagues) return null;
     
     return data.leagues.find((league: LeagueEntry) => league.queueType === this.selectedQueue()) || null;
+  }
+
+  getLeagueDisplayName(league: LeagueEntry | null): string {
+    if (!league) return 'Sin clasificar';
+    const tier = league.tier || '';
+    const rank = league.rank || '';
+    if (tier === 'MASTER' || tier === 'GRANDMASTER' || tier === 'CHALLENGER') {
+      return `${tier}`;
+    }
+    return `${tier} ${rank}`.trim();
   }
 
   getLPProgress(): number {

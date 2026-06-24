@@ -24,6 +24,7 @@ export class RouletteComponent implements AfterViewInit {
   private startAngle = 0;
   private arc = 0;
   private spinTimeout: any = null;
+  private showWinnerTimeout: any = null;
   private spinAngleStart = 0;
   private spinTime = 0;
   private spinTimeTotal = 0;
@@ -55,6 +56,10 @@ export class RouletteComponent implements AfterViewInit {
   spin() {
     if (this.isSpinning() || this.options().length < 2) return;
 
+    if (this.showWinnerTimeout) {
+      clearTimeout(this.showWinnerTimeout);
+      this.showWinnerTimeout = null;
+    }
     this.isSpinning.set(true);
     this.winner.set(null);
     this.showWinner.set(false);
@@ -119,11 +124,15 @@ export class RouletteComponent implements AfterViewInit {
     const degrees = this.startAngle * 180 / Math.PI + 90;
     const arcd = this.arc * 180 / Math.PI;
     const index = Math.floor((360 - degrees % 360) / arcd);
-    const winner = this.options()[index];
-    
-    this.winner.set(winner);
-    this.showWinner.set(true);
-    this.startWinnerTimer();
+    const winnerName = this.options()[index];
+
+    // Esperar 4 segundos antes de mostrar al ganador
+    this.showWinnerTimeout = setTimeout(() => {
+      this.showWinnerTimeout = null;
+      this.winner.set(winnerName);
+      this.showWinner.set(true);
+      this.startWinnerTimer();
+    }, 4000);
   }
 
   private startWinnerTimer() {
@@ -162,28 +171,27 @@ export class RouletteComponent implements AfterViewInit {
 
   private getColor(item: number, maxitem: number): string {
     const colors = [
-      '#016C6C',
-      '#006968', 
-      '#00363D',
-      '#014C4A',
+      '#6366f1',
+      '#4f46e5',
+      '#818cf8',
+      '#a5b4fc',
       '#9146ff',
       '#5865f2',
+      '#7c3aed',
       '#E74C3C',
       '#F39C12',
-      '#27AE60',
+      '#F59E0B',
       '#3498DB',
       '#9B59B6',
       '#E67E22',
-      '#1ABC9C',
-      '#34495E',
+      '#64748b',
       '#E91E63',
-      '#FF5722',
-      '#607D8B',
+      '#EC4899',
+      '#06b6d4',
+      '#14b8a6',
       '#795548',
-      '#FF9800',
-      '#4CAF50'
+      '#FF9800'
     ];
-    
     return colors[item % colors.length];
   }
 
@@ -200,7 +208,7 @@ export class RouletteComponent implements AfterViewInit {
 
     this.ctx.clearRect(0, 0, 550, 550);
 
-    this.ctx.strokeStyle = "#016C6C";
+    this.ctx.strokeStyle = "rgba(1, 108, 108, 0.55)";
     this.ctx.lineWidth = 3;
     this.ctx.font = 'bold 14px Arial, sans-serif';
 
@@ -243,7 +251,7 @@ export class RouletteComponent implements AfterViewInit {
     this.ctx.shadowOffsetX = 2;
     this.ctx.shadowOffsetY = 2;
     
-    this.ctx.fillStyle = '#016C6C';
+    this.ctx.fillStyle = '#6366f1';
     this.ctx.beginPath();
     this.ctx.moveTo(275 - 6, arrowY);
     this.ctx.lineTo(275 + 6, arrowY);

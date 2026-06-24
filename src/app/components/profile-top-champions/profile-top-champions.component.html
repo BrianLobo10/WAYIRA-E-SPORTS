@@ -1,0 +1,25 @@
+<div class="aurea-card profile-top-champions-card">
+  <div class="aurea-container">
+    <div class="champions-header">
+      <h2 class="section-title">Top Champions</h2>
+      <span class="period-badge">{{ periodLabel() }}</span>
+    </div>
+    <div class="champions-row">
+      @for (champ of champions().slice(0, maxShow()); track champ.championId) {
+        <div class="champion-tile">
+          <div class="champion-img-wrap">
+            <img [src]="champ.imageUrl" [alt]="champ.championName" class="champion-img">
+            @if (champ.level > 0) {
+              <span class="champion-mastery-badge">{{ champ.level }}</span>
+            }
+          </div>
+          @if (champ.winRate !== undefined && champ.winRate !== null) {
+            <span class="champion-winrate">{{ champ.winRate }}%</span>
+          }
+          <span class="champion-points">{{ champ.points >= 1000 ? (champ.points / 1000).toFixed(1) + 'k' : champ.points }}</span>
+          <span class="champion-name">{{ champ.championName }}</span>
+        </div>
+      }
+    </div>
+  </div>
+</div>

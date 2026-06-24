@@ -1,0 +1,258 @@
+.thd-page {
+  min-height: 100vh;
+  background: #0f1419;
+  color: #e8edf7;
+}
+
+.thd-muted {
+  color: rgba(226, 232, 240, 0.65);
+  padding: 2rem;
+}
+
+.thd-error {
+  color: #fca5a5;
+}
+
+.thd-pad {
+  padding: 2rem 1rem;
+}
+
+.thd-link {
+  color: #93c5fd;
+}
+
+.thd-hero {
+  padding: 4rem 0 2rem;
+  background: linear-gradient(160deg, #1e293b 0%, #0f172a 100%);
+}
+
+.thd-back {
+  color: #93c5fd;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.thd-back:hover {
+  text-decoration: underline;
+}
+
+.thd-hero h1 {
+  margin: 0.75rem 0 0.35rem;
+  font-size: 1.85rem;
+}
+
+.thd-sub {
+  margin: 0 0 1.25rem;
+  opacity: 0.8;
+  font-size: 0.95rem;
+}
+
+.thd-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.thd-pill {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.9rem;
+}
+
+.thd-pill-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+}
+
+.thd-pill--gold {
+  background: linear-gradient(135deg, rgba(250, 204, 21, 0.15), rgba(251, 191, 36, 0.08));
+  border-color: rgba(250, 204, 21, 0.35);
+}
+
+.thd-pill--rose {
+  background: linear-gradient(135deg, rgba(251, 113, 133, 0.12), rgba(244, 114, 182, 0.08));
+  border-color: rgba(251, 113, 133, 0.3);
+}
+
+.thd-body {
+  padding: 2rem 1rem 4rem;
+}
+
+.thd-h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.25rem;
+}
+
+.thd-hint {
+  margin: 0 0 1.25rem;
+  font-size: 0.88rem;
+  opacity: 0.75;
+}
+
+.thd-teams {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.thd-team-btn {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(26, 35, 50, 0.9);
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease;
+}
+
+.thd-team-btn:hover {
+  background: rgba(40, 52, 72, 0.95);
+  transform: translateX(4px);
+}
+
+.thd-team-name {
+  font-weight: 600;
+}
+
+.thd-team-wins {
+  font-size: 0.85rem;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+.thd-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  animation: thd-fade 0.25s ease;
+}
+
+@keyframes thd-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.thd-modal {
+  width: 100%;
+  max-width: 480px;
+  max-height: min(85vh, 640px);
+  overflow-y: auto;
+  background: #1a2332;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 1.25rem 1.35rem;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+  animation: thd-pop 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes thd-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.thd-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.thd-modal-head h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.thd-modal-close {
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.thd-modal-close:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.thd-modal-caption {
+  margin: 0.35rem 0 1rem;
+  font-size: 0.88rem;
+  opacity: 0.8;
+}
+
+.thd-players {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.thd-player-card {
+  padding: 0.75rem 0.85rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.82rem;
+}
+
+.thd-player-name {
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+  color: #fde68a;
+}
+
+.thd-player-row {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.2rem;
+  flex-wrap: wrap;
+}
+
+.thd-player-row span {
+  opacity: 0.65;
+  min-width: 4.5rem;
+}
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}

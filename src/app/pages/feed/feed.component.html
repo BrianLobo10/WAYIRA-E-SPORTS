@@ -1,0 +1,212 @@
+<div class="feed-page">
+  <div class="feed-layout">
+    <!-- Columna izquierda: perfil y actividad -->
+    <aside class="feed-sidebar left">
+      @if (currentUser(); as profile) {
+        <div class="profile-card">
+          <a [routerLink]="['/profile', profile.uid]" class="profile-avatar-link">
+            @if (profile.photoURL) {
+              <img [src]="profile.photoURL" [alt]="profile.displayName" class="profile-avatar">
+            } @else {
+              <div class="profile-avatar-placeholder">{{ (profile.displayName || 'U').charAt(0).toUpperCase() }}</div>
+            }
+          </a>
+          <h2 class="profile-name">{{ profile.displayName || 'Usuario' }}</h2>
+          <p class="profile-handle">{{ getHandle(profile) }}</p>
+          <div class="profile-stats">
+            <span><strong>{{ (profile.followers || []).length }}</strong> Seguidores</span>
+            <span><strong>{{ (profile.following || []).length }}</strong> Siguiendo</span>
+          </div>
+          <a [routerLink]="['/profile', profile.uid]" class="profile-link">Ver perfil</a>
+        </div>
+        <div class="sidebar-block">
+          <h3 class="sidebar-title">Actividad reciente</h3>
+          <p class="sidebar-text">League of Legends · WAYIRA E-SPORTS</p>
+        </div>
+        <a [routerLink]="['/search']" [queryParams]="getGameLogParams()" class="sidebar-block game-log">
+          <span>Tu registro de juego</span>
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </a>
+        <div class="sidebar-block feedback-card">
+          <p>¿Tienes 30 segundos? Ayúdanos a mejorar WAYIRA</p>
+          <a routerLink="/contact" class="btn-feedback">Comparte tu opinión →</a>
+        </div>
+      }
+    </aside>
+
+    <!-- Columna central: publicaciones -->
+    <main class="feed-main">
+      <div class="feed-create" (click)="showCreateModal.set(true)">
+        @if (currentUser()?.photoURL) {
+          <img [src]="currentUser()!.photoURL" [alt]="currentUser()!.displayName" class="create-avatar">
+        } @else {
+          <div class="create-avatar-placeholder">{{ (currentUser()?.displayName || 'U').charAt(0).toUpperCase() }}</div>
+        }
+        <span class="create-placeholder">Publica tus ideas gamer</span>
+      </div>
+      <div class="feed-tabs">
+        <button class="feed-tab" [class.active]="activeTab() === 'all'" (click)="activeTab.set('all')">Para ti</button>
+        <button class="feed-tab" [class.active]="activeTab() === 'following'" (click)="activeTab.set('following')">Sigues</button>
+      </div>
+
+      @if (loading()) {
+        <div class="feed-loading"><span class="spinner"></span> Cargando publicaciones...</div>
+      } @else if (displayedPosts().length === 0) {
+        <div class="feed-empty">
+          <svg class="feed-empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+          @if (activeTab() === 'following') {
+            <p>No hay publicaciones de quienes sigues. Sigue a más usuarios para verlas aquí.</p>
+            <a routerLink="/explore" class="btn-create-first">Explorar usuarios sugeridos</a>
+          } @else {
+            <p>No hay publicaciones aún. ¡Sé el primero en publicar!</p>
+            <button type="button" class="btn-create-first" (click)="showCreateModal.set(true)">Crear publicación</button>
+          }
+        </div>
+      } @else {
+        <div class="feed-posts">
+          @for (post of displayedPosts(); track post.id) {
+            <article class="post-card" (click)="openPost(post)">
+              <div class="post-header">
+                @if (post.authorPhoto) {
+                  <img [src]="post.authorPhoto" [alt]="post.authorName" class="post-author-avatar" (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
+                } @else {
+                  <div class="post-author-avatar-placeholder">{{ post.authorName.charAt(0).toUpperCase() }}</div>
+                }
+                <div class="post-meta">
+                  <a [routerLink]="['/profile', post.authorId]" class="post-author-name" (click)="$event.stopPropagation()">{{ post.authorName }}</a>
+                  <span class="post-date">{{ formatDate(post.createdAt) }}</span>
+                </div>
+              </div>
+              @if (post.images && post.images.length > 0) {
+                <div class="post-media images">
+                  <div class="post-img-wrap">
+                    <img [src]="getCurrentPostImageUrl(post)" [alt]="post.content || ('Publicación de ' + post.authorName)">
+                    @if (post.images.length > 1) {
+                      <button class="carousel-btn prev" (click)="prevImage(post, $event)"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
+                      <button class="carousel-btn next" (click)="nextImage(post, $event)"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
+                    }
+                  </div>
+                </div>
+              } @else if (post.video) {
+                <div class="post-media"><video [src]="post.video" controls></video></div>
+              }
+              <p class="post-text">{{ post.content }}</p>
+              <div class="post-actions">
+                <button class="post-action" (click)="likePost(post, $event)" [class.active]="isLiked(post)">👍 {{ (post.likes || []).length }}</button>
+                <button class="post-action" (click)="dislikePost(post, $event)" [class.active]="isDisliked(post)">👎 {{ (post.dislikes || []).length }}</button>
+                <button class="post-action" (click)="openPost(post); $event.stopPropagation()">💬 {{ (post.comments || []).length }}</button>
+              </div>
+            </article>
+          }
+        </div>
+      }
+    </main>
+
+    <!-- Columna derecha: sugerencias e invitar -->
+    <aside class="feed-sidebar right">
+      <div class="sidebar-block">
+        <h3 class="sidebar-title">Seguir en WAYIRA</h3>
+        @for (user of suggestedUsers(); track user.uid) {
+          <div class="suggested-user">
+            <a [routerLink]="['/profile', user.uid]" class="suggested-avatar-wrap">
+              @if (user.photoURL) {
+                <img [src]="user.photoURL" [alt]="user.displayName" class="suggested-avatar">
+              } @else {
+                <div class="suggested-avatar-placeholder">{{ (user.displayName || '?').charAt(0).toUpperCase() }}</div>
+              }
+            </a>
+            <div class="suggested-info">
+              <a [routerLink]="['/profile', user.uid]" class="suggested-name">{{ user.displayName || 'Usuario' }}</a>
+              <span class="suggested-handle">{{ getHandle(user) }}</span>
+            </div>
+            <button type="button" class="btn-follow" (click)="followUser(user.uid)">Seguir</button>
+          </div>
+        }
+      </div>
+      <div class="sidebar-block invite-card">
+        <h3 class="sidebar-title">Invitar a WAYIRA</h3>
+        <p class="invite-text">Conecta con tus amigos y comparte tu link de invitación.</p>
+        <button type="button" class="btn-invite" (click)="copyInviteLink()">Obtener tu link de invitación</button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Modal crear publicación -->
+  @if (showCreateModal()) {
+    <div class="modal-overlay" (click)="showCreateModal.set(false)">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Nueva publicación</h3>
+          <button type="button" class="modal-close" (click)="showCreateModal.set(false)">×</button>
+        </div>
+        <div class="modal-body">
+          <textarea [(ngModel)]="newPostContent" placeholder="¿Qué estás pensando?" rows="4" class="modal-textarea" [disabled]="uploading()"></textarea>
+          @if (newPostImages().length) {
+            <div class="modal-previews">
+              @for (img of newPostImages(); track $index) {
+                <div class="preview-item"><img [src]="getImagePreview(img)" [alt]="img.name"><button type="button" class="preview-remove" (click)="removeImage($index)">×</button></div>
+              }
+            </div>
+          }
+          @if (newPostVideo()) {
+            <div class="modal-video-preview">
+              <video [src]="getVideoPreview(newPostVideo()!)" controls></video>
+              <button type="button" class="preview-remove" (click)="removeVideo()">Quitar video</button>
+            </div>
+          }
+          <div class="modal-uploads">
+            <label class="upload-btn"><input type="file" accept="image/*" multiple (change)="onImageSelect($event)" [disabled]="uploading()">📷 Imágenes</label>
+            <label class="upload-btn"><input type="file" accept="video/*" (change)="onVideoSelect($event)" [disabled]="uploading()">🎬 Video</label>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn-cancel" (click)="showCreateModal.set(false)">Cancelar</button>
+            <button type="button" class="btn-submit" (click)="createPost()" [disabled]="uploading() || !newPostContent().trim()">
+              @if (uploading()) { Publicando... } @else { Publicar }
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Modal ver publicación -->
+  @if (showPostModal() && selectedPost(); as post) {
+    <div class="modal-overlay" (click)="closePostModal()">
+      <div class="post-modal" (click)="$event.stopPropagation()">
+        <button type="button" class="modal-close top" (click)="closePostModal()">×</button>
+        <div class="post-modal-body">
+          @if (post.images?.length) {
+            <div class="post-modal-media"><img [src]="getCurrentPostImageUrl(post)" [alt]="post.content || ('Publicación de ' + post.authorName)"></div>
+          } @else if (post.video) {
+            <div class="post-modal-media"><video [src]="post.video" controls></video></div>
+          }
+          <div class="post-modal-side">
+            <div class="post-modal-author">
+              @if (post.authorPhoto) {
+                <img [src]="post.authorPhoto" [alt]="post.authorName" class="author-avatar">
+              } @else {
+                <div class="author-avatar-placeholder">{{ post.authorName.charAt(0).toUpperCase() }}</div>
+              }
+              <a [routerLink]="['/profile', post.authorId]" (click)="closePostModal()">{{ post.authorName }}</a>
+            </div>
+            <p class="post-modal-text">{{ post.content }}</p>
+            <div class="post-modal-comments">
+              <h4>Comentarios ({{ (post.comments || []).length }})</h4>
+              @for (c of (post.comments || []); track $index) {
+                <div class="comment-item">
+                  <strong>{{ c.authorName }}</strong> {{ c.content }}
+                </div>
+              }
+            </div>
+            <div class="post-modal-comment-form">
+              <input type="text" [(ngModel)]="newComment" placeholder="Escribe un comentario..." (keyup.enter)="addComment()">
+              <button type="button" class="btn-submit small" (click)="addComment()">Comentar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

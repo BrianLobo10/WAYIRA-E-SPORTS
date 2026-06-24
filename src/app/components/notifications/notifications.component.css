@@ -78,8 +78,8 @@
   font-size: 0.875rem;
   cursor: pointer;
   padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  transition: all 0.3s ease;
+  border-radius: 6px;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 .mark-all-read:hover {

@@ -1,0 +1,350 @@
+/* Bloque cabecera perfil – estilo Aurea: cuadro con espacio y forma definida */
+.profile-header-wrap.aurea-card {
+  background: #1a2332;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.profile-banner {
+  height: 200px;
+  background-size: cover;
+  background-position: top center;
+  background-repeat: no-repeat;
+  background-color: #1a2332;
+  border-radius: 12px 12px 0 0;
+  position: relative;
+}
+
+.profile-banner-edit {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  padding: 0.4rem 0.75rem;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.profile-banner-edit input {
+  display: none;
+}
+
+.profile-header {
+  padding: 1.5rem 1.25rem;
+}
+
+.container.aurea-container {
+  max-width: 935px;
+  margin: 0 auto;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+
+.profile-info.aurea-profile-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.profile-avatar {
+  flex-shrink: 0;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  box-sizing: border-box;
+}
+
+.profile-avatar-overlap {
+  margin-top: -48px;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 0 0 3px #1a2332;
+}
+
+.profile-avatar img,
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  color: #fff;
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+.profile-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-name-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.profile-username {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.profile-rank-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.profile-rank-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.profile-rank-text {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #e5e7eb;
+  letter-spacing: 0.01em;
+}
+
+.btn-edit,
+.btn-follow,
+.btn-message {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-edit:hover,
+.btn-message:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.btn-follow {
+  background: #6366f1;
+  border-color: #6366f1;
+}
+
+.btn-follow:hover {
+  background: #818cf8;
+}
+
+.btn-follow.following {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.profile-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.profile-handle {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.9375rem;
+  margin: 0 0 0.15rem 0;
+}
+
+.profile-joined {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.875rem;
+  margin: 0 0 0.5rem 0;
+}
+
+.profile-stats-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 0.75rem;
+}
+
+.stat-inline.clickable {
+  cursor: pointer;
+}
+
+.stat-inline.clickable:hover {
+  text-decoration: underline;
+}
+
+.stat-sep {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.profile-bio .bio-text,
+.profile-bio .game-info {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0 0 0.25rem 0;
+}
+
+.game-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Tarjeta score "Last 4 Weeks" (Aurea) */
+.profile-score-card.aurea-score-card {
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  min-width: 120px;
+  text-align: center;
+}
+
+.score-period {
+  display: block;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.score-value {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.score-label {
+  display: block;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 0.15rem;
+}
+
+/* Modal confirmación portada */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-dialog.confirm-dialog {
+  background: #1a2332;
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 400px;
+  width: 90%;
+}
+
+.confirm-dialog h3 {
+  margin: 0 0 1rem 0;
+  color: #fff;
+  font-size: 1.125rem;
+}
+
+.cover-preview {
+  max-height: 120px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.cover-preview img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.dialog-actions .btn-cancel {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.dialog-actions .btn-primary {
+  padding: 0.5rem 1rem;
+  background: #6366f1;
+  border: none;
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .profile-banner {
+    height: 140px;
+  }
+
+  .profile-avatar-overlap {
+    margin-top: -36px;
+  }
+
+  .profile-avatar {
+    width: 100px;
+    height: 100px;
+  }
+
+  .profile-info.aurea-profile-info {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .profile-details {
+    width: 100%;
+  }
+
+  .profile-name-section {
+    justify-content: center;
+  }
+
+  .profile-stats-inline {
+    justify-content: center;
+  }
+
+  .profile-score-card.aurea-score-card {
+    width: 100%;
+  }
+}
