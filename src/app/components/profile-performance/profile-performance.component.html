@@ -1,7 +1,7 @@
 <div class="aurea-card profile-performance-card">
   <div class="aurea-container">
     <div class="performance-header">
-      <h2 class="section-title">Performance</h2>
+      <h2 class="section-title">Rendimiento</h2>
       <span class="period-badge">{{ periodLabel() }}</span>
     </div>
     @if (loading()) {
@@ -10,18 +10,18 @@
       <div class="performance-grid">
         <div class="perf-item">
           <span class="perf-value">{{ last4Weeks() ? last4Weeks()!.winRate : stats.winRate }}%</span>
-          <span class="perf-label">Win Rate</span>
+          <span class="perf-label">Tasa de victorias</span>
           @if (last4Weeks()) {
             @let d = last4Weeks()!.winRate - stats.winRate;
             <span class="perf-delta" [class.positive]="d >= 0" [class.negative]="d < 0"
-              title="Diferencia de las últimas 4 semanas respecto a tu media total (all time)">
-              {{ d >= 0 ? '+' : '' }}{{ d }}% vs all time
+              title="Diferencia de las últimas 4 semanas respecto a tu media histórica">
+              {{ d >= 0 ? '+' : '' }}{{ d }}% vs histórico
             </span>
           }
         </div>
         <div class="perf-item">
           <span class="perf-value">{{ stats.wayiraScore }}</span>
-          <span class="perf-label">WAYIRA Score</span>
+          <span class="perf-label">Puntuación WAYIRA</span>
         </div>
         <div class="perf-item">
           <span class="perf-value">{{ totalMatchesThisYear() }}</span>
@@ -34,8 +34,8 @@
           @if (last4Weeks()) {
             @let d = last4Weeks()!.kda - stats.kda;
             <span class="perf-delta" [class.positive]="d >= 0" [class.negative]="d < 0"
-              title="Diferencia de las últimas 4 semanas respecto a tu media total (all time)">
-              {{ d >= 0 ? '+' : '' }}{{ d.toFixed(2) }} vs all time
+              title="Diferencia de las últimas 4 semanas respecto a tu media histórica">
+              {{ d >= 0 ? '+' : '' }}{{ d.toFixed(2) }} vs histórico
             </span>
           }
         </div>

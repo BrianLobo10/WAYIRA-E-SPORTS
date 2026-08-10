@@ -1,55 +1,101 @@
-<section class="hero">
-  <div class="hero-content">
-    <div class="hero-text">
-      <h1 class="hero-title">
-        <span class="gradient-text">WAYIRA</span>
-        <span class="accent-text">E-SPORTS</span>
-      </h1>
-      <p class="hero-subtitle">
-        Impulsando el talento en deportes electrónicos en La Guajira y Colombia
-      </p>
-      <p class="hero-description">
-        Promovemos, difundimos y profesionalizamos los e-Sports a través de eventos,
-        formación y desarrollo de la comunidad gaming.
-      </p>
-      <div class="hero-buttons">
-        <a routerLink="/search" class="btn btn-primary">
-          <span>Buscar Jugador</span>
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+<div class="home">
+  <!-- Hero -->
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="home-container hero__grid">
+      <div class="hero__copy anim-fade-up">
+        <p class="hero__eyebrow">⚡ Competencia · Comunidad · Nivel Pro</p>
+        <h1 id="hero-title" class="hero__title">
+          <span>COMPITE.</span>
+          <span>DOMINA.</span>
+          <span class="hero__title-accent">WAYIRA.</span>
+        </h1>
+        <p class="hero__sub">
+          Torneos competitivos, comunidad activa y stats de League of Legends desde La Guajira para Colombia.
+        </p>
+        <div class="hero__ctas anim-fade-up anim-d3">
+          @if (!isAuthenticated()) {
+            <a routerLink="/login" class="btn btn-primary">
+              <span class="material-icons" aria-hidden="true">person_add</span>
+              Registrarse / Entrar
+            </a>
+          }
+          <a routerLink="/" fragment="torneos" class="btn btn-secondary">
+            <span class="material-icons" aria-hidden="true">emoji_events</span>
+            Ver torneos
+          </a>
+          <a
+            [href]="twitchUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-live"
+            [class.btn-live--off]="!twitchIsLive()">
+            @if (twitchIsLive()) {
+              Live en Twitch
+            } @else {
+              Twitch
+            }
+          </a>
+        </div>
+      </div>
+      <div class="hero__visual anim-fade-up anim-d2">
+        <div class="hero__logo-wrap" aria-hidden="true">
+          <img src="image.png" alt="" class="hero__logo">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Torneos -->
+  <section class="tournaments-sec" id="torneos" aria-labelledby="torneos-title">
+    <div class="home-container">
+      <div class="sec-head anim-fade-up">
+        <h2 id="torneos-title" class="sec-head__title">Torneos destacados</h2>
+        <a routerLink="/tournaments" class="btn btn-ghost sec-head__link">
+          Ver todos
+          <span class="material-icons" aria-hidden="true">arrow_forward</span>
         </a>
-        <a routerLink="/about" class="btn btn-secondary">Conocer más</a>
       </div>
+      @if (loadingTournaments()) {
+        <p class="tournaments-sec__loading anim-fade-up">Cargando torneos…</p>
+      } @else if (hasTournaments()) {
+        <div class="tournaments-sec__grid">
+          @for (t of displayTournaments(); track t.id) {
+            <article class="t-card anim-fade-up" [routerLink]="['/tournaments']">
+              <div class="t-card__band" [class]="t.bandClass"></div>
+              <div class="t-card__body">
+                <div class="t-card__top">
+                  <span class="t-card__game">{{ t.game }}</span>
+                  <span class="t-card__chip" [class]="t.chipClass">{{ t.chipLabel }}</span>
+                </div>
+                <h3 class="t-card__name">{{ t.name }}</h3>
+                <p class="t-card__desc">{{ t.description }}</p>
+                <p class="t-card__prize">{{ t.prize }}</p>
+                <div class="t-card__foot">
+                  <span class="t-card__slots">{{ t.slots }}</span>
+                  <span class="btn t-card__action" [class]="t.actionClass">{{ t.actionLabel }}</span>
+                </div>
+              </div>
+            </article>
+          }
+        </div>
+      } @else {
+        <div class="tournaments-sec__empty anim-fade-up">
+          <span class="material-icons tournaments-sec__empty-icon" aria-hidden="true">emoji_events</span>
+          <p class="tournaments-sec__empty-title">No hay torneos activos ahora</p>
+          <p class="tournaments-sec__empty-text">Cuando publiquemos uno, aparecerá aquí. Mientras tanto puedes revisar el historial o unirte a la comunidad.</p>
+          <a routerLink="/tournaments" class="btn btn-primary">Ir a torneos</a>
+        </div>
+      }
     </div>
-    <div class="hero-image">
-      <div class="floating-element">
-        <img src="image.png" alt="Wayira Esports" class="hero-logo">
-      </div>
+  </section>
+
+  <!-- Twitch Live -->
+  <section class="twitch-sec" aria-labelledby="twitch-live-title">
+    <div class="home-container">
+      <h2 id="twitch-live-title" class="sec-head__title sec-head__title--solo anim-fade-up">Twitch Live</h2>
+      <app-twitch-embed layout="sidebar" class="anim-fade-up anim-d2"></app-twitch-embed>
     </div>
-  </div>
-</section>
+  </section>
 
-<section class="twitch-section">
-  <div class="container">
-    <app-twitch-embed></app-twitch-embed>
-  </div>
-</section>
-
-<app-community-section></app-community-section>
-
-<section class="cta-section">
-  <div class="container">
-    <div class="cta-content">
-      <h2>¿Listo para competir?</h2>
-      <p>Busca perfiles de jugadores de League of Legends y conoce sus estadísticas</p>
-      <a routerLink="/search" class="btn btn-primary btn-large">
-        <span>Buscar Jugador</span>
-        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-        </svg>
-      </a>
-    </div>
-  </div>
-</section>
-
+  <app-community-section></app-community-section>
+</div>

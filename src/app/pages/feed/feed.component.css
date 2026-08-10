@@ -2,7 +2,7 @@
 .feed-layout { display: grid; grid-template-columns: 280px 1fr 300px; gap: 1.5rem; max-width: 1280px; margin: 0 auto; padding: 0 1rem; }
 .feed-sidebar { display: flex; flex-direction: column; gap: 1rem; }
 .profile-card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 1.5rem; text-align: center; }
-.profile-avatar, .profile-avatar-placeholder { width: 80px; height: 80px; border-radius: 50%; margin: 0 auto; display: block; }
+.profile-avatar, .profile-avatar-placeholder { width: 80px; height: 80px; border-radius: 50%; margin: 0 auto; display: block; object-fit: cover; }
 .profile-avatar-placeholder { background: var(--accent-muted); color: var(--accent); font-size: 1.75rem; font-weight: 600; line-height: 80px; }
 .profile-name { font-size: 1.125rem; font-weight: 600; color: var(--text-primary); margin: 0 0 0.25rem 0; }
 .profile-handle { font-size: 0.875rem; color: var(--text-muted); margin: 0 0 1rem 0; }
@@ -18,7 +18,7 @@
 .feed-main { min-width: 0; }
 .feed-create { display: flex; align-items: center; gap: 1rem; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 1rem 1.25rem; cursor: pointer; margin-bottom: 1rem; transition: border-color 0.2s ease, background 0.2s ease; }
 .feed-create:hover { border-color: var(--border-accent, rgba(1, 108, 108, 0.35)); background: var(--bg-elevated); }
-.create-avatar, .create-avatar-placeholder { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; }
+.create-avatar, .create-avatar-placeholder { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; object-fit: cover; }
 .create-avatar-placeholder { background: var(--accent-muted); color: var(--accent); font-weight: 600; display: flex; align-items: center; justify-content: center; font-size: 1.125rem; }
 .create-placeholder { font-size: 0.9375rem; color: var(--text-muted); }
 .feed-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }

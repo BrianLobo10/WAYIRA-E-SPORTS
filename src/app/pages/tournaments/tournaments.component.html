@@ -64,6 +64,9 @@
               </div>
               <h3 class="tournament-name">{{ tournament.name }}</h3>
               <p class="tournament-description">{{ tournament.description }}</p>
+              @if (tournament.prizePoolUsd && tournament.prizePoolUsd > 0) {
+                <p class="tournament-prize">${{ tournament.prizePoolUsd | number:'1.0-0' }} USD en premios</p>
+              }
               <div class="tournament-info">
                 <div class="info-item">
                   <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -222,6 +225,21 @@
               [disabled]="creating()"
               required></textarea>
           </div>
+
+          <div class="form-group">
+            <label for="tournamentPrizeUsd">Premio en USD</label>
+            <input
+              type="number"
+              id="tournamentPrizeUsd"
+              [ngModel]="tournamentPrizeUsd()"
+              (ngModelChange)="tournamentPrizeUsd.set($event === '' || $event === null ? null : +$event)"
+              name="tournamentPrizeUsd"
+              min="0"
+              step="1"
+              placeholder="500"
+              class="form-input"
+              [disabled]="creating()">
+          </div>
           </div>
 
           <div class="form-section">
@@ -247,7 +265,7 @@
               <select
                 id="tournamentMaxTeams"
                 [ngModel]="tournamentMaxTeams()"
-                (ngModelChange)="tournamentMaxTeams.set(+$event)"
+                (ngModelChange)="onMaxTeamsChange($event)"
                 name="tournamentMaxTeams"
                 class="form-select"
                 [disabled]="creating()">
@@ -275,7 +293,7 @@
             </div>
 
             <div class="form-group">
-              <label for="tournamentFormat">¿Bracket de redención?</label>
+              <label for="tournamentFormat">Bracket de redención</label>
               <select
                 id="tournamentFormat"
                 [ngModel]="tournamentFormat()"
@@ -283,15 +301,11 @@
                 name="tournamentFormat"
                 class="form-select"
                 [disabled]="creating()">
-                <option value="single">No — un solo cuadro (sin redención)</option>
-                <option value="double">Sí — cuadro inferior para perdedores</option>
+                <option value="single">No</option>
+                <option value="double">Sí</option>
               </select>
             </div>
           </div>
-          <p class="form-helper-inline">
-            Con redención aparece un segundo cuadro debajo; la gran final sigue siendo la del cuadro superior.
-            Cupo máximo según rondas: <strong>{{ getBracketCapacityForRounds(tournamentConfiguredRounds()) }}</strong> equipos.
-          </p>
           </div>
 
           <div class="form-section">
@@ -329,12 +343,20 @@
 
           @if (!selectedTournament()) {
             <div class="form-section">
-              <h4 class="form-section-title">Inscripciones (opcional)</h4>
+              <h4 class="form-section-title">Inscripciones</h4>
             <div class="form-group registration-import-block">
-              <label for="registrationSheet">Excel / CSV</label>
               <p class="form-helper registration-import-hint">
-                Mismas columnas que el registro manual (equipo, capitán, titulares, suplentes). <strong>.xlsx</strong> o <strong>CSV UTF-8</strong>. No más equipos que el cupo del torneo.
+                Elige la cantidad de equipos arriba, descarga la plantilla, llénala y súbela. También puedes inscribir equipos a mano después de crear el torneo.
               </p>
+              <div class="registration-import-actions">
+                <button
+                  type="button"
+                  class="btn-download-template"
+                  (click)="downloadRegistrationTemplate()"
+                  [disabled]="creating()">
+                  Descargar plantilla · {{ tournamentMaxTeams() }} equipos
+                </button>
+              </div>
               <div class="registration-import-row">
                 <input
                   type="file"
@@ -344,9 +366,9 @@
                   [disabled]="creating()"
                   (change)="onRegistrationFileSelected($event)">
                 @if (registrationImportDraft(); as imp) {
-                  <span class="registration-import-badge">{{ imp.teams.length }} equipo(s) listos</span>
+                  <span class="registration-import-badge">{{ imp.teams.length }} / {{ tournamentMaxTeams() }} equipos</span>
                   <button type="button" class="btn-cancel btn-clear-import" (click)="clearRegistrationImport()" [disabled]="creating()">
-                    Quitar archivo
+                    Quitar
                   </button>
                 }
               </div>

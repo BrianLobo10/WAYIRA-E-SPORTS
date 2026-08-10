@@ -37,6 +37,8 @@ yarn-error.log
 testem.log
 /typings
 
-# System files
-.DS_Store
-Thumbs.db
+# Secrets / env local (nunca subir)
+server/.env
+.env
+.env.*
+!.env.example

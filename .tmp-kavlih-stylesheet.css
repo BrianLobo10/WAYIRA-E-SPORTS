@@ -1,0 +1,599 @@
+/*
+.  RESET
+.  FONT
+.  GENERAL
+.  STYLES
+  .1  Buttons
+.  TOURNAMENT BRACKET
+  .1  Bracket
+  .2  Bracket connections
+  .3  Rounds
+  .4  Textbox
+  .5  Textbox hover
+.  END SCREEN
+  .1  Trophy
+  .2  2nd & 3rd
+.  SMALLFINAL
+.  BACKGROUND
+.  SETTINGS
+  .2  Warning
+  .3  Info
+.  THEMES
+*/
+
+/* . RESET ------------------------------------*/
+ html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed,
+figure, figcaption, footer, header, hgroup,
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: 100%;
+	font: inherit;
+  vertical-align: baseline;
+  overflow: hidden;
+  user-select: None;
+}
+
+*:focus{
+  outline: none;
+}
+
+/* . FONT ------------------------------------*/
+p{
+  font-family: 'Passion One', cursive;
+  font-weight: 400;
+  font-size: 15pt;
+  letter-spacing: 0.6pt;
+  color: white;
+  text-align: center;
+}
+
+h2{
+  font-family: 'Passion One', cursive;
+  font-weight: 700;
+  font-size: 18pt;
+  text-transform: uppercase;
+  color: #2071A4;
+  padding-bottom: 5px;
+}
+
+h3{
+  font-family: 'Passion One', cursive;
+  font-weight: 400;
+  font-size: 16pt;
+  text-transform: uppercase;
+  color: white;
+  text-align: center;
+  padding-bottom: 25px;
+}
+
+input{
+  font-family: 'Press Start 2P';
+}
+
+/* . GENERAL ------------------------------------*/
+:root{
+  --bg-color: rgb(40, 170, 255);
+  --bracket-line-color: rgb(70, 185, 255);
+  --bracket-line-shadow: rgb(30, 135, 200);
+  --settings-bg-color: rgb(90, 190, 255, 0.9);
+}
+
+.rounds, .textbox, .teams, #side-bracket, #settings-icon, #trophy{
+  overflow: visible;
+}
+
+button:active, #settings-icon:active, #infoBtn:active, .textbox:after{
+  transform: scale(0.9);
+}
+
+html, body, #wrapper{
+  width: 100%;
+  height: 100%;
+}
+
+#wrapper{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  background-color: rgb(40, 170, 255);
+  overflow: hidden;
+}
+
+#gitIcon{
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  font-size: 18pt;
+  color: rgba(0, 0, 0, 0.2);
+  z-index: 2;
+}
+
+#gitIcon:active i{transform: scale(0.9); color: rgba(0, 0, 0, 0.3)}
+#gitIcon:hover i{color: rgba(0, 0, 0, 0.15)}
+
+#logo{
+  margin-top: 20px;
+  position: absolute;
+  top: 0;
+  z-index: 2;
+  cursor: pointer;
+}
+
+#logo img{
+  height: 27vh;
+}
+
+/* . STYLES ------------------------------------*/
+/* .1  Buttons ------------------*/
+button{
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: 'Passion One', cursive;
+  font-weight: 400;
+  color: white;
+  cursor: pointer;
+  border: none;
+  box-sizing: border-box;
+  margin: 0;
+  background-color: transparent;
+  border: 2px solid white;
+  padding: 0;
+}
+
+button.btn-wide{
+  width: 100%;
+  height: 35px;
+  font-size: 15pt;
+  border-radius: 20px;
+}
+
+button.btn-small{
+  width: 35px;
+  height: 35px;
+  font-size: 12pt;
+  border-radius: 50%;
+  border: none;
+}
+
+button.toggle{
+  border: 2px dashed white;
+  background-color: transparent;
+}
+
+button.toggle.active{border: 2px solid white;}
+button.red{background-color: rgb(225, 106, 106);}
+button.grey{background-color: #84A8BC;}
+
+button.active, button:hover.active{
+  background-color: #2071A4;
+}
+
+button:hover{
+  border: 2px solid white;
+  background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* . TOURNAMENT BRACKET ------------------------------------*/
+/* .1  Bracket ------------------*/
+#bracket{
+  width: 90vw;
+  max-width: 2200px;
+  height: 80vh;
+  max-height: 1000px;
+  margin: 5vh 6vw 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  overflow: visible;
+}
+
+#bracket .eighth.left{order: 1;}
+#bracket .eighth.right{order: 7;}
+#bracket .quarter.left{order: 2;}
+#bracket .quarter.right{order: 6;}
+#bracket .semi.left{order: 3;}
+#bracket .semi.right{order: 5;}
+#bracket .final{order: 4;}
+
+/* .2  Bracket connections ------------------*/
+#connections{
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  top: 0;
+  z-index: -1;
+}
+
+#connections .shaddow{opacity:0.5;}
+#connections .st0{stroke:var(--bracket-line-shadow);}
+#connections .st1{stroke:var(--bracket-line-color);}
+
+#connections .st0, #connections .st1{
+  fill:none;
+  stroke-width:10;
+  stroke-linejoin:round;
+  stroke-miterlimit:10;
+}
+
+/* .3  Rounds ------------------*/
+#rounds-container{
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: space-between;
+}
+
+.rounds{
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 0 1%;
+}
+
+.rounds.eighth .teams {height: 25%; padding: 15px 0;}
+.rounds.quarter .teams, .rounds.final .teams {height: 50%;}
+.rounds.semi .teams {height: 100%;}
+
+/* .4  Textbox ------------------*/
+.textbox, #winnerbox, #second-box, #third-box{
+  height: 50%;
+  width: 100%;
+  max-width: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background-image: url(../assets/imgs/themeTaddl/textfield.svg);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  position: relative;
+}
+
+.player, #winner, #second, #third{
+  display: flex;
+  margin: auto;
+  width: 85%;
+  background-color: transparent;
+  border: none;
+  text-align: center;
+  font-size: 12pt;
+  color: white;
+  padding: 0;
+}
+
+/* .5  Textbox hover ------------------*/
+.textbox i{
+  top: 0;
+  position: absolute;
+  opacity: 0;
+  font-size: 15pt;
+  width: 30%;
+  height: 100%;
+  display: none;
+  align-items: center;
+  color: white;
+}
+
+.rounds.left i, .rounds.left{
+  right: -15px; 
+  justify-content: flex-end;
+}
+.rounds.right i, .rounds.right{
+  left: -15px; 
+  justify-content: flex-start;
+}
+
+.rounds:not(.eighth) input{cursor: default;}
+
+.rounds.final i{
+  height: 30%;
+  width: 100%;
+  justify-content: center;
+  top: unset;
+}
+
+.rounds.final .top i{
+  top: 47%;
+  align-items: flex-end;
+}
+
+.rounds.final .bottom i{
+  bottom: 47%;
+  align-items: flex-start;
+}
+
+.rounds.final i:before{
+  transform: rotate(90deg);
+}
+
+/*.rounds.eighth.hidden ~ .rounds.quarter{cursor: text;}*/
+
+/* . END SCREEN ------------------------------------*/
+#end-screen{
+  height: 8vh;
+  width: 8vh;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1;
+  overflow: visible;
+}
+
+/* .1  Trophy ------------------*/
+#winnerbox{
+  display: none;
+  height: 0;
+}
+
+#trophy-container{
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 10vh;
+  width: 10vh;
+  cursor: pointer;
+  display: flex;
+  overflow: visible;
+  z-index: 1;
+}
+
+/* .2  2nd & 3rd ------------------*/
+#second, #third, #winner{
+  cursor: default;
+}
+
+#second-box, #third-box{
+  margin-bottom: -2.2vh;
+  z-index: -1;
+}
+
+#second-container, #third-container{
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  height: 15vh;
+  width: 15vh;
+  margin-top: 13vh; 
+}
+
+#trophy, #second-container img, #third-container img{
+  height: 50%;
+}
+
+/* .3  Button & Message ------------------*/
+
+#end-back-btn{
+  z-index: 1;
+  position: absolute;
+  flex-direction: column;
+  align-items: center;
+  bottom: 5vh;
+  display: none;
+}
+
+#end-back-btn #message{
+  margin-top: 20px;
+  display: none;
+}
+
+#end-back-btn button{width: 90px;}
+
+/* . SMALLFINAL ------------------------------------*/
+#side-bracket {
+  width: 40%;
+  height: 0%;
+  display: none;
+  justify-content: center;
+  position: absolute;
+  bottom: 7%;
+}
+
+#side-bracket .rounds {
+  width: 30%;
+  height: 100%;
+  margin: 0 10px;
+  max-width: 180px;
+}
+
+#side-bracket .textbox {
+  height: 100%;
+}
+
+#smallfinal-trophy {
+  width: 18%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+}
+
+#smallfinal-trophy img{
+  height: 4.5vh;
+}
+
+/* . BACKGROUND ------------------------------------*/
+#background{
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  position: absolute;
+  bottom: 0;
+  z-index: 0;
+}
+
+#gradient{
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, var(--bg-color) 40%, rgba(40, 170, 255, 0) 65%);
+  z-index: 1;
+  position: absolute;
+}
+
+#grid{
+  opacity: 0.15;
+  height: 80%;
+  width: 100%;
+  /* More in grid.css */
+}
+
+/* . SETTINGS ------------------------------------*/
+#settings{
+  z-index: 1;
+  position: absolute;
+  bottom: 25px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: visible;
+}
+
+#settings-icon{
+  width: 50px;
+  height: 50px;
+  cursor: pointer;
+}
+
+#settings-icon path:not(#outline){
+  fill: white;
+  transform-origin: center;
+}
+
+#exit{transform: scale(0);}
+#outline{fill: none;}
+
+#settings #settings-icon:hover #gearwheel, #settings.active #gearwheel{
+  animation: rotating 3s linear infinite;
+}
+
+@keyframes rotating {to {transform: rotate(360deg);}}
+
+#inner-settings{
+  margin-top: 2vh;
+  padding: 0;
+  border: 1px solid white;
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  border-radius: 0px;
+  background-color: var(--settings-bg-color);
+  height: 0;
+  width: 0;
+  opacity: 0;
+  overflow: visible;
+}
+
+#inner-settings > div:not(:first-child){
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  opacity: 0;
+}
+
+#inner-settings > div > button{margin-top: 10px;}
+#inner-settings > #mid-icons > button:first-child{margin-top: 0;}
+
+#infoBtn{
+  color: white;
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  z-index: 1;
+}
+
+#infoBtn i:hover{
+  color: #2071A4;
+  cursor: pointer;
+}
+
+/* .2  Warning ------------------*/
+#reset{
+  position: absolute;
+  background-color: rgb(206, 96, 96);
+  top: 0;
+  left: 0;
+  justify-content: center !important;
+  transform: scale(1);
+  border-radius: 20px;
+}
+
+#reset:not(.hidden){
+  transition: all 0.4s ease;
+}
+
+#reset .btn-container{
+  display: flex;
+  width: 65%;
+  justify-content: space-between;
+}
+
+#reset.hidden{
+  top: 45px;
+  transform: scale(0);
+  border-radius: 150px;
+  opacity: 0 !important;
+}
+
+#reset button.cancel{opacity: 0.5; margin-right: 20px;}
+#reset button.cancel:hover{opacity: 1;}
+#reset button.confirm{border: 2px solid white;}
+
+/* .3  Info ------------------*/
+#infos{
+  height: inherit !important;
+  width: inherit !important;
+  overflow: visible;
+  position: absolute;
+}
+
+#infos img{
+  display: none;
+  position: absolute;
+}
+
+#infoPlayers{transform: translate(-225.9px, -121px) scale(0.4)}
+#infoReset{transform: translate(18px, 65px) scale(0.3)}
+#infoShuffle{transform: translate(-89px, -179px) scale(0.4)}
+#infoThemes{transform: translate(238px, -70px) scale(0.5)}
+#infoThird{transform: translate(117px, -136px) scale(0.6)}
+
+/* . THEMES ------------------------------------*/
+#themes button:nth-child(3):after, #themes button:nth-child(3):before{
+  position: absolute;
+  content: "";
+  height: 2px;
+  background-color: red;
+  width: 100%;
+  top: 50%;
+  left: 50%;
+}
+#themes button:nth-child(3):after{transform: translate(-50%, -50%) rotateZ(15deg)}
+#themes button:nth-child(3):before{transform: translate(-50%, -50%) rotateZ(-15deg)}

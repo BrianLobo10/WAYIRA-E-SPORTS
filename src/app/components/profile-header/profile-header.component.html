@@ -1,5 +1,5 @@
 <div class="profile-header-wrap aurea-card">
-  <div class="profile-banner" [style.backgroundImage]="profile().coverImageURL ? 'url(' + profile().coverImageURL + ')' : 'linear-gradient(135deg, #1a2332 0%, #2d3748 100%)'">
+  <div class="profile-banner" [style.backgroundImage]="profile().coverImageURL ? 'url(' + profile().coverImageURL + ')' : 'linear-gradient(135deg, var(--surface-2) 0%, var(--surface-3) 100%)'">
     @if (isOwnProfile()) {
       <label class="profile-banner-edit">
         <input type="file" accept="image/*" (change)="onCoverChange($event)" [disabled]="uploadingCover()">

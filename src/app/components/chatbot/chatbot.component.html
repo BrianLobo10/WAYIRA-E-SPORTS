@@ -1,0 +1,96 @@
+<div class="potato" [class.potato--open]="isOpen()">
+  <button type="button" class="potato__toggle" (click)="toggleChat()" [attr.aria-expanded]="isOpen()">
+    @if (!isOpen()) {
+      <span class="potato__emoji" aria-hidden="true">🥔</span>
+    } @else {
+      <span class="material-icons" aria-hidden="true">close</span>
+    }
+    <span class="potato__label">POTATO</span>
+  </button>
+
+  @if (isOpen()) {
+    <div class="potato__panel" role="dialog" aria-label="Chat POTATO">
+      <header class="potato__head">
+        <div class="potato__head-main">
+          <span class="potato__avatar" aria-hidden="true">🥔</span>
+          <div>
+            <strong>POTATO</strong>
+            <span class="potato__status">
+              @if (isAuthenticated()) {
+                <span class="potato__dot"></span> Memoria activa
+              } @else {
+                <a routerLink="/login" class="potato__login-link">Inicia sesión para guardar chat</a>
+              }
+            </span>
+          </div>
+        </div>
+        <div class="potato__actions">
+          <button type="button" class="potato__icon-btn" (click)="toggleMenu()" aria-label="Opciones">
+            <span class="material-icons">more_vert</span>
+          </button>
+          <button type="button" class="potato__icon-btn" (click)="toggleChat()" aria-label="Cerrar">
+            <span class="material-icons">expand_more</span>
+          </button>
+        </div>
+        @if (menuOpen()) {
+          <div class="potato__menu">
+            <button type="button" class="potato__menu-item" (click)="askClear()">
+              <span class="material-icons">delete_outline</span>
+              Borrar conversación
+            </button>
+          </div>
+        }
+      </header>
+
+      @if (confirmClear()) {
+        <div class="potato__confirm">
+          <p>¿Borrar todo el historial del chat?</p>
+          <div class="potato__confirm-actions">
+            <button type="button" class="btn btn-secondary potato__confirm-btn" (click)="cancelClear()">Cancelar</button>
+            <button type="button" class="btn btn-primary potato__confirm-btn" (click)="clearChat()">Borrar</button>
+          </div>
+        </div>
+      }
+
+      <div class="potato__messages" #chatMessages>
+        @if (loadingHistory()) {
+          <p class="potato__loading">Cargando tu conversación…</p>
+        }
+        @for (msg of messages(); track $index) {
+          <div class="potato__row" [class.potato__row--user]="msg.sender === 'user'">
+            @if (msg.sender === 'bot') {
+              <span class="potato__bubble-avatar" aria-hidden="true">🥔</span>
+            }
+            <div class="potato__bubble" [class.potato__bubble--user]="msg.sender === 'user'">
+              {{ msg.text }}
+            </div>
+          </div>
+        }
+        @if (isTyping()) {
+          <div class="potato__row">
+            <span class="potato__bubble-avatar" aria-hidden="true">🥔</span>
+            <div class="potato__bubble potato__bubble--typing">
+              <span class="potato__dots"><span></span><span></span><span></span></span>
+            </div>
+          </div>
+        }
+      </div>
+
+      <form class="potato__form" (submit)="$event.preventDefault(); sendMessage()">
+        <input
+          type="text"
+          class="potato__input"
+          placeholder="Escribe tu mensaje…"
+          maxlength="280"
+          [ngModel]="userInput()"
+          (ngModelChange)="userInput.set($event)"
+          (keydown)="onKeydown($event)"
+          name="chatInput"
+          autocomplete="off">
+        <button type="submit" class="btn btn-primary potato__send" [disabled]="isTyping() || !userInput().trim()">
+          <span class="material-icons" aria-hidden="true">send</span>
+        </button>
+      </form>
+    </div>
+  }
+</div>

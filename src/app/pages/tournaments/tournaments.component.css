@@ -1,9 +1,11 @@
 .tournaments-page {
   min-height: 100vh;
+  background: var(--bg);
 }
 
 .tournaments-hero {
-  background: linear-gradient(135deg, #1a2332 0%, #2d3748 100%);
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
   padding: 8rem 0 4rem;
   position: relative;
   overflow: hidden;
@@ -17,32 +19,33 @@
 }
 
 .hero-content h1 {
-  font-size: 3.5rem;
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
   font-weight: 700;
   margin-bottom: 1.5rem;
-  color: #ffffff;
+  color: var(--white);
 }
 
 .hero-content p {
-  font-size: 1.25rem;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.125rem;
+  color: var(--teal-muted);
   line-height: 1.8;
 }
 
 .hero-historial-link {
-  color: #93c5fd;
+  color: var(--teal-accent);
   text-decoration: underline;
   text-underline-offset: 3px;
   white-space: nowrap;
 }
 
 .hero-historial-link:hover {
-  color: #bfdbfe;
+  color: var(--teal-hover);
 }
 
 .tournaments-content {
   padding: 4rem 2rem;
-  background: #0f1419;
+  background: var(--bg);
   scroll-margin-top: 1rem;
 }
 
@@ -79,6 +82,32 @@
   justify-content: flex-end;
   gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+.registration-import-actions {
+  margin-bottom: 0.65rem;
+}
+
+.btn-download-template {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--teal-pri);
+  background: rgba(1, 108, 108, 0.12);
+  color: var(--teal-accent);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-download-template:hover:not(:disabled) {
+  background: rgba(1, 108, 108, 0.22);
+}
+
+.btn-download-template:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .registration-import-block {
@@ -162,7 +191,7 @@
   width: 50px;
   height: 50px;
   border: 4px solid rgba(99, 102, 241, 0.2);
-  border-top-color: #6366f1;
+  border-top-color: var(--teal-pri);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -205,7 +234,7 @@
 }
 
 .tournament-card {
-  background: #1a2332;
+  background: var(--surface-1);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   padding: 2rem;
@@ -228,7 +257,7 @@
 .tournament-game {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #818cf8;
+  color: var(--teal-hover);
   background: rgba(99, 102, 241, 0.2);
   padding: 0.375rem 0.75rem;
   border-radius: 12px;
@@ -271,7 +300,14 @@
   font-size: 0.9375rem;
   color: rgba(255, 255, 255, 0.7);
   line-height: 1.6;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.tournament-prize {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--gold, #ffb800);
+  margin-bottom: 1.25rem;
 }
 
 .tournament-info {
@@ -310,7 +346,7 @@
 }
 
 .btn-register {
-  background: linear-gradient(135deg, #6366f1, #818cf8);
+  background: linear-gradient(135deg, var(--teal-pri), var(--teal-hover));
   color: #ffffff;
 }
 
@@ -326,7 +362,7 @@
 
 .btn-view-bracket {
   background: rgba(99, 102, 241, 0.2);
-  color: #818cf8;
+  color: var(--teal-hover);
   border: 1px solid rgba(99, 102, 241, 0.3);
 }
 
@@ -429,7 +465,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  background: #6366f1;
+  background: var(--teal-pri);
   color: #fff;
   display: flex;
   align-items: center;
@@ -451,7 +487,7 @@
   cursor: pointer;
   transition: all 0.3s ease;
   background: rgba(99, 102, 241, 0.2);
-  color: #818cf8;
+  color: var(--teal-hover);
   border: 1px solid rgba(99, 102, 241, 0.3);
   display: flex;
   align-items: center;
@@ -481,7 +517,7 @@
 
 .tournament-modal,
 .register-modal {
-  background: #1a2332;
+  background: var(--surface-1);
   border-radius: 16px;
   max-width: 600px;
   width: 100%;
@@ -492,6 +528,61 @@
 
 .create-tournament-modal {
   max-width: 680px;
+  color-scheme: dark;
+}
+
+.create-tournament-modal .form-input,
+.create-tournament-modal .form-textarea,
+.create-tournament-modal .form-select {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  color: var(--white);
+}
+
+.create-tournament-modal .form-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2301C4C4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1rem;
+  padding-right: 2.75rem;
+}
+
+.create-tournament-modal .form-select option {
+  background: var(--surface-2);
+  color: var(--white);
+}
+
+.create-tournament-modal .form-input:focus,
+.create-tournament-modal .form-textarea:focus,
+.create-tournament-modal .form-select:focus {
+  border-color: var(--teal-accent);
+  box-shadow: 0 0 0 3px rgba(1, 108, 108, 0.2);
+}
+
+.create-tournament-modal input[type="datetime-local"] {
+  color-scheme: dark;
+}
+
+.create-tournament-modal input[type="file"]::file-selector-button {
+  margin-right: 0.75rem;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--border-accent);
+  border-radius: 6px;
+  background: rgba(1, 108, 108, 0.12);
+  color: var(--teal-accent);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.create-tournament-modal input[type="file"]::file-selector-button:hover {
+  background: rgba(1, 108, 108, 0.22);
+  border-color: var(--teal-accent);
 }
 
 .create-tournament-modal .tournament-form {
@@ -515,11 +606,12 @@
 
 .create-tournament-modal .form-section-title {
   margin: 0 0 0.15rem 0;
+  font-family: var(--font-display);
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(148, 163, 184, 0.95);
+  color: var(--teal-muted);
 }
 
 .create-tournament-modal .form-helper-inline {
@@ -621,8 +713,8 @@
 .form-textarea:focus,
 .form-select:focus {
   outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  border-color: var(--teal-accent);
+  box-shadow: 0 0 0 3px rgba(1, 108, 108, 0.2);
 }
 
 .form-input:disabled,
@@ -675,7 +767,7 @@
   padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 8px;
-  background: linear-gradient(135deg, #6366f1, #818cf8);
+  background: linear-gradient(135deg, var(--teal-pri), var(--teal-hover));
   color: #ffffff;
   font-size: 0.9375rem;
   font-weight: 600;
@@ -765,7 +857,7 @@
 .file-upload-label:hover .file-upload-content {
   border-color: rgba(99, 102, 241, 0.5);
   background: rgba(99, 102, 241, 0.1);
-  color: #818cf8;
+  color: var(--teal-hover);
 }
 
 .file-upload-content svg {
@@ -830,7 +922,7 @@
 }
 
 .player-card.active {
-  border-color: #6366f1;
+  border-color: var(--teal-pri);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
 }
 
@@ -851,8 +943,8 @@
   max-height: 85vh !important;
   min-height: 650px !important;
   z-index: 1001 !important;
-  background: #1a2332 !important;
-  border: 2px solid #6366f1 !important;
+  background: var(--surface-1) !important;
+  border: 2px solid var(--teal-pri) !important;
   box-shadow: 0 20px 60px rgba(99, 102, 241, 0.5) !important;
   border-radius: 16px !important;
   overflow: hidden !important;
@@ -877,7 +969,7 @@
   left: 0.5rem;
   width: 28px;
   height: 28px;
-  background: linear-gradient(135deg, #6366f1, #818cf8);
+  background: linear-gradient(135deg, var(--teal-pri), var(--teal-hover));
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -922,7 +1014,7 @@
 .champion-name {
   font-size: 0.75rem;
   font-weight: 700;
-  color: #818cf8;
+  color: var(--teal-hover);
   display: block;
   white-space: nowrap;
   overflow: hidden;
@@ -935,7 +1027,7 @@
 .card-summoner-name {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #818cf8;
+  color: var(--teal-hover);
   margin: 0.5rem 0.75rem;
   letter-spacing: 0.05em;
   text-align: center;
@@ -984,7 +1076,7 @@
   border: 1px solid rgba(99, 102, 241, 0.3);
   border-radius: 6px;
   padding: 0.375rem;
-  color: #818cf8;
+  color: var(--teal-hover);
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
@@ -1077,7 +1169,7 @@
 .player-card-form .form-input:focus,
 .player-card-form .form-select:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: var(--teal-pri);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
   background: rgba(0, 0, 0, 0.4);
 }
@@ -1103,7 +1195,7 @@
   padding: 1rem 2rem;
   border: none;
   border-radius: 8px;
-  background: linear-gradient(135deg, #6366f1, #818cf8);
+  background: linear-gradient(135deg, var(--teal-pri), var(--teal-hover));
   color: #ffffff;
   font-size: 1rem;
   font-weight: 600;
@@ -1138,7 +1230,7 @@
 }
 
 .bracket-modal {
-  background: #1a2332;
+  background: var(--surface-1);
   border-radius: 16px;
   max-width: 1200px;
   width: 100%;
@@ -1298,7 +1390,7 @@
 
 .team-score {
   font-weight: 700;
-  color: #818cf8;
+  color: var(--teal-hover);
   font-size: 1.125rem;
   min-width: 30px;
   text-align: right;
@@ -1663,7 +1755,7 @@
 
 .btn-auto-bracket:hover:not(:disabled) {
   background: rgba(99, 102, 241, 0.25);
-  border-color: #6366f1;
+  border-color: var(--teal-pri);
   color: #fff;
 }
 

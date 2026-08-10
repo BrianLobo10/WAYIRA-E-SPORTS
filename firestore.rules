@@ -30,6 +30,11 @@ service cloud.firestore {
         request.resource.data.followers is list;
       // Permitir eliminar solo el propio perfil
       allow delete: if request.auth != null && request.auth.uid == userId;
+
+      // Chat POTATO: historial privado por usuario
+      match /potatoChat/{docId} {
+        allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+      }
     }
     
     // Posts: lectura pública para autenticados, escritura autenticada

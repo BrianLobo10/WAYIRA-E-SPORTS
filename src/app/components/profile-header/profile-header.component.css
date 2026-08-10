@@ -1,10 +1,10 @@
 /* Bloque cabecera perfil – estilo Aurea: cuadro con espacio y forma definida */
 .profile-header-wrap.aurea-card {
-  background: #1a2332;
+  background: var(--surface-1);
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
 }
 
 .profile-banner {
@@ -12,7 +12,7 @@
   background-size: cover;
   background-position: top center;
   background-repeat: no-repeat;
-  background-color: #1a2332;
+  background-color: var(--surface-2);
   border-radius: 12px 12px 0 0;
   position: relative;
 }
@@ -65,7 +65,7 @@
   margin-top: -48px;
   position: relative;
   z-index: 1;
-  box-shadow: 0 0 0 3px #1a2332;
+  box-shadow: 0 0 0 3px var(--surface-1);
 }
 
 .profile-avatar img,
@@ -81,7 +81,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #6366f1, #818cf8);
+  background: linear-gradient(135deg, var(--teal-pri), var(--teal-accent));
   color: #fff;
   font-size: 2.5rem;
   font-weight: 700;
@@ -152,12 +152,12 @@
 }
 
 .btn-follow {
-  background: #6366f1;
-  border-color: #6366f1;
+  background: var(--teal-pri);
+  border-color: var(--teal-pri);
 }
 
 .btn-follow:hover {
-  background: #818cf8;
+  background: var(--teal-accent);
 }
 
 .btn-follow.following {
@@ -262,7 +262,7 @@
 }
 
 .modal-dialog.confirm-dialog {
-  background: #1a2332;
+  background: var(--surface-1);
   border-radius: 12px;
   padding: 1.5rem;
   max-width: 400px;
@@ -305,7 +305,7 @@
 
 .dialog-actions .btn-primary {
   padding: 0.5rem 1rem;
-  background: #6366f1;
+  background: var(--teal-pri);
   border: none;
   color: #fff;
   border-radius: 8px;

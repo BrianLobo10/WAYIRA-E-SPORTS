@@ -5,10 +5,29 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+function normalizeRiotApiKey(raw) {
+  if (!raw) return null;
+  let value = String(raw).trim();
+  while (value.startsWith('RGAPI-RGAPI-')) {
+    value = value.replace(/^RGAPI-/, '');
+  }
+  return value;
+}
+
+function normalizeOpenAiKey(raw) {
+  if (!raw) return null;
+  let value = String(raw).trim();
+  while (value.startsWith('sk-sk-')) {
+    value = value.replace(/^sk-/, '');
+  }
+  return value;
+}
+
 const app = express();
 // Cloud Run usa PORT automáticamente, local usa 3001
 const PORT = process.env.PORT || 3001;
-const RIOT_API_KEY = process.env.RIOT_API_KEY;
+const RIOT_API_KEY = normalizeRiotApiKey(process.env.RIOT_API_KEY);
+const OPENAI_API_KEY = normalizeOpenAiKey(process.env.OPENAI_API_KEY);
 
 // Middleware
 app.use(cors({
@@ -259,6 +278,59 @@ app.get('/api/summoner/:region/:gameName/:tagLine', async (req, res) => {
   }
 });
 
+// Endpoint para obtener datos del account usando PUUID
+app.get('/api/account/:region/:puuid', async (req, res) => {
+  try {
+    const { puuid } = req.params;
+
+    if (!RIOT_API_KEY) {
+      return res.status(503).json({
+        error: 'El servicio no está disponible en este momento. Por favor, intenta más tarde.'
+      });
+    }
+
+    const cacheKey = `account-${puuid}`;
+    const accountData = await getCachedData(cacheKey, async () => {
+      const accountUrl = `https://americas.api.riotgames.com/riot/account/v1/accounts/by-puuid/${puuid}`;
+      const accountResponse = await fetch(accountUrl, {
+        headers: { 'X-Riot-Token': RIOT_API_KEY }
+      });
+
+      if (!accountResponse.ok) {
+        if (accountResponse.status === 401 || accountResponse.status === 403 || accountResponse.status === 429) {
+          throw new Error('SERVICE_UNAVAILABLE');
+        }
+        if (accountResponse.status === 404) {
+          throw new Error('Cuenta no encontrada');
+        }
+        throw new Error(`Error obteniendo cuenta: ${accountResponse.status}`);
+      }
+
+      return accountResponse.json();
+    }, 30000);
+
+    res.json({
+      puuid: accountData.puuid,
+      gameName: accountData.gameName,
+      tagLine: accountData.tagLine
+    });
+  } catch (err) {
+    console.error('Error en /api/account:', err);
+    const msg = (err.message || '').toString();
+    let statusCode = 500;
+    if (msg.includes('no encontrada')) {
+      statusCode = 404;
+    } else if (msg === 'SERVICE_UNAVAILABLE') {
+      statusCode = 503;
+    }
+    res.status(statusCode).json({
+      error: statusCode === 503
+        ? 'El servicio no está disponible en este momento. Por favor, intenta más tarde.'
+        : (err.message || 'Error interno del servidor')
+    });
+  }
+});
+
 // Endpoint para obtener las últimas partidas (con paginación hasta ~1000; API Riot limita 100 por request)
 app.get('/api/matches/:region/:puuid', async (req, res) => {
   try {
@@ -426,6 +498,236 @@ async function getChampionRanking(region, championId, type) {
     return null;
   }
 }
+
+// Estadísticas sociales (dev local — producción usa Firebase Functions)
+const DISCORD_INVITE_CODE_DEFAULT = 'HHBMumv8S';
+const TWITCH_LOGIN = 'wayiraesports';
+
+function parseOptionalInt(value) {
+  if (value == null || value === '') return null;
+  const n = parseInt(String(value), 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+function getDiscordInviteCode() {
+  return (process.env.DISCORD_INVITE_CODE || DISCORD_INVITE_CODE_DEFAULT).trim();
+}
+
+async function fetchDiscordMemberCount() {
+  const res = await fetch(
+    `https://discord.com/api/v10/invites/${getDiscordInviteCode()}?with_counts=true`
+  );
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.approximate_member_count ?? null;
+}
+
+async function fetchTwitchFollowers() {
+  const clientId = process.env.TWITCH_CLIENT_ID;
+  const clientSecret = process.env.TWITCH_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return null;
+
+  const tokenRes = await fetch('https://id.twitch.tv/oauth2/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: 'client_credentials'
+    })
+  });
+  if (!tokenRes.ok) return null;
+  const { access_token: token } = await tokenRes.json();
+  if (!token) return null;
+
+  const userRes = await fetch(`https://api.twitch.tv/helix/users?login=${TWITCH_LOGIN}`, {
+    headers: { 'Client-ID': clientId, Authorization: `Bearer ${token}` }
+  });
+  if (!userRes.ok) return null;
+  const userData = await userRes.json();
+  const userId = userData.data?.[0]?.id;
+  if (!userId) return null;
+
+  const followRes = await fetch(
+    `https://api.twitch.tv/helix/channels/followers?broadcaster_id=${userId}&first=1`,
+    { headers: { 'Client-ID': clientId, Authorization: `Bearer ${token}` } }
+  );
+  if (!followRes.ok) return null;
+  const followData = await followRes.json();
+  return followData.total ?? null;
+}
+
+async function fetchTwitchIsLiveHelix() {
+  const clientId = process.env.TWITCH_CLIENT_ID;
+  const clientSecret = process.env.TWITCH_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return null;
+
+  const tokenRes = await fetch('https://id.twitch.tv/oauth2/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: 'client_credentials'
+    })
+  });
+  if (!tokenRes.ok) return null;
+  const { access_token: token } = await tokenRes.json();
+  if (!token) return null;
+
+  const streamRes = await fetch(
+    `https://api.twitch.tv/helix/streams?user_login=${TWITCH_LOGIN}`,
+    { headers: { 'Client-ID': clientId, Authorization: `Bearer ${token}` } }
+  );
+  if (!streamRes.ok) return null;
+  const streamData = await streamRes.json();
+  return Array.isArray(streamData.data) && streamData.data.length > 0;
+}
+
+/** Fallback sin credenciales Twitch (decapi.me). */
+async function fetchTwitchIsLivePublic() {
+  try {
+    const res = await fetch(`https://decapi.me/twitch/uptime/${TWITCH_LOGIN}`, {
+      headers: { Accept: 'text/plain' },
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!res.ok) return null;
+    const text = (await res.text()).trim().toLowerCase();
+    if (!text || text.includes('offline') || text.includes('[error]')) return false;
+    return true;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchTwitchIsLive() {
+  const helix = await fetchTwitchIsLiveHelix();
+  if (helix !== null) return helix;
+  const fallback = await fetchTwitchIsLivePublic();
+  return fallback === true;
+}
+
+app.get('/api/twitch/live', async (req, res) => {
+  try {
+    const live = await fetchTwitchIsLive();
+    res.set('Cache-Control', 'no-store, max-age=0');
+    res.json({
+      live,
+      channel: TWITCH_LOGIN,
+      updatedAt: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('twitch/live error:', err);
+    res.status(500).json({ live: false, channel: TWITCH_LOGIN, error: 'No se pudo verificar el directo' });
+  }
+});
+
+app.get('/api/social-stats', async (req, res) => {
+  try {
+    let discord = parseOptionalInt(process.env.SOCIAL_DISCORD);
+    let twitch = parseOptionalInt(process.env.SOCIAL_TWITCH);
+    let instagram = parseOptionalInt(process.env.SOCIAL_INSTAGRAM);
+
+    try {
+      const liveDiscord = await fetchDiscordMemberCount();
+      if (liveDiscord != null) discord = liveDiscord;
+    } catch (e) {
+      console.warn('social-stats discord:', e.message);
+    }
+
+    try {
+      const liveTwitch = await fetchTwitchFollowers();
+      if (liveTwitch != null) twitch = liveTwitch;
+    } catch (e) {
+      console.warn('social-stats twitch:', e.message);
+    }
+
+    let twitchLive = false;
+    try {
+      twitchLive = await fetchTwitchIsLive();
+    } catch (e) {
+      console.warn('social-stats twitch live:', e.message);
+    }
+
+    res.json({
+      discord,
+      twitch,
+      instagram,
+      registeredUsers: null,
+      twitchLive,
+      updatedAt: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('social-stats error:', err);
+    res.status(500).json({ error: 'No se pudieron cargar las estadísticas sociales' });
+  }
+});
+
+// Chatbot POTATO — OpenAI en local si OPENAI_API_KEY está en server/.env
+const POTATO_SYSTEM = `Eres POTATO 🥔, asistente amable de WAYIRA E-SPORTS (La Guajira, Colombia).
+Tono cálido y breve. Solo WAYIRA (torneos, ruleta, buscar, Discord, Twitch) y League of Legends.
+Máximo 3 frases. Español.`;
+
+function potatoLocalReply(message) {
+  const lower = String(message).toLowerCase();
+  if (/\b(hola|hi|hey)\b/.test(lower)) {
+    return '¡Hola! Soy POTATO 🥔 Pregúntame sobre torneos, buscar jugadores o LoL.';
+  }
+  if (/\b(torneo|inscrib)\b/.test(lower)) {
+    return 'Ve a Torneos en el menú para ver eventos e inscribirte.';
+  }
+  if (/\b(buscar|jugador|invocador)\b/.test(lower)) {
+    return 'Usa Buscar con nombre, tag y región (LA1, LA2, etc.).';
+  }
+  return 'Solo respondo sobre WAYIRA E-SPORTS y League of Legends.';
+}
+
+async function callOpenAI(message, conversationHistory) {
+  const messages = [
+    { role: 'system', content: POTATO_SYSTEM },
+    ...(conversationHistory || []).slice(-4).map((m) => ({
+      role: m.sender === 'user' ? 'user' : 'assistant',
+      content: String(m.text).slice(0, 500)
+    })),
+    { role: 'user', content: String(message).slice(0, 280) }
+  ];
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages,
+      max_tokens: 150,
+      temperature: 0.35
+    })
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content?.trim();
+}
+
+app.post('/api/chatbot', async (req, res) => {
+  try {
+    const { message = '', conversationHistory = [] } = req.body || {};
+    if (!String(message).trim()) {
+      return res.status(400).json({ error: 'Mensaje requerido' });
+    }
+    if (OPENAI_API_KEY) {
+      try {
+        const ai = await callOpenAI(message, conversationHistory);
+        if (ai) return res.json({ response: ai, model: 'gpt-4o-mini' });
+      } catch (e) {
+        console.warn('OpenAI local:', e.message);
+      }
+    }
+    res.json({ response: potatoLocalReply(message), model: 'local' });
+  } catch (e) {
+    res.status(500).json({ error: 'Error procesando el mensaje' });
+  }
+});
 
 // Health check
 app.get('/health', (req, res) => {

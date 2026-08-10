@@ -44,25 +44,17 @@ export class HeaderComponent implements OnInit, OnDestroy {
     
     this.subscriptions.add(
       this.firebaseService.currentUser.subscribe((user: User | null) => {
-        console.log('Header: Auth state changed, user:', user?.uid);
         this.isAuthenticated.set(!!user);
         if (user) {
           this.loadUserProfile(user.uid);
-          // Suscribirse a cambios en tiempo real del perfil
           this.subscribeToUserProfile(user.uid);
-          // Cargar contador de mensajes no leídos
           this.subscriptions.add(
             this.firebaseService.getUnreadMessagesCount(user.uid).subscribe({
-              next: (count) => {
-                this.unreadMessagesCount.set(count);
-              },
-              error: (error) => {
-                console.error('Error cargando contador de mensajes no leídos:', error);
-              }
+              next: (count) => this.unreadMessagesCount.set(count),
+              error: (error) => console.error('Error cargando contador de mensajes no leídos:', error)
             })
           );
         } else {
-          // Limpiar suscripción del perfil cuando el usuario cierra sesión
           if (this.profileSubscription) {
             this.profileSubscription.unsubscribe();
             this.profileSubscription = null;
@@ -73,48 +65,20 @@ export class HeaderComponent implements OnInit, OnDestroy {
         }
       })
     );
-    
-    // Cargar torneo activo después de un pequeño delay para evitar problemas de contexto de inyección
-    setTimeout(() => {
-      this.subscriptions.add(
-        this.firebaseService.getActiveTournament().subscribe({
-          next: (tournament) => {
-            this.activeTournament.set(tournament);
-          },
-          error: (error) => {
-            console.error('Error loading active tournament:', error);
-          }
-        })
-      );
-      
-      // Verificar si hay torneos disponibles (upcoming, ongoing, confirmed)
-      this.subscriptions.add(
-        this.firebaseService.hasAvailableTournaments().subscribe({
-          next: (hasTournaments) => {
-            this.hasAvailableTournaments.set(hasTournaments);
-          },
-          error: (error) => {
-            console.error('Error checking available tournaments:', error);
-            this.hasAvailableTournaments.set(false);
-          }
-        })
-      );
-      
-      // Cargar contador de mensajes no leídos
-      const currentUser = this.firebaseService.getCurrentUser();
-      if (currentUser) {
-        this.subscriptions.add(
-          this.firebaseService.getUnreadMessagesCount(currentUser.uid).subscribe({
-            next: (count) => {
-              this.unreadMessagesCount.set(count);
-            },
-            error: (error) => {
-              console.error('Error cargando contador de mensajes no leídos:', error);
-            }
-          })
-        );
-      }
-    }, 0);
+
+    this.subscriptions.add(
+      this.firebaseService.getActiveTournament().subscribe({
+        next: (tournament) => this.activeTournament.set(tournament),
+        error: (error) => console.error('Error loading active tournament:', error)
+      })
+    );
+
+    this.subscriptions.add(
+      this.firebaseService.hasAvailableTournaments().subscribe({
+        next: (hasTournaments) => this.hasAvailableTournaments.set(hasTournaments),
+        error: () => this.hasAvailableTournaments.set(false)
+      })
+    );
   }
 
   subscribeToUserProfile(uid: string) {
@@ -237,6 +201,14 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.dropdownOpen = false;
     this.moreDropdownOpen = false;
     this.profileDropdownOpen = false;
+  }
+
+  closeMobileNav() {
+    this.closeMenu();
+  }
+
+  openMoreDropdown() {
+    this.moreDropdownOpen = true;
   }
 
   scrollToSection(sectionId: string) {

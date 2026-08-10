@@ -697,7 +697,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
         const winRate = totalLeague > 0 ? Math.round((wins / totalLeague) * 1000) / 10 : 0;
 
         forkJoin({
-          matches: this.riotApiService.getMatches(region, puuid, 250),
+          matches: this.riotApiService.getMatches(region, puuid, 100),
           mastery: this.riotApiService.getChampionMastery(region, puuid, 6)
         }).subscribe({
           next: ({ matches, mastery }) => {
@@ -1058,9 +1058,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
     const entry = this.soloQRank();
     if (!entry) return null;
     return {
-      period: 'Solo Q',
+      period: 'Clasificatoria solo',
       value: this.formatSoloQRank(entry),
-      label: 'mejor rango'
+      label: 'Mejor rango'
     };
   }
 

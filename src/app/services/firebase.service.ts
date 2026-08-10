@@ -129,6 +129,7 @@ export interface Tournament {
   lowerBracket?: BracketMatch[]; // bracket de recuperación (doble eliminación)
   confirmed?: boolean;
   confirmedAt?: Timestamp;
+  prizePoolUsd?: number;
   /** Mejor de 1 o 3 en la gran final */
   grandFinalBestOf?: 1 | 3;
   /** Mejor de 1 o 3 en la final del bracket de redención */
@@ -1425,22 +1426,25 @@ export class FirebaseService {
   }
 
   getActiveTournament(): Observable<Tournament | null> {
-    const tournamentsRef = collection(this.firestore, 'tournaments');
-    const q = query(
-      tournamentsRef,
-      where('status', '==', 'ongoing'),
-      limit(10)
-    );
-    return from(runInInjectionContext(this.injector, () => getDocs(q))).pipe(
+    return from(
+      runInInjectionContext(this.injector, () => {
+        const tournamentsRef = collection(this.firestore, 'tournaments');
+        const q = query(
+          tournamentsRef,
+          where('status', '==', 'ongoing'),
+          limit(10)
+        );
+        return getDocs(q);
+      })
+    ).pipe(
       map((snapshot: QuerySnapshot<DocumentData>) => {
         if (snapshot.empty) return null;
-        // Ordenar por createdAt en memoria
         const tournaments = snapshot.docs
           .map((doc: any) => ({ id: doc.id, ...doc.data() } as Tournament))
           .sort((a, b) => {
             const aTime = a.createdAt?.toMillis() || 0;
             const bTime = b.createdAt?.toMillis() || 0;
-            return bTime - aTime; // Descendente
+            return bTime - aTime;
           });
         return tournaments[0] || null;
       })
@@ -1471,23 +1475,23 @@ export class FirebaseService {
   }
 
   hasAvailableTournaments(): Observable<boolean> {
-    const tournamentsRef = collection(this.firestore, 'tournaments');
-    const q = query(
-      tournamentsRef,
-      where('status', 'in', ['upcoming', 'ongoing', 'confirmed']),
-      limit(1)
-    );
     return new Observable<boolean>((observer) => {
-      const unsubscribe = runInInjectionContext(this.injector, () =>
-        onSnapshot(
+      const unsubscribe = runInInjectionContext(this.injector, () => {
+        const tournamentsRef = collection(this.firestore, 'tournaments');
+        const q = query(
+          tournamentsRef,
+          where('status', 'in', ['upcoming', 'ongoing', 'confirmed']),
+          limit(1)
+        );
+        return onSnapshot(
           q,
           (snapshot) => observer.next(!snapshot.empty),
           (error) => {
             console.error('Error checking available tournaments:', error);
             observer.next(false);
           }
-        )
-      );
+        );
+      });
       return () => unsubscribe();
     });
   }
