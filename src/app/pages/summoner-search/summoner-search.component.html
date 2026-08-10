@@ -1,6 +1,6 @@
 <div class="search-container">
   <div class="search-hero">
-    <h1>Buscar Jugador de League of Legends</h1>
+    <h1>Buscar <span>invocador</span></h1>
     <p>Encuentra estadísticas y ranking de cualquier invocador</p>
   </div>
 
@@ -20,7 +20,7 @@
         </div>
 
         <div class="form-group">
-          <label for="tagLine">Tagline</label>
+          <label for="tagLine">Etiqueta</label>
           <input
             type="text"
             id="tagLine"
@@ -101,30 +101,11 @@
       <div class="stats-mastery-container">
         <div class="ranked-stats-section">
           <h3 class="section-title">Estadísticas Rankeadas</h3>
-          <div class="queue-toggle">
-            <button class="toggle-btn" [class.active]="selectedQueue() === 'RANKED_SOLO_5x5'" (click)="switchQueue('RANKED_SOLO_5x5')">Solo/Duo</button>
-            <button class="toggle-btn" [class.active]="selectedQueue() === 'RANKED_FLEX_SR'" (click)="switchQueue('RANKED_FLEX_SR')">Flex</button>
+          <div class="ranked-coming-soon">
+            <span class="coming-soon-badge">Próximamente</span>
+            <p class="coming-soon-title">Esta sección aún no está disponible</p>
+            <p class="coming-soon-text">Estamos trabajando para mostrar aquí estadísticas rankeadas detalladas. Por ahora puedes ver maestría de campeones y partidas recientes.</p>
           </div>
-
-          @if (getCurrentLeague(); as league) {
-            <div class="rank-info">
-              <div class="rank-icon">
-                <img class="rank-image" [src]="getRankImageUrl(league.tier)" [alt]="league.tier">
-              </div>
-              <div class="rank-details">
-                <div class="rank-name" [style.color]="getTierColor(league.tier)">{{ getLeagueDisplayName(league) }}</div>
-                <div class="lp-amount">{{ league.leaguePoints }} LP</div>
-                <div class="rank-stats-row">
-                  <span class="wins-losses">{{ league.wins }}W / {{ league.losses }}L</span>
-                  <span class="winrate">{{ getWinRate(league) }}% WR</span>
-                </div>
-              </div>
-            </div>
-          } @else {
-            <div class="no-ranked">
-              <p>Este jugador no tiene clasificación en esta cola.</p>
-            </div>
-          }
         </div>
 
         <div class="mastery-section">

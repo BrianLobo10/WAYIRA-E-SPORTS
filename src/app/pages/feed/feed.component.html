@@ -6,7 +6,7 @@
         <div class="profile-card">
           <a [routerLink]="['/profile', profile.uid]" class="profile-avatar-link">
             @if (profile.photoURL) {
-              <img [src]="profile.photoURL" [alt]="profile.displayName" class="profile-avatar">
+              <img [src]="profile.photoURL" [alt]="profile.displayName" class="profile-avatar" (error)="onAvatarError($event)">
             } @else {
               <div class="profile-avatar-placeholder">{{ (profile.displayName || 'U').charAt(0).toUpperCase() }}</div>
             }
@@ -38,7 +38,7 @@
     <main class="feed-main">
       <div class="feed-create" (click)="showCreateModal.set(true)">
         @if (currentUser()?.photoURL) {
-          <img [src]="currentUser()!.photoURL" [alt]="currentUser()!.displayName" class="create-avatar">
+          <img [src]="currentUser()!.photoURL" [alt]="currentUser()!.displayName" class="create-avatar" (error)="onAvatarError($event)">
         } @else {
           <div class="create-avatar-placeholder">{{ (currentUser()?.displayName || 'U').charAt(0).toUpperCase() }}</div>
         }
@@ -70,7 +70,7 @@
             <article class="post-card" (click)="openPost(post)">
               <div class="post-header">
                 @if (post.authorPhoto) {
-                  <img [src]="post.authorPhoto" [alt]="post.authorName" class="post-author-avatar" (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
+                  <img [src]="post.authorPhoto" [alt]="post.authorName" class="post-author-avatar" (error)="onAvatarError($event)">
                 } @else {
                   <div class="post-author-avatar-placeholder">{{ post.authorName.charAt(0).toUpperCase() }}</div>
                 }
@@ -112,7 +112,7 @@
           <div class="suggested-user">
             <a [routerLink]="['/profile', user.uid]" class="suggested-avatar-wrap">
               @if (user.photoURL) {
-                <img [src]="user.photoURL" [alt]="user.displayName" class="suggested-avatar">
+                <img [src]="user.photoURL" [alt]="user.displayName" class="suggested-avatar" (error)="onAvatarError($event)">
               } @else {
                 <div class="suggested-avatar-placeholder">{{ (user.displayName || '?').charAt(0).toUpperCase() }}</div>
               }
@@ -185,7 +185,7 @@
           <div class="post-modal-side">
             <div class="post-modal-author">
               @if (post.authorPhoto) {
-                <img [src]="post.authorPhoto" [alt]="post.authorName" class="author-avatar">
+                <img [src]="post.authorPhoto" [alt]="post.authorName" class="author-avatar" (error)="onAvatarError($event)">
               } @else {
                 <div class="author-avatar-placeholder">{{ post.authorName.charAt(0).toUpperCase() }}</div>
               }

@@ -9,6 +9,7 @@ import { BracketCanvasComponent } from '../../components/bracket-canvas/bracket-
 import {
   parseRegistrationRows,
   readSpreadsheetFile,
+  downloadRegistrationTemplate,
   type RegistrationImportResult
 } from '../../utils/tournament-registration-import';
 
@@ -80,6 +81,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
   tournamentMaxTeams = signal(16);
   tournamentConfiguredRounds = signal(4);
   tournamentFormat = signal<'single' | 'double'>('double');
+  tournamentPrizeUsd = signal<number | null>(null);
 
   games = [
     'League of Legends',
@@ -170,7 +172,14 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     this.tournamentMaxTeams.set(16);
     this.tournamentConfiguredRounds.set(4);
     this.tournamentFormat.set('double');
+    this.tournamentPrizeUsd.set(null);
     this.registrationImportDraft.set(null);
+  }
+
+  downloadRegistrationTemplate() {
+    const max = this.tournamentMaxTeams();
+    const label = this.tournamentName().trim() || 'torneo';
+    downloadRegistrationTemplate(max, label);
   }
 
   private getCurrentDateTimeLocal(): Date {
@@ -223,6 +232,11 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     return this.teamCounts.filter(count => count <= capacity);
   }
 
+  onMaxTeamsChange(value: number | string) {
+    this.tournamentMaxTeams.set(+value);
+    this.registrationImportDraft.set(null);
+  }
+
   onConfiguredRoundsChange(rounds: number | string) {
     const n = typeof rounds === 'string' ? parseInt(rounds, 10) : rounds;
     if (Number.isNaN(n)) return;
@@ -231,6 +245,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     if (!availableCounts.includes(this.tournamentMaxTeams())) {
       this.tournamentMaxTeams.set(availableCounts[availableCounts.length - 1] ?? 2);
     }
+    this.registrationImportDraft.set(null);
   }
 
   getTournamentConfiguredRounds(tournament: Tournament | null | undefined): number {
@@ -310,7 +325,8 @@ export class TournamentsComponent implements OnInit, OnDestroy {
           endDate: Timestamp.fromDate(endDate),
           maxTeams: newMax,
           format: this.tournamentFormat(),
-          configuredRounds: this.tournamentConfiguredRounds()
+          configuredRounds: this.tournamentConfiguredRounds(),
+          prizePoolUsd: this.tournamentPrizeUsd() ?? null
         };
 
         if (this.isPracticeTournament(tournamentToEdit)) {
@@ -342,6 +358,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
           maxTeams: this.tournamentMaxTeams(),
           format: this.tournamentFormat(),
           configuredRounds: this.tournamentConfiguredRounds(),
+          prizePoolUsd: this.tournamentPrizeUsd() ?? undefined,
           createdBy: user.uid
         });
 
@@ -1701,8 +1718,9 @@ export class TournamentsComponent implements OnInit, OnDestroy {
         return;
       }
       this.registrationImportDraft.set(result);
-      const w = result.warnings.length ? `\n\n${result.warnings.slice(0, 8).join('\n')}` : '';
-      alert(`Listo: ${result.teams.length} equipo(s) detectados en «${file.name}». Se cargarán al crear el torneo.${w}`);
+      if (result.warnings.length) {
+        console.warn(result.warnings);
+      }
     } catch (e: any) {
       console.error(e);
       alert(`No se pudo leer el archivo: ${e?.message || e}`);
@@ -1794,6 +1812,11 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     this.tournamentMaxTeams.set(tournament.maxTeams);
     this.tournamentFormat.set(tournament.format || 'single');
     this.tournamentConfiguredRounds.set(this.getTournamentConfiguredRounds(tournament));
+    this.tournamentPrizeUsd.set(
+      typeof tournament.prizePoolUsd === 'number' && tournament.prizePoolUsd > 0
+        ? tournament.prizePoolUsd
+        : null
+    );
     
     // Convertir timestamps a formato datetime-local
     const startDate = tournament.startDate.toDate();

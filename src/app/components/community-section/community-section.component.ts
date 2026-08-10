@@ -1,5 +1,13 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { SOCIAL_LINKS } from '../../config/social.config';
+
+interface SocialCard {
+  name: string;
+  icon: string;
+  theme: 'discord' | 'twitch' | 'instagram' | 'facebook';
+  action: () => void;
+}
 
 @Component({
   selector: 'app-community-section',
@@ -9,19 +17,46 @@ import { CommonModule } from '@angular/common';
   styleUrls: ['./community-section.component.css']
 })
 export class CommunitySectionComponent {
-  discordUrl = 'https://discord.gg/HHBMumv8S';
-  facebookUrl = 'https://www.facebook.com/share/1TtgfPoLSL/';
-  instagramUrl = 'https://www.instagram.com/wayiraesports?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==';
+  readonly socialCards: SocialCard[] = [
+    {
+      name: 'Discord',
+      icon: 'forum',
+      theme: 'discord',
+      action: () => this.goToDiscord()
+    },
+    {
+      name: 'Twitch',
+      icon: 'live_tv',
+      theme: 'twitch',
+      action: () => this.goToTwitch()
+    },
+    {
+      name: 'Instagram',
+      icon: 'photo_camera',
+      theme: 'instagram',
+      action: () => this.goToInstagram()
+    },
+    {
+      name: 'Facebook',
+      icon: 'thumb_up',
+      theme: 'facebook',
+      action: () => this.goToFacebook()
+    }
+  ];
 
   goToDiscord() {
-    window.open(this.discordUrl, '_blank');
+    window.open(SOCIAL_LINKS.discord, '_blank', 'noopener');
   }
 
-  goToFacebook() {
-    window.open(this.facebookUrl, '_blank');
+  goToTwitch() {
+    window.open(SOCIAL_LINKS.twitch, '_blank', 'noopener');
   }
 
   goToInstagram() {
-    window.open(this.instagramUrl, '_blank');
+    window.open(SOCIAL_LINKS.instagram, '_blank', 'noopener');
+  }
+
+  goToFacebook() {
+    window.open(SOCIAL_LINKS.facebook, '_blank', 'noopener');
   }
 }

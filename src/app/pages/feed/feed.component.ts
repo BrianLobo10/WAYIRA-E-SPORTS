@@ -61,18 +61,41 @@ export class FeedComponent implements OnInit, OnDestroy {
   private async loadUserProfile(user: User) {
     try {
       const profile = await this.firebaseService.getUserProfile(user.uid);
-      this.currentUser.set(profile);
+      if (profile) {
+        this.currentUser.set({
+          ...profile,
+          photoURL: profile.photoURL || user.photoURL || undefined
+        });
+        return;
+      }
+      this.currentUser.set({
+        uid: user.uid,
+        email: user.email || '',
+        displayName: user.displayName || 'Usuario',
+        photoURL: user.photoURL || undefined,
+        role: 'user',
+        followers: [],
+        following: [],
+        createdAt: Timestamp.now()
+      });
     } catch {
       this.currentUser.set({
         uid: user.uid,
         email: user.email || '',
         displayName: user.displayName || 'Usuario',
+        photoURL: user.photoURL || undefined,
         role: 'user',
         followers: [],
         following: [],
         createdAt: Timestamp.now()
       });
     }
+  }
+
+  onAvatarError(event: Event) {
+    const img = event.target as HTMLImageElement;
+    img.onerror = null;
+    img.src = 'https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png';
   }
 
   ngOnDestroy() {

@@ -3,6 +3,42 @@ import type { PlayerInfo, Team } from '../services/firebase.service';
 
 const ROSTER_ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Support'] as const;
 
+export function buildRegistrationTemplateHeaders(): string[] {
+  const headers = [
+    'Nombre del equipo',
+    'Tag del equipo',
+    'Nombre del capitán',
+    'Correo del capitán',
+    'WhatsApp',
+    'Discord del capitán'
+  ];
+  for (const role of ROSTER_ROLES) {
+    headers.push(
+      `${role} - Nombre completo`,
+      `${role} - Nick`,
+      `${role} - Riot ID`,
+      `${role} - Rango`
+    );
+  }
+  headers.push('Suplente 1', 'Suplente 2');
+  return headers;
+}
+
+/** Genera y descarga .xlsx con filas vacías según cupo del torneo */
+export function downloadRegistrationTemplate(maxTeams: number, fileLabel = 'torneo'): void {
+  const headers = buildRegistrationTemplateHeaders();
+  const rows: string[][] = [headers];
+  for (let i = 0; i < maxTeams; i++) {
+    rows.push(new Array(headers.length).fill(''));
+  }
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = headers.map(h => ({ wch: Math.min(32, Math.max(14, h.length + 2)) }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Equipos');
+  const safe = fileLabel.replace(/[^\w\s-áéíóúñÁÉÍÓÚÑ]/g, '').trim().replace(/\s+/g, '-') || 'torneo';
+  XLSX.writeFile(wb, `WAYIRA-inscripcion-${maxTeams}-equipos-${safe}.xlsx`);
+}
+
 function normHeader(s: string): string {
   return (s ?? '')
     .trim()

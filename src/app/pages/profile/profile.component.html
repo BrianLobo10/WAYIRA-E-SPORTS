@@ -36,12 +36,12 @@
         [riotStats]="riotStats()"
         [last4Weeks]="last4WeeksStats()"
         [totalMatchesThisYear]="getTotalMatchesThisYear()"
-        periodLabel="Last 4 Weeks" />
+        periodLabel="Últimas 4 semanas" />
 
       @if (topChampions().length > 0) {
         <app-profile-top-champions
           [champions]="getChampionsForDisplay()"
-          periodLabel="Last 4 Weeks"
+          periodLabel="Últimas 4 semanas"
           [maxShow]="8" />
       }
 
@@ -50,7 +50,7 @@
           [data]="timelineData"
           totalLabel="Este año"
           activitiesLabel="partidas"
-          hint="Partidas por día (últimas 250 de la API Riot). Días 1–31 por mes (Ene–Dic)." />
+          hint="Partidas registradas por mes en el año en curso." />
       }
     }
 
