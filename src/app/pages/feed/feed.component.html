@@ -6,7 +6,7 @@
         <div class="profile-card">
           <a [routerLink]="['/profile', profile.uid]" class="profile-avatar-link">
             @if (profile.photoURL) {
-              <img [src]="profile.photoURL" [alt]="profile.displayName" class="profile-avatar" (error)="onAvatarError($event)">
+              <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="profile.photoURL" [alt]="profile.displayName" class="profile-avatar" (error)="onAvatarError($event)">
             } @else {
               <div class="profile-avatar-placeholder">{{ (profile.displayName || 'U').charAt(0).toUpperCase() }}</div>
             }
@@ -38,7 +38,7 @@
     <main class="feed-main">
       <div class="feed-create" (click)="showCreateModal.set(true)">
         @if (currentUser()?.photoURL) {
-          <img [src]="currentUser()!.photoURL" [alt]="currentUser()!.displayName" class="create-avatar" (error)="onAvatarError($event)">
+          <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="currentUser()!.photoURL" [alt]="currentUser()!.displayName" class="create-avatar" (error)="onAvatarError($event)">
         } @else {
           <div class="create-avatar-placeholder">{{ (currentUser()?.displayName || 'U').charAt(0).toUpperCase() }}</div>
         }
@@ -70,7 +70,7 @@
             <article class="post-card" (click)="openPost(post)">
               <div class="post-header">
                 @if (post.authorPhoto) {
-                  <img [src]="post.authorPhoto" [alt]="post.authorName" class="post-author-avatar" (error)="onAvatarError($event)">
+                  <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="post.authorPhoto" [alt]="post.authorName" class="post-author-avatar" (error)="onAvatarError($event)">
                 } @else {
                   <div class="post-author-avatar-placeholder">{{ post.authorName.charAt(0).toUpperCase() }}</div>
                 }
@@ -82,7 +82,7 @@
               @if (post.images && post.images.length > 0) {
                 <div class="post-media images">
                   <div class="post-img-wrap">
-                    <img [src]="getCurrentPostImageUrl(post)" [alt]="post.content || ('Publicación de ' + post.authorName)">
+                    <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="getCurrentPostImageUrl(post)" [alt]="post.content || ('Publicación de ' + post.authorName)">
                     @if (post.images.length > 1) {
                       <button class="carousel-btn prev" (click)="prevImage(post, $event)"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
                       <button class="carousel-btn next" (click)="nextImage(post, $event)"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
@@ -112,7 +112,7 @@
           <div class="suggested-user">
             <a [routerLink]="['/profile', user.uid]" class="suggested-avatar-wrap">
               @if (user.photoURL) {
-                <img [src]="user.photoURL" [alt]="user.displayName" class="suggested-avatar" (error)="onAvatarError($event)">
+                <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="user.photoURL" [alt]="user.displayName" class="suggested-avatar" (error)="onAvatarError($event)">
               } @else {
                 <div class="suggested-avatar-placeholder">{{ (user.displayName || '?').charAt(0).toUpperCase() }}</div>
               }
@@ -146,7 +146,7 @@
           @if (newPostImages().length) {
             <div class="modal-previews">
               @for (img of newPostImages(); track $index) {
-                <div class="preview-item"><img [src]="getImagePreview(img)" [alt]="img.name"><button type="button" class="preview-remove" (click)="removeImage($index)">×</button></div>
+                <div class="preview-item"><img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="getImagePreview(img)" [alt]="img.name"><button type="button" class="preview-remove" (click)="removeImage($index)">×</button></div>
               }
             </div>
           }
@@ -178,14 +178,14 @@
         <button type="button" class="modal-close top" (click)="closePostModal()">×</button>
         <div class="post-modal-body">
           @if (post.images?.length) {
-            <div class="post-modal-media"><img [src]="getCurrentPostImageUrl(post)" [alt]="post.content || ('Publicación de ' + post.authorName)"></div>
+            <div class="post-modal-media"><img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="getCurrentPostImageUrl(post)" [alt]="post.content || ('Publicación de ' + post.authorName)"></div>
           } @else if (post.video) {
             <div class="post-modal-media"><video [src]="post.video" controls></video></div>
           }
           <div class="post-modal-side">
             <div class="post-modal-author">
               @if (post.authorPhoto) {
-                <img [src]="post.authorPhoto" [alt]="post.authorName" class="author-avatar" (error)="onAvatarError($event)">
+                <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="post.authorPhoto" [alt]="post.authorName" class="author-avatar" (error)="onAvatarError($event)">
               } @else {
                 <div class="author-avatar-placeholder">{{ post.authorName.charAt(0).toUpperCase() }}</div>
               }

@@ -13,10 +13,10 @@
 .page-title {
   font-family: var(--font-display);
   font-size: 1.75rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--white);
   margin: 0 0 0.5rem 0;
-  letter-spacing: 0.02em;
+  letter-spacing: -0.02em;
 }
 
 .page-subtitle {
@@ -52,15 +52,15 @@
   display: inline-block;
   margin-top: 1rem;
   padding: 0.5rem 1rem;
-  border-radius: 8px;
-  background: rgba(1, 108, 108, 0.15);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.075);
   color: var(--teal-accent);
   text-decoration: none;
   font-weight: 500;
 }
 
 .btn-back:hover {
-  background: rgba(1, 108, 108, 0.25);
+  background: rgba(255, 255, 255, 0.125);
 }
 
 .users-grid {
@@ -74,9 +74,9 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem 1.25rem;
-  background: var(--bg-card, #1a2332);
+  background: var(--bg-card, var(--surface-2));
   border: 1px solid var(--border-subtle, rgba(255,255,255,0.08));
-  border-radius: 12px;
+  border-radius: 2px;
   transition: border-color 0.2s;
 }
 
@@ -104,7 +104,7 @@
 }
 
 .user-avatar-placeholder {
-  background: rgba(1, 108, 108, 0.2);
+  background: rgba(255, 255, 255, 0.1);
   color: var(--teal-accent);
   font-weight: 600;
   display: flex;
@@ -120,7 +120,7 @@
 .user-name {
   font-size: 1rem;
   font-weight: 600;
-  color: var(--text-primary, #fff);
+  color: var(--text-primary, #eceae3);
   margin: 0 0 0.15rem 0;
 }
 
@@ -142,7 +142,7 @@
 .btn-follow {
   flex-shrink: 0;
   padding: 0.4rem 1rem;
-  border-radius: 8px;
+  border-radius: 2px;
   border: 1px solid var(--teal-pri);
   background: transparent;
   color: var(--teal-accent);
@@ -153,7 +153,7 @@
 }
 
 .btn-follow:hover:not(.following) {
-  background: rgba(1, 108, 108, 0.15);
+  background: rgba(255, 255, 255, 0.075);
 }
 
 .btn-follow.following {
@@ -169,7 +169,7 @@
 
 .btn-load-more {
   padding: 0.6rem 1.5rem;
-  border-radius: 8px;
+  border-radius: 2px;
   border: 1px solid var(--border);
   background: var(--surface-1);
   color: var(--teal-muted);

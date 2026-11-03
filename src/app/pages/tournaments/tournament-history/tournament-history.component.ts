@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { FirebaseService, Tournament } from '../../../services/firebase.service';
+import type { Tournament } from '../../../models';
+import { TournamentService } from '../../../services/tournament.service';
 
 @Component({
   selector: 'app-tournament-history',
@@ -12,7 +13,7 @@ import { FirebaseService, Tournament } from '../../../services/firebase.service'
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TournamentHistoryComponent implements OnInit {
-  private firebase = inject(FirebaseService);
+  private firebase = inject(TournamentService);
 
   loading = signal(true);
   tournaments = signal<Tournament[]>([]);

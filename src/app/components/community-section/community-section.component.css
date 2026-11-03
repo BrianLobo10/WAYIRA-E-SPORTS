@@ -5,9 +5,9 @@
 }
 
 .community__container {
-  max-width: 1280px;
+  max-width: var(--container);
   margin: 0 auto;
-  padding: 0 var(--space-4);
+  padding: 0 var(--gutter);
 }
 
 .community__grid {
@@ -19,16 +19,16 @@
 
 .community__eyebrow {
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 400;
   letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--teal-accent);
+  font-family: var(--font-mono); text-transform: uppercase;
+  color: var(--text-secondary);
   margin-bottom: var(--space-2);
 }
 
 .community__headline {
   font-family: var(--font-display);
-  font-weight: 700;
+  font-weight: 500;
   font-size: clamp(2.375rem, 5vw, 4.5rem);
   line-height: 0.95;
   margin-bottom: var(--space-3);
@@ -62,25 +62,32 @@
   align-items: center;
   gap: var(--space-2);
   width: 100%;
-  padding: var(--space-3);
+  min-height: 72px;
+  padding: 14px 18px;
   background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  border: none;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
   cursor: pointer;
   text-align: left;
   color: var(--white);
-  transition: transform var(--transition-fast), border-color var(--transition-fast);
+  transition: box-shadow 200ms var(--ease-out), background-color 200ms var(--ease-out), transform 160ms var(--ease-out);
 }
 
-.social-row:hover {
-  transform: translateX(5px);
-  border-color: var(--teal-pri);
+.social-row:active { transform: scale(0.98); }
+
+@media (hover: hover) {
+  .social-row:hover {
+    background: var(--surface-2);
+    box-shadow: var(--shadow-1), 0 0 0 1px var(--teal-pri);
+  }
+  .social-row:hover .social-row__chev { transform: translateX(3px); color: var(--teal-accent); }
 }
 
 .social-row__icon-box {
   width: 44px;
   height: 44px;
-  border-radius: 10px;
+  border-radius: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -98,19 +105,18 @@
   flex: 1;
   min-width: 0;
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 1.0625rem;
   color: var(--white);
   text-align: left;
 }
 
-.social-row__chev { color: var(--teal-muted); font-size: 22px; flex-shrink: 0; }
+.social-row__chev { color: var(--teal-muted); font-size: 22px; flex-shrink: 0; transition: transform 200ms var(--ease-out), color 200ms var(--ease-out); }
 
 @media (max-width: 900px) {
   .community__grid { grid-template-columns: 1fr; gap: var(--space-5); }
 }
 
 @media (max-width: 560px) {
-  .community__container { padding: 0 var(--space-2); }
   .community__ctas { flex-direction: column; align-items: stretch; }
 }

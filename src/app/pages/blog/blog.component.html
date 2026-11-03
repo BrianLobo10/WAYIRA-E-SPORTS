@@ -41,7 +41,7 @@
                   <div class="carousel-container">
                     @for (image of post.images; track $index) {
                       <div class="carousel-slide" [class.active]="$index === getCurrentImageIndex(post.id || '')">
-                        <img [src]="image" [alt]="post.content">
+                        <img loading="lazy" decoding="async" [src]="image" [alt]="post.content">
                       </div>
                     }
                   </div>
@@ -84,7 +84,7 @@
                 <div class="post-header">
                   <div class="post-author">
                     @if (post.authorPhoto) {
-                      <img 
+                      <img loading="lazy" decoding="async" 
                         [src]="post.authorPhoto" 
                         [alt]="post.authorName" 
                         class="author-avatar"
@@ -161,7 +161,7 @@
           @if (isAuthenticated()) {
             <div class="post-author-info">
               @if (currentUser()?.photoURL) {
-                <img 
+                <img loading="lazy" decoding="async" 
                   [src]="currentUser()!.photoURL" 
                   [alt]="currentUser()!.displayName" 
                   class="author-avatar-small"
@@ -187,7 +187,7 @@
             <div class="preview-images">
               @for (img of newPostImages(); track $index) {
                 <div class="preview-image-container">
-                  <img [src]="getImagePreview(img)" [alt]="img.name" class="preview-image">
+                  <img loading="lazy" decoding="async" [src]="getImagePreview(img)" [alt]="img.name" class="preview-image">
                   <button class="remove-image-btn" (click)="removeImage($index)" [disabled]="uploading()">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -266,7 +266,7 @@
                 <div class="carousel-container">
                   @for (image of selectedPost()!.images!; track $index) {
                     <div class="carousel-slide" [class.active]="$index === getCurrentImageIndex(selectedPost()!.id || '')">
-                      <img [src]="image" [alt]="selectedPost()!.content">
+                      <img loading="lazy" decoding="async" [src]="image" [alt]="selectedPost()!.content">
                     </div>
                   }
                 </div>
@@ -307,7 +307,7 @@
           <div class="post-modal-sidebar">
             <div class="post-modal-author">
               @if (selectedPost()!.authorPhoto) {
-                <img 
+                <img loading="lazy" decoding="async" 
                   [src]="selectedPost()!.authorPhoto" 
                   [alt]="selectedPost()!.authorName" 
                   class="author-avatar"
@@ -342,7 +342,7 @@
                     <div class="comment-item">
                       <div class="comment-header">
                         @if (comment.authorPhoto) {
-                          <img 
+                          <img loading="lazy" decoding="async" 
                             [src]="comment.authorPhoto" 
                             [alt]="comment.authorName" 
                             class="comment-avatar"
@@ -389,7 +389,7 @@
                             <div class="reply-item">
                               <div class="comment-header">
                                 @if (reply.authorPhoto) {
-                                  <img 
+                                  <img loading="lazy" decoding="async" 
                                     [src]="reply.authorPhoto" 
                                     [alt]="reply.authorName" 
                                     class="comment-avatar reply-avatar"
@@ -509,7 +509,7 @@
             <div class="preview-images">
               @for (imageUrl of existingImages(); track imageUrl) {
                 <div class="preview-image-container">
-                  <img [src]="imageUrl" [alt]="'Imagen existente'" class="preview-image">
+                  <img loading="lazy" decoding="async" [src]="imageUrl" [alt]="'Imagen existente'" class="preview-image">
                   <button type="button" class="remove-image-btn" (click)="removeExistingImage(imageUrl)">
                     <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -525,7 +525,7 @@
             <div class="preview-images">
               @for (image of editPostImages(); track $index) {
                 <div class="preview-image-container">
-                  <img [src]="getImagePreview(image)" [alt]="'Nueva imagen ' + $index" class="preview-image">
+                  <img loading="lazy" decoding="async" [src]="getImagePreview(image)" [alt]="'Nueva imagen ' + $index" class="preview-image">
                   <button type="button" class="remove-image-btn" (click)="removeImage($index)">
                     <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />

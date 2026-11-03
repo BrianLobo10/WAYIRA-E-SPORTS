@@ -1,7 +1,11 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { getApiUrl } from '../config/api.config';
+import { environment } from '../../environments/environment';
+
+/** Consultas a Riot a través de la función de Supabase (la clave de Riot vive solo en el servidor). */
+const riotUrl = (path: string) => `${environment.supabase.functionsUrl}/riot${path}`;
+const seg = encodeURIComponent;
 
 export interface SummonerData {
   id: string;
@@ -80,26 +84,26 @@ export class RiotApiService {
 
   getSummoner(region: string, gameName: string, tagLine: string): Observable<SummonerData> {
     return this.http.get<SummonerData>(
-      getApiUrl(`/summoner/${region}/${gameName}/${tagLine}`)
+      riotUrl(`/summoner/${seg(region)}/${seg(gameName)}/${seg(tagLine)}`)
     );
   }
 
   getMatches(region: string, puuid: string, count: number = 5): Observable<MatchData[]> {
     return this.http.get<MatchData[]>(
-      getApiUrl(`/matches/${region}/${puuid}?count=${count}`)
+      riotUrl(`/matches/${seg(region)}/${seg(puuid)}?count=${count}`)
     );
   }
 
   getChampionMastery(region: string, puuid: string, count: number = 5): Observable<ChampionMastery[]> {
     return this.http.get<ChampionMastery[]>(
-      getApiUrl(`/mastery/${region}/${puuid}?count=${count}`)
+      riotUrl(`/mastery/${seg(region)}/${seg(puuid)}?count=${count}`)
     );
   }
 
   // Obtener datos del account usando PUUID (para actualizar nombres/tags)
   getAccountByPuuid(region: string, puuid: string): Observable<{ puuid: string; gameName: string; tagLine: string }> {
     return this.http.get<{ puuid: string; gameName: string; tagLine: string }>(
-      getApiUrl(`/account/${region}/${puuid}`)
+      riotUrl(`/account/${seg(region)}/${seg(puuid)}`)
     );
   }
 }

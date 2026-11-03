@@ -9,8 +9,8 @@
   color: rgba(255, 255, 255, 0.8);
   cursor: pointer;
   padding: 0.5rem;
-  border-radius: 8px;
-  transition: all 0.3s ease;
+  border-radius: 2px;
+  transition: var(--t-ui);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -18,23 +18,23 @@
 
 .notifications-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  color: #eceae3;
 }
 
 .notifications-btn.has-unread {
-  color: #6366f1;
+  color: var(--text-secondary);
 }
 
 .unread-badge {
   position: absolute;
   top: 0;
   right: 0;
-  background: #ef4444;
-  color: #ffffff;
+  background: #ff5a36;
+  color: #eceae3;
   font-size: 0.75rem;
   font-weight: 600;
   padding: 0.125rem 0.375rem;
-  border-radius: 10px;
+  border-radius: 2px;
   min-width: 18px;
   text-align: center;
   line-height: 1.2;
@@ -46,9 +46,9 @@
   right: 0;
   width: 380px;
   max-height: 500px;
-  background: #1a2332;
+  background: var(--surface-2);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  border-radius: 2px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   z-index: 1000;
   display: flex;
@@ -68,22 +68,22 @@
   margin: 0;
   font-size: 1.125rem;
   font-weight: 600;
-  color: #ffffff;
+  color: #eceae3;
 }
 
 .mark-all-read {
   background: transparent;
   border: none;
-  color: #818cf8;
+  color: var(--teal-accent);
   font-size: 0.875rem;
   cursor: pointer;
   padding: 0.25rem 0.5rem;
-  border-radius: 6px;
+  border-radius: 2px;
   transition: background 0.2s ease, color 0.2s ease;
 }
 
 .mark-all-read:hover {
-  background: rgba(129, 140, 248, 0.1);
+  background: rgba(215, 255, 63, 0.06);
 }
 
 .notifications-list {
@@ -109,7 +109,7 @@
   width: 24px;
   height: 24px;
   border: 3px solid rgba(255, 255, 255, 0.2);
-  border-top-color: #6366f1;
+  border-top-color: var(--teal-pri);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -134,7 +134,7 @@
 }
 
 .notification-item.unread {
-  background: rgba(99, 102, 241, 0.05);
+  background: rgba(255, 255, 255, 0.025);
 }
 
 .notification-avatar {
@@ -153,8 +153,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #6366f1, #818cf8);
-  color: #ffffff;
+  background: var(--volt);
+  color: var(--volt-ink);
   font-weight: 600;
   font-size: 0.875rem;
 }
@@ -172,7 +172,7 @@
 }
 
 .notification-time {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.68);
   font-size: 0.75rem;
 }
 
@@ -183,7 +183,7 @@
   transform: translateY(-50%);
   width: 8px;
   height: 8px;
-  background: #6366f1;
+  background: var(--teal-pri);
   border-radius: 50%;
 }
 
@@ -198,7 +198,7 @@
 
 .notifications-list::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
+  border-radius: 2px;
 }
 
 .notifications-list::-webkit-scrollbar-thumb:hover {

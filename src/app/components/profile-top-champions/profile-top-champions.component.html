@@ -8,7 +8,7 @@
       @for (champ of champions().slice(0, maxShow()); track champ.championId) {
         <div class="champion-tile">
           <div class="champion-img-wrap">
-            <img [src]="champ.imageUrl" [alt]="champ.championName" class="champion-img">
+            <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="champ.imageUrl" [alt]="champ.championName" class="champion-img">
             @if (champ.level > 0) {
               <span class="champion-mastery-badge">{{ champ.level }}</span>
             }

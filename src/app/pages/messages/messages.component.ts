@@ -1,9 +1,11 @@
-import { Component, signal, inject, OnInit, computed } from '@angular/core';
+import { Component, signal, inject, OnInit, OnDestroy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { FirebaseService, Message, UserProfile } from '../../services/firebase.service';
-import { Observable } from 'rxjs';
+import type { Message, UserProfile } from '../../models';
+import { CommunityService } from '../../services/community.service';
+import { MessagingService, type ConversationSummary } from '../../services/messaging.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-messages',
@@ -12,12 +14,18 @@ import { Observable } from 'rxjs';
   templateUrl: './messages.component.html',
   styleUrls: ['./messages.component.css']
 })
-export class MessagesComponent implements OnInit {
-  private firebaseService = inject(FirebaseService);
+export class MessagesComponent implements OnInit, OnDestroy {
+  private community = inject(CommunityService);
+  private messaging = inject(MessagingService);
+  private auth = inject(AuthService);
+  private stopWatching?: () => void;
+  /** id de conversación por cada persona (la plantilla trabaja con el id de la otra persona). */
+  private convIds = new Map<string, string>();
   private route = inject(ActivatedRoute);
   private router = inject(Router);
 
-  conversations = signal<Array<{ userId: string; profile: UserProfile | null; lastMessage: Message | null; unread: number }>>([]);
+  conversations = signal<ConversationSummary[]>([]);
+  sending = signal(false);
   selectedConversation = signal<string | null>(null);
   messages = signal<Message[]>([]);
   currentUser = signal<UserProfile | null>(null);
@@ -99,215 +107,131 @@ export class MessagesComponent implements OnInit {
     return conv?.profile || null;
   });
 
-  ngOnInit() {
-    this.loadCurrentUser();
-    this.loadConversations();
-    
-    // Verificar si hay un userId en queryParams
+  async ngOnInit() {
+    await this.auth.waitForInit();
+    void this.loadCurrentUser();
+    await this.loadConversations();
+
+    // Abrir chat directo desde un perfil (?userId=...)
     this.route.queryParams.subscribe(params => {
       if (params['userId']) {
-        this.selectConversation(params['userId']);
+        void this.selectConversation(params['userId']);
       }
     });
+
+    // Mensajes nuevos al instante
+    this.stopWatching = this.messaging.watch({
+      onMessage: (conversationId) => {
+        void this.loadConversations();
+        const open = this.selectedConversation();
+        if (open && this.convIds.get(open) === conversationId) {
+          void this.loadMessages(open);
+          void this.messaging.markConversationRead(conversationId);
+        }
+      }
+    });
+  }
+
+  ngOnDestroy() {
+    this.stopWatching?.();
   }
 
   async loadCurrentUser() {
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.community.getCurrentUser();
     if (user) {
-      const profile = await this.firebaseService.getUserProfile(user.uid);
-      this.currentUser.set(profile);
+      this.currentUser.set(await this.community.getUserProfile(user.uid));
     }
   }
 
-  loadConversations() {
-    const user = this.firebaseService.getCurrentUser();
-    if (!user) {
-      console.warn('No hay usuario autenticado para cargar conversaciones');
-      return;
+  async loadConversations() {
+    try {
+      const list = await this.messaging.getConversations();
+      list.forEach((c) => this.convIds.set(c.userId, c.id));
+      // Conserva un chat recién abierto que aún no tiene mensajes
+      const open = this.selectedConversation();
+      const pending = open && !list.some((c) => c.userId === open) ? this.conversations().find((c) => c.userId === open) : undefined;
+      this.conversations.set(pending ? [pending, ...list] : list);
+    } catch (error) {
+      console.error('Error cargando conversaciones:', error);
     }
-
-    console.log('Cargando conversaciones para usuario:', user.uid);
-
-    this.firebaseService.getConversations(user.uid).subscribe({
-      next: async (conversationIds) => {
-        console.log('IDs de conversaciones recibidos:', conversationIds);
-        
-        if (!conversationIds || conversationIds.length === 0) {
-          console.log('No hay conversaciones');
-          this.conversations.set([]);
-          return;
-        }
-
-        const conversations = await Promise.all(
-          conversationIds.map(async (otherUserId) => {
-            try {
-              const profile = await this.firebaseService.getUserProfile(otherUserId);
-              
-              // Obtener mensajes usando firstValueFrom para obtener el primer valor del Observable
-              let messages: any[] = [];
-              try {
-                const { firstValueFrom } = await import('rxjs');
-                messages = await firstValueFrom(this.firebaseService.getMessages(user.uid, otherUserId));
-              } catch (rxjsError) {
-                // Fallback: usar el Observable directamente con timeout
-                messages = await new Promise((resolve) => {
-                  const subscription = this.firebaseService.getMessages(user.uid, otherUserId).subscribe({
-                    next: (msgs) => {
-                      subscription.unsubscribe();
-                      resolve(msgs);
-                    },
-                    error: () => {
-                      subscription.unsubscribe();
-                      resolve([]);
-                    }
-                  });
-                  // Timeout de seguridad
-                  setTimeout(() => {
-                    subscription.unsubscribe();
-                    resolve([]);
-                  }, 5000);
-                });
-              }
-              
-              const lastMessage = messages && messages.length > 0 ? messages[messages.length - 1] : null;
-              const unread = messages ? messages.filter(m => !m.read && m.toId === user.uid).length : 0;
-              return { userId: otherUserId, profile, lastMessage, unread };
-            } catch (error) {
-              console.error(`Error cargando conversación con ${otherUserId}:`, error);
-              return null;
-            }
-          })
-        );
-
-        // Filtrar conversaciones nulas
-        const validConversations = conversations.filter(c => c !== null) as Array<{ userId: string; profile: UserProfile | null; lastMessage: Message | null; unread: number }>;
-        
-        // Ordenar por fecha del último mensaje (más reciente primero)
-        validConversations.sort((a, b) => {
-          if (!a.lastMessage && !b.lastMessage) return 0;
-          if (!a.lastMessage) return 1;
-          if (!b.lastMessage) return -1;
-          const aTime = a.lastMessage.timestamp?.toDate?.() || new Date(0);
-          const bTime = b.lastMessage.timestamp?.toDate?.() || new Date(0);
-          return bTime.getTime() - aTime.getTime();
-        });
-        
-        console.log('Conversaciones cargadas:', validConversations.length);
-        this.conversations.set(validConversations);
-      },
-      error: (error) => {
-        console.error('Error cargando conversaciones:', error);
-        this.conversations.set([]);
-      }
-    });
   }
 
   async selectConversation(userId: string) {
-    // Verificar si el usuario existe en las conversaciones
-    let existingConv = this.conversations().find(c => c.userId === userId);
-    
-    if (!existingConv) {
-      // Si no existe, cargar el perfil y crear una conversación nueva
-      try {
-        const profile = await this.firebaseService.getUserProfile(userId);
-        if (profile) {
-          // Agregar la conversación a la lista
-          const newConversation = { userId, profile, lastMessage: null, unread: 0 };
-          this.conversations.update(convs => [...convs, newConversation]);
-          existingConv = newConversation;
-          
-          // Recargar conversaciones para asegurar que esté en la lista
-          // Esto también creará la conversación en Firestore si no existe
-          await this.firebaseService.getConversations(this.firebaseService.getCurrentUser()!.uid);
-        }
-      } catch (error) {
-        console.error('Error cargando perfil para conversación:', error);
-        return;
+    if (userId === this.community.getCurrentUser()?.uid) return;
+    try {
+      let convId = this.convIds.get(userId);
+      if (!convId) {
+        convId = await this.messaging.openConversation(userId);
+        this.convIds.set(userId, convId);
       }
+      if (!this.conversations().some((c) => c.userId === userId)) {
+        const profile = await this.community.getUserProfile(userId);
+        this.conversations.update((convs) => [{ id: convId!, userId, profile, lastMessage: null, unread: 0 }, ...convs]);
+      }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'No se pudo abrir la conversación.');
+      return;
     }
-    
-    // Seleccionar la conversación
+
     this.selectedConversation.set(userId);
     this.minimizedChats.update(chats => {
       const newChats = new Set(chats);
       newChats.delete(userId);
       return newChats;
     });
-    
-    // Cargar mensajes de esta conversación
-    this.loadMessages(userId);
-    this.markAsRead(userId);
-    
-    // Limpiar queryParams después de seleccionar (pero mantener la conversación seleccionada)
-    this.router.navigate([], { 
-      queryParams: {},
-      replaceUrl: true // Reemplazar en lugar de agregar a la historia
-    });
+
+    await this.loadMessages(userId);
+    void this.markAsRead(userId);
+
+    // Limpia ?userId= de la dirección sin perder el chat abierto
+    this.router.navigate([], { queryParams: {}, replaceUrl: true });
   }
 
-  loadMessages(otherUserId: string) {
-    const user = this.firebaseService.getCurrentUser();
-    if (!user) return;
-
-    this.firebaseService.getMessages(user.uid, otherUserId).subscribe({
-      next: (messages) => {
-        this.messages.set(messages);
-        setTimeout(() => this.scrollToBottom(), 100);
-      }
-    });
+  async loadMessages(otherUserId: string) {
+    const convId = this.convIds.get(otherUserId);
+    if (!convId) return;
+    try {
+      this.messages.set(await this.messaging.getMessages(convId));
+      setTimeout(() => this.scrollToBottom(), 50);
+    } catch (error) {
+      console.error('Error cargando mensajes:', error);
+    }
   }
 
   async sendMessage() {
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.community.getCurrentUser();
     const otherUserId = this.selectedConversation();
-    if (!user || !otherUserId || !this.newMessage().trim()) return;
+    const convId = otherUserId ? this.convIds.get(otherUserId) : undefined;
+    const content = this.newMessage().trim();
+    if (!user || !otherUserId || !convId || !content || this.sending()) return;
 
-    // Guardar el ID de la conversación para mantenerla seleccionada
-    const currentConversationId = otherUserId;
-    const messageContent = this.newMessage().trim();
-
+    this.sending.set(true);
+    // Se muestra al instante; el tiempo real confirma y recarga
+    const optimistic: Message = {
+      id: `tmp-${Date.now()}`, fromId: user.uid, fromName: '', toId: otherUserId, content,
+      timestamp: { toDate: () => new Date() } as Message['timestamp'], read: false
+    };
+    this.messages.update((m) => [...m, optimistic]);
+    this.newMessage.set('');
+    setTimeout(() => this.scrollToBottom(), 0);
     try {
-      await this.firebaseService.sendMessage({
-        fromId: user.uid,
-        toId: otherUserId,
-        content: messageContent
-      });
-
-      this.newMessage.set('');
-      // Asegurar que la conversación sigue seleccionada
-      this.selectedConversation.set(currentConversationId);
-      
-      // Recargar mensajes y conversaciones
-      this.loadMessages(currentConversationId);
-      
-      // Esperar un momento antes de recargar conversaciones para que Firestore actualice
-      setTimeout(() => {
-        this.loadConversations();
-        this.scrollToBottom();
-      }, 300);
+      await this.messaging.sendMessage(convId, content);
+      await this.loadMessages(otherUserId);
+      void this.loadConversations();
     } catch (error) {
-      console.error('Error enviando mensaje:', error);
-      alert('Error al enviar el mensaje. Por favor intenta nuevamente.');
+      this.messages.update((m) => m.filter((x) => x.id !== optimistic.id));
+      this.newMessage.set(content);
+      alert(error instanceof Error ? error.message : 'No se pudo enviar el mensaje.');
+    } finally {
+      this.sending.set(false);
     }
   }
 
   async markAsRead(otherUserId: string) {
-    const user = this.firebaseService.getCurrentUser();
-    if (!user) return;
-
-    const messages = this.messages();
-    // Marcar todos los mensajes no leídos como leídos
-    for (let i = 0; i < messages.length; i++) {
-      const msg = messages[i];
-      if (!msg.read && msg.toId === user.uid) {
-        try {
-          await this.firebaseService.markAsRead(user.uid, otherUserId, i);
-        } catch (error) {
-          console.error('Error marcando mensaje como leído:', error);
-        }
-      }
-    }
-    this.loadConversations();
+    const convId = this.convIds.get(otherUserId);
+    if (!convId) return;
+    await this.messaging.markConversationRead(convId);
+    this.conversations.update((list) => list.map((c) => (c.userId === otherUserId ? { ...c, unread: 0 } : c)));
   }
 
   minimizeChat(userId: string) {
@@ -361,7 +285,7 @@ export class MessagesComponent implements OnInit {
     return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
   }
 
-  getLastMessageTime(conv: { userId: string; profile: UserProfile | null; lastMessage: Message | null; unread: number }): string {
+  getLastMessageTime(conv: ConversationSummary): string {
     if (!conv.lastMessage) return '';
     return this.formatTime(conv.lastMessage.timestamp);
   }
@@ -408,32 +332,23 @@ export class MessagesComponent implements OnInit {
   }
 
   async deleteConversation(userId: string) {
-    if (!confirm('¿Estás seguro de que quieres eliminar esta conversación?')) {
+    if (!confirm('¿Eliminar esta conversación? Se borrará para los dos.')) {
       return;
     }
-
-    const user = this.firebaseService.getCurrentUser();
-    if (!user) return;
+    const convId = this.convIds.get(userId);
+    if (!convId) return;
 
     try {
-      // Eliminar toda la conversación (ahora se elimina el documento de conversación completo)
-      await this.firebaseService.deleteMessage(user.uid, userId);
-
-      // Si la conversación seleccionada es la que se elimina, cerrarla
+      await this.messaging.deleteConversation(convId);
+      this.convIds.delete(userId);
       if (this.selectedConversation() === userId) {
         this.selectedConversation.set(null);
+        this.messages.set([]);
       }
-
-      // Recargar conversaciones
-      this.loadConversations();
-
-      // Cerrar el menú
-      const currentMenu = new Map(this.showConversationMenu());
-      currentMenu.set(userId, false);
-      this.showConversationMenu.set(currentMenu);
+      this.conversations.update((list) => list.filter((c) => c.userId !== userId));
+      this.closeConversationMenu(userId);
     } catch (error) {
-      console.error('Error eliminando conversación:', error);
-      alert('Error al eliminar la conversación. Por favor intenta nuevamente.');
+      alert(error instanceof Error ? error.message : 'No se pudo eliminar la conversación.');
     }
   }
 

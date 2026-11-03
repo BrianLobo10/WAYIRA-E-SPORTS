@@ -1,5 +1,5 @@
-import { Timestamp } from '@angular/fire/firestore';
-import type { UserProfile } from '../services/firebase.service';
+import { Timestamp } from './timestamp';
+import type { UserProfile } from '../models';
 
 const PREFIX = 'wayira_prof_v1_';
 

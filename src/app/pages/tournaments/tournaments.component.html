@@ -1,8 +1,9 @@
 <div class="tournaments-page">
-  <section class="tournaments-hero">
+  <section class="tournaments-hero page-hero">
     <div class="container">
       <div class="hero-content">
-        <h1>Torneos</h1>
+        <span class="kicker">02 · Torneos</span>
+        <h1>Arma tu equipo. <span>Entra</span> al bracket.</h1>
         <p>Participa en los torneos competitivos de WAYIRA E-SPORTS. <a routerLink="/tournaments/historial" class="hero-historial-link">Ver historial de torneos finalizados</a></p>
       </div>
     </div>
@@ -78,22 +79,73 @@
                   <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
-                  <span>{{ (tournament.teams || []).length }} / {{ tournament.maxTeams }} equipos</span>
+                  <span>{{ (tournament.teams || []).length }} / {{ tournament.maxTeams }} equipos aprobados</span>
                 </div>
               </div>
-              <div class="tournament-actions">
-                @if (tournament.status === 'ongoing' || tournament.status === 'upcoming') {
-                  <button 
-                    class="btn-register" 
-                    [disabled]="(tournament.teams || []).length >= tournament.maxTeams || isUserRegistered(tournament)"
-                    (click)="openRegisterModal(tournament)">
-                    @if (isUserRegistered(tournament)) {
-                      Ya Registrado
-                    } @else if ((tournament.teams || []).length >= tournament.maxTeams) {
-                      Lleno
-                    } @else {
-                      Registrarse
+              @if (myRegistration(tournament); as mine) {
+                <div class="reg-box reg-box--mine">
+                  <div class="reg-box__head">
+                    <span class="reg-box__title">Tu equipo: <strong>{{ mine.name }}</strong></span>
+                    <span class="reg-pill" [attr.data-status]="mine.status">{{ registrationStatusText(mine.status) }}</span>
+                  </div>
+                  @if (mine.status === 'approved') {
+                    @if (mine.checkedInAt) {
+                      <p class="reg-box__note">Check-in hecho. ¡Listos para jugar!</p>
+                    } @else if (checkInWindow(tournament).open) {
+                      <p class="reg-box__note">El check-in está abierto: confírmalo o perderás el cupo.</p>
+                    } @else if (checkInWindow(tournament).opensAt) {
+                      <p class="reg-box__note">El check-in abre el {{ checkInWindow(tournament).opensAt | date:'d MMM, h:mm a' }}.</p>
                     }
+                  }
+                  @if (mine.captainId === currentUser()?.uid) {
+                    <div class="reg-box__actions">
+                      @if (mine.status === 'approved' && !mine.checkedInAt && checkInWindow(tournament).open) {
+                        <button type="button" class="reg-btn reg-btn--primary" [disabled]="busyTeamId() === mine.id" (click)="checkInMyTeam(mine)">Hacer check-in</button>
+                      }
+                      @if (tournament.status === 'upcoming') {
+                        <button type="button" class="reg-btn" [disabled]="busyTeamId() === mine.id" (click)="withdrawMyTeam(mine)">Retirar equipo</button>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+
+              @if (isAdmin() && (pendingRegistrations(tournament).length || checkInWindow(tournament).opensAt)) {
+                <details class="reg-box" [open]="pendingRegistrations(tournament).length > 0">
+                  <summary class="reg-box__head">
+                    <span class="reg-box__title">Inscripciones por revisar</span>
+                    <span class="reg-count">{{ pendingRegistrations(tournament).length }}</span>
+                  </summary>
+                  @for (reg of pendingRegistrations(tournament); track reg.id) {
+                    <div class="reg-row">
+                      <div class="reg-row__info">
+                        <strong>{{ reg.name }}</strong>
+                        <span>Capitán: {{ reg.captainName || '—' }} · {{ (reg.playerInfo || []).length }} jugadores
+                          @if (reg.status === 'waitlisted') { · <em>lista de espera</em> }</span>
+                        <span class="reg-row__riot">
+                          @for (p of reg.playerInfo || []; track $index) { {{ p.gameName }}#{{ p.tagLine }}@if (!$last) {, } }
+                        </span>
+                      </div>
+                      <div class="reg-row__actions">
+                        <button type="button" class="reg-btn reg-btn--primary" [disabled]="busyTeamId() === reg.id || (reg.status === 'waitlisted' && (tournament.teams || []).length >= tournament.maxTeams)" (click)="setRegistrationStatus(reg, 'approved')">Aprobar</button>
+                        <button type="button" class="reg-btn" [disabled]="busyTeamId() === reg.id" (click)="setRegistrationStatus(reg, 'rejected')">Rechazar</button>
+                      </div>
+                    </div>
+                  } @empty {
+                    <p class="reg-box__note">No hay inscripciones pendientes.</p>
+                  }
+                  @if (checkInWindow(tournament).opensAt && tournament.status === 'upcoming') {
+                    <div class="reg-box__actions">
+                      <button type="button" class="reg-btn" (click)="closeCheckIn(tournament)">Cerrar check-in</button>
+                    </div>
+                  }
+                </details>
+              }
+
+              <div class="tournament-actions">
+                @if (tournament.status === 'upcoming' && !tournament.confirmed && !isUserRegistered(tournament)) {
+                  <button class="btn-register" (click)="openRegisterModal(tournament)">
+                    {{ activeCount(tournament) >= tournament.maxTeams ? 'Lista de espera' : 'Inscribir equipo' }}
                   </button>
                 }
                 @if (tournament.confirmed || tournament.bracket || (isAdmin() && (tournament.teams || []).length >= 2)) {
@@ -435,7 +487,7 @@
               <div class="logo-upload-section">
                 @if (teamLogoPreview()) {
                   <div class="logo-preview">
-                    <img [src]="teamLogoPreview()!" alt="Logo del equipo" class="logo-preview-image">
+                    <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="teamLogoPreview()!" alt="Logo del equipo" class="logo-preview-image">
                     <button type="button" class="remove-logo-btn" (click)="teamLogo.set(null); teamLogoPreview.set(null)">
                       <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -516,24 +568,6 @@
                           placeholder="Ej: Juan Pérez"
                           class="form-input">
                       </div>
-                      <div class="form-group">
-                        <label>Teléfono *</label>
-                        <input
-                          type="tel"
-                          [value]="getPlayerCard(i).phone"
-                          (input)="updatePlayerInfo(i, 'phone', $any($event.target).value)"
-                          placeholder="Ej: +57 300 123 4567"
-                          class="form-input">
-                      </div>
-                      <div class="form-group">
-                        <label>Correo Electrónico *</label>
-                        <input
-                          type="email"
-                          [value]="getPlayerCard(i).email"
-                          (input)="updatePlayerInfo(i, 'email', $any($event.target).value)"
-                          placeholder="Ej: jugador@email.com"
-                          class="form-input">
-                      </div>
                       <div class="form-row">
                         <div class="form-group">
                           <label>Nombre de Invocador *</label>
@@ -598,7 +632,7 @@
                     @if (isCardComplete(i)) {
                       @if (getPlayerCard(i).mainChampion) {
                         <div class="card-champion">
-                          <img 
+                          <img referrerpolicy="no-referrer" 
                             [src]="getChampionImageUrl(getPlayerCard(i).mainChampion || '')" 
                             [alt]="getPlayerCard(i).mainChampion || ''"
                             class="champion-image"
@@ -693,7 +727,7 @@
                       (dragstart)="onTeamDragStart($event, team)"
                       (dragend)="onTeamDragEnd($event)">
                       @if (team.logoUrl) {
-                        <img [src]="team.logoUrl" [alt]="team.name" class="team-logo-small">
+                        <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="team.logoUrl" [alt]="team.name" class="team-logo-small">
                       }
                       <span class="team-name-item">{{ team.name }}</span>
                     </div>
@@ -762,7 +796,7 @@
                           @if (match.team1) {
                             <div class="slot-team">
                               @if (match.team1.logoUrl) {
-                                <img [src]="match.team1.logoUrl" [alt]="match.team1.name" class="team-logo-small">
+                                <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="match.team1.logoUrl" [alt]="match.team1.name" class="team-logo-small">
                               }
                               <span>{{ match.team1.name }}</span>
                               <button class="remove-slot-btn" (click)="removeTeamFromMatch(i, 'team1')" title="Eliminar">
@@ -785,7 +819,7 @@
                           @if (match.team2) {
                             <div class="slot-team">
                               @if (match.team2.logoUrl) {
-                                <img [src]="match.team2.logoUrl" [alt]="match.team2.name" class="team-logo-small">
+                                <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="match.team2.logoUrl" [alt]="match.team2.name" class="team-logo-small">
                               }
                               <span>{{ match.team2.name }}</span>
                               <button class="remove-slot-btn" (click)="removeTeamFromMatch(i, 'team2')" title="Eliminar">

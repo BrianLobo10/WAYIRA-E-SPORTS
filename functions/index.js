@@ -614,7 +614,7 @@ app.get('/api/mastery/:region/:puuid', async (req, res) => {
   }
 });
 
-const DISCORD_INVITE_CODE_DEFAULT = 'HHBMumv8S';
+const DISCORD_INVITE_CODE_DEFAULT = 'WZHESnGACq';
 const TWITCH_LOGIN = 'wayiraesports';
 
 function parseOptionalInt(value) {
@@ -821,7 +821,7 @@ function potatoLocalReply(message) {
     return 'La ruleta está en el menú Ruleta. Revisa las reglas en pantalla.';
   }
   if (/\b(discord|comunidad)\b/.test(lower)) {
-    return 'Discord oficial: https://discord.gg/HHBMumv8S';
+    return 'Discord oficial: https://discord.com/invite/WZHESnGACq';
   }
   if (/\b(twitch|live|stream)\b/.test(lower)) {
     return 'Canal: https://www.twitch.tv/wayiraesports';

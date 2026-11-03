@@ -3,51 +3,12 @@
   background: var(--bg);
 }
 
-.tournaments-hero {
-  background: var(--surface-1);
-  border-bottom: 1px solid var(--border);
-  padding: 8rem 0 4rem;
-  position: relative;
-  overflow: hidden;
-}
 
-.hero-content {
-  text-align: center;
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 0 2rem;
-}
 
-.hero-content h1 {
-  font-family: var(--font-display);
-  font-size: clamp(2.5rem, 5vw, 3.5rem);
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-  color: var(--white);
-}
 
-.hero-content p {
-  font-size: 1.125rem;
-  color: var(--teal-muted);
-  line-height: 1.8;
-}
 
-.hero-historial-link {
-  color: var(--teal-accent);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  white-space: nowrap;
-}
 
-.hero-historial-link:hover {
-  color: var(--teal-hover);
-}
 
-.tournaments-content {
-  padding: 4rem 2rem;
-  background: var(--bg);
-  scroll-margin-top: 1rem;
-}
 
 .clasificaciones-intro {
   margin-bottom: 2rem;
@@ -58,23 +19,13 @@
   margin-bottom: 0.75rem;
 }
 
-.clasificaciones-text {
-  margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.55;
-  color: rgba(226, 232, 240, 0.88);
-}
 
-.section-title-sub {
-  font-size: 1.35rem;
-  margin-bottom: 1rem;
-}
 
 .practice-tournament-modal .practice-modal-hint {
   margin: 0 0 1rem;
   font-size: 0.9rem;
   line-height: 1.5;
-  color: rgba(226, 232, 240, 0.85);
+  color: rgba(236, 234, 227, 0.85);
 }
 
 .practice-modal-footer {
@@ -92,9 +43,9 @@
   display: inline-flex;
   align-items: center;
   padding: 0.55rem 1rem;
-  border-radius: 8px;
+  border-radius: 2px;
   border: 1px solid var(--teal-pri);
-  background: rgba(1, 108, 108, 0.12);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--teal-accent);
   font-size: 0.875rem;
   font-weight: 600;
@@ -102,7 +53,7 @@
 }
 
 .btn-download-template:hover:not(:disabled) {
-  background: rgba(1, 108, 108, 0.22);
+  background: rgba(255, 255, 255, 0.11);
 }
 
 .btn-download-template:disabled {
@@ -120,7 +71,7 @@
   margin: 0.35rem 0 0.6rem;
   font-size: 0.82rem;
   line-height: 1.45;
-  color: rgba(226, 232, 240, 0.75);
+  color: rgba(236, 234, 227, 0.75);
 }
 
 .registration-import-row {
@@ -139,9 +90,9 @@
 .registration-import-badge {
   font-size: 0.8rem;
   padding: 0.25rem 0.55rem;
-  border-radius: 6px;
+  border-radius: 2px;
   background: rgba(34, 197, 94, 0.2);
-  color: #bbf7d0;
+  color: var(--volt);
   border: 1px solid rgba(34, 197, 94, 0.35);
 }
 
@@ -151,9 +102,9 @@
 }
 
 .container {
-  max-width: 1400px;
+  max-width: var(--container);
   margin: 0 auto;
-  padding: 0 2rem;
+  padding: 0 var(--gutter);
 }
 
 .tournaments-header {
@@ -169,12 +120,6 @@
   margin: 0;
 }
 
-.section-title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #ffffff;
-  margin: 0;
-}
 
 .loading-container {
   display: flex;
@@ -190,7 +135,7 @@
 .spinner {
   width: 50px;
   height: 50px;
-  border: 4px solid rgba(99, 102, 241, 0.2);
+  border: 4px solid rgba(255, 255, 255, 0.1);
   border-top-color: var(--teal-pri);
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -200,7 +145,7 @@
   width: 18px;
   height: 18px;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #ffffff;
+  border-top-color: #eceae3;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   display: inline-block;
@@ -210,41 +155,29 @@
   to { transform: rotate(360deg); }
 }
 
-.empty-state {
-  text-align: center;
-  padding: 4rem 2rem;
-  color: rgba(255, 255, 255, 0.7);
-}
 
 .empty-state p {
   font-size: 1.125rem;
   margin-bottom: 0.5rem;
 }
 
-.empty-hint {
-  font-size: 0.9375rem;
-  color: rgba(255, 255, 255, 0.5);
-  font-style: italic;
-}
 
 .tournaments-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 350px), 1fr));
   gap: 2rem;
 }
 
 .tournament-card {
   background: var(--surface-1);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
+  border-radius: 2px;
   padding: 2rem;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .tournament-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  border-color: rgba(99, 102, 241, 0.5);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .tournament-header {
@@ -255,44 +188,53 @@
 }
 
 .tournament-game {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--teal-hover);
-  background: rgba(99, 102, 241, 0.2);
-  padding: 0.375rem 0.75rem;
-  border-radius: 12px;
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  background: transparent;
+  padding: 0.3rem 0.5rem;
+  border-radius: 2px;
+  border: 1px solid var(--border-strong);
 }
 
 .tournament-status {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  padding: 0.375rem 0.75rem;
-  border-radius: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.5rem;
+  border-radius: 2px;
 }
 
 .status-upcoming {
-  background: rgba(251, 191, 36, 0.2);
-  color: #fbbf24;
-  border: 1px solid rgba(251, 191, 36, 0.3);
+  background: var(--volt);
+  color: var(--volt-ink);
+  border: 1px solid var(--volt);
 }
 
 .status-ongoing {
-  background: rgba(34, 197, 94, 0.2);
-  color: #22c55e;
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  background: rgba(255, 90, 54, 0.14);
+  color: var(--ember-text);
+  border: 1px solid rgba(255, 90, 54, 0.3);
 }
 
 .status-finished {
   background: rgba(148, 163, 184, 0.2);
-  color: #94a3b8;
+  color: var(--teal-muted);
   border: 1px solid rgba(148, 163, 184, 0.3);
 }
 
 .tournament-name {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #ffffff;
+  font-family: var(--font-display);
+  font-size: 1.875rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: #eceae3;
   margin-bottom: 0.75rem;
 }
 
@@ -306,7 +248,7 @@
 .tournament-prize {
   font-family: var(--font-mono);
   font-size: 0.875rem;
-  color: var(--gold, #ffb800);
+  color: var(--gold, #d7ff3f);
   margin-bottom: 1.25rem;
 }
 
@@ -326,11 +268,21 @@
 }
 
 .tournament-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
   gap: 0.75rem;
   padding-top: 1rem;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tournament-actions > * {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  justify-content: center;
+  text-align: center;
 }
 
 .btn-register,
@@ -338,21 +290,20 @@
 .btn-start-tournament {
   padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 2px;
   font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .btn-register {
-  background: linear-gradient(135deg, var(--teal-pri), var(--teal-hover));
-  color: #ffffff;
+  background: var(--volt);
+  color: var(--volt-ink);
 }
 
 .btn-register:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
 }
 
 .btn-register:disabled {
@@ -361,13 +312,13 @@
 }
 
 .btn-view-bracket {
-  background: rgba(99, 102, 241, 0.2);
-  color: var(--teal-hover);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--volt);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .btn-view-bracket:hover {
-  background: rgba(99, 102, 241, 0.3);
+  background: rgba(255, 255, 255, 0.15);
   transform: translateY(-2px);
 }
 
@@ -376,14 +327,14 @@
   align-items: center;
   justify-content: center;
   padding: 0.75rem 1.5rem;
-  border-radius: 8px;
+  border-radius: 2px;
   font-size: 0.9375rem;
   font-weight: 600;
   text-decoration: none;
-  background: linear-gradient(135deg, #0ea5e9, #0284c7);
-  color: #ffffff;
-  border: 1px solid rgba(14, 165, 233, 0.5);
-  transition: all 0.3s ease;
+  background: transparent;
+  color: var(--white);
+  border: 1px solid var(--border-strong);
+  transition: var(--t-ui);
 }
 
 .btn-interactive-bracket:hover {
@@ -392,35 +343,34 @@
 }
 
 .btn-start-tournament {
-  background: linear-gradient(135deg, #22c55e, #16a34a);
-  color: #ffffff;
+  background: var(--volt);
+  color: var(--volt-ink);
 }
 
 .btn-start-tournament:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(34, 197, 94, 0.3);
 }
 
 .btn-delete-tournament {
   padding: 0.75rem 1.25rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 2px;
   font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
-  background: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  transition: var(--t-ui);
+  background: rgba(255, 90, 54, 0.2);
+  color: #ff5a36;
+  border: 1px solid rgba(255, 90, 54, 0.3);
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
 .btn-delete-tournament:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.3);
+  background: rgba(255, 90, 54, 0.3);
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
+  box-shadow: 0 10px 20px rgba(255, 90, 54, 0.3);
 }
 
 .btn-delete-tournament:disabled {
@@ -431,23 +381,22 @@
 .btn-edit-tournament {
   padding: 0.75rem 1.25rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 2px;
   font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
-  background: rgba(251, 191, 36, 0.2);
-  color: #fbbf24;
-  border: 1px solid rgba(251, 191, 36, 0.3);
+  transition: var(--t-ui);
+  background: rgba(215, 255, 63, 0.2);
+  color: #d7ff3f;
+  border: 1px solid rgba(215, 255, 63, 0.3);
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
 .btn-edit-tournament:hover {
-  background: rgba(251, 191, 36, 0.3);
+  background: rgba(215, 255, 63, 0.3);
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(251, 191, 36, 0.3);
 }
 
 .tournaments-header-actions {
@@ -460,13 +409,13 @@
 .btn-create-tournament {
   padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 2px;
   font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
-  background: var(--teal-pri);
-  color: #fff;
+  transition: var(--t-ui);
+  background: var(--volt);
+  color: var(--volt-ink);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -474,21 +423,21 @@
 }
 
 .btn-create-tournament:hover {
-  background: #4f46e5;
+  background: var(--accent-hover);
   transform: translateY(-2px);
 }
 
 .btn-create-test-tournament {
   padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 2px;
   font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
-  background: rgba(99, 102, 241, 0.2);
-  color: var(--teal-hover);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  transition: var(--t-ui);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--volt);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -496,7 +445,7 @@
 }
 
 .btn-create-test-tournament:hover:not(:disabled) {
-  background: rgba(99, 102, 241, 0.3);
+  background: rgba(255, 255, 255, 0.15);
   transform: translateY(-2px);
 }
 
@@ -518,7 +467,7 @@
 .tournament-modal,
 .register-modal {
   background: var(--surface-1);
-  border-radius: 16px;
+  border-radius: 2px;
   max-width: 600px;
   width: 100%;
   max-height: 90vh;
@@ -560,7 +509,7 @@
 .create-tournament-modal .form-textarea:focus,
 .create-tournament-modal .form-select:focus {
   border-color: var(--teal-accent);
-  box-shadow: 0 0 0 3px rgba(1, 108, 108, 0.2);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
 }
 
 .create-tournament-modal input[type="datetime-local"] {
@@ -571,8 +520,8 @@
   margin-right: 0.75rem;
   padding: 0.45rem 0.85rem;
   border: 1px solid var(--border-accent);
-  border-radius: 6px;
-  background: rgba(1, 108, 108, 0.12);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.06);
   color: var(--teal-accent);
   font-size: 0.8125rem;
   font-weight: 600;
@@ -581,7 +530,7 @@
 }
 
 .create-tournament-modal input[type="file"]::file-selector-button:hover {
-  background: rgba(1, 108, 108, 0.22);
+  background: rgba(255, 255, 255, 0.11);
   border-color: var(--teal-accent);
 }
 
@@ -608,9 +557,8 @@
   margin: 0 0 0.15rem 0;
   font-family: var(--font-display);
   font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: -0.02em;
   color: var(--teal-muted);
 }
 
@@ -643,7 +591,7 @@
 .modal-header h3 {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #ffffff;
+  color: #eceae3;
   margin: 0;
 }
 
@@ -653,8 +601,8 @@
   color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   padding: 0.5rem;
-  border-radius: 8px;
-  transition: all 0.3s ease;
+  border-radius: 2px;
+  transition: var(--t-ui);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -662,7 +610,7 @@
 
 .close-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  color: #eceae3;
 }
 
 .modal-body {
@@ -703,10 +651,10 @@
   padding: 0.75rem 1rem;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: #ffffff;
+  border-radius: 2px;
+  color: #eceae3;
   font-size: 0.9375rem;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .form-input:focus,
@@ -714,7 +662,7 @@
 .form-select:focus {
   outline: none;
   border-color: var(--teal-accent);
-  box-shadow: 0 0 0 3px rgba(1, 108, 108, 0.2);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
 }
 
 .form-input:disabled,
@@ -739,23 +687,27 @@
   .create-tournament-modal .form-row.form-row--rounds-format {
     grid-template-columns: 1fr;
   }
+
+  .tournament-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 .btn-cancel {
   padding: 0.75rem 1.5rem;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
+  border-radius: 2px;
   background: transparent;
   color: rgba(255, 255, 255, 0.7);
   font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .btn-cancel:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  color: #eceae3;
 }
 
 .btn-cancel:disabled {
@@ -766,13 +718,13 @@
 .btn-submit {
   padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 8px;
-  background: linear-gradient(135deg, var(--teal-pri), var(--teal-hover));
-  color: #ffffff;
+  border-radius: 2px;
+  background: var(--volt);
+  color: var(--volt-ink);
   font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -780,7 +732,6 @@
 
 .btn-submit:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
 }
 
 .btn-submit:disabled {
@@ -798,9 +749,9 @@
   display: inline-block;
   width: 120px;
   height: 120px;
-  border-radius: 12px;
+  border-radius: 2px;
   overflow: hidden;
-  border: 2px solid rgba(99, 102, 241, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.15);
 }
 
 .logo-preview-image {
@@ -813,7 +764,7 @@
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
-  background: rgba(239, 68, 68, 0.9);
+  background: rgba(255, 90, 54, 0.9);
   border: none;
   border-radius: 50%;
   width: 28px;
@@ -822,12 +773,12 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #ffffff;
-  transition: all 0.3s ease;
+  color: #eceae3;
+  transition: var(--t-ui);
 }
 
 .remove-logo-btn:hover {
-  background: #ef4444;
+  background: #ff5a36;
   transform: scale(1.1);
 }
 
@@ -847,21 +798,21 @@
   justify-content: center;
   gap: 0.75rem;
   padding: 2rem;
-  border: 2px dashed rgba(99, 102, 241, 0.3);
-  border-radius: 12px;
-  background: rgba(99, 102, 241, 0.05);
+  border: 2px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.025);
   color: rgba(255, 255, 255, 0.7);
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .file-upload-label:hover .file-upload-content {
-  border-color: rgba(99, 102, 241, 0.5);
-  background: rgba(99, 102, 241, 0.1);
-  color: var(--teal-hover);
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--volt);
 }
 
 .file-upload-content svg {
-  color: rgba(99, 102, 241, 0.7);
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .file-upload-content span {
@@ -871,7 +822,7 @@
 
 .file-upload-content small {
   font-size: 0.8125rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.68);
 }
 
 /* Players Step Styles */
@@ -907,23 +858,22 @@
   position: relative;
   width: 220px;
   height: 300px;
-  border-radius: 12px;
+  border-radius: 2px;
   background: rgba(0, 0, 0, 0.3);
   border: 2px solid rgba(255, 255, 255, 0.1);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   overflow: hidden;
 }
 
 .player-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(99, 102, 241, 0.5);
-  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.2);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .player-card.active {
   border-color: var(--teal-pri);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
 }
 
 .player-card.complete {
@@ -945,8 +895,8 @@
   z-index: 1001 !important;
   background: var(--surface-1) !important;
   border: 2px solid var(--teal-pri) !important;
-  box-shadow: 0 20px 60px rgba(99, 102, 241, 0.5) !important;
-  border-radius: 16px !important;
+  box-shadow: 0 20px 60px rgba(255, 255, 255, 0.25) !important;
+  border-radius: 2px !important;
   overflow: hidden !important;
   margin: 0 !important;
 }
@@ -969,12 +919,12 @@
   left: 0.5rem;
   width: 28px;
   height: 28px;
-  background: linear-gradient(135deg, var(--teal-pri), var(--teal-hover));
+  background: var(--volt);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
+  color: var(--volt-ink);
   font-weight: 700;
   font-size: 0.875rem;
 }
@@ -990,11 +940,11 @@
 .card-champion {
   margin: 0.5rem 0.75rem;
   padding: 0.5rem 0.75rem;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(129, 140, 248, 0.2));
-  border: 2px solid rgba(99, 102, 241, 0.5);
-  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(215, 255, 63, 0.12));
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1004,8 +954,8 @@
 .champion-image {
   width: 56px;
   height: 56px;
-  border-radius: 8px;
-  border: 2px solid rgba(99, 102, 241, 0.4);
+  border-radius: 2px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
   object-fit: cover;
   background: rgba(0, 0, 0, 0.3);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
@@ -1014,7 +964,7 @@
 .champion-name {
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--teal-hover);
+  color: var(--volt);
   display: block;
   white-space: nowrap;
   overflow: hidden;
@@ -1027,7 +977,7 @@
 .card-summoner-name {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--teal-hover);
+  color: var(--volt);
   margin: 0.5rem 0.75rem;
   letter-spacing: 0.05em;
   text-align: center;
@@ -1048,7 +998,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #22c55e;
+  color: var(--volt);
 }
 
 .card-empty-state {
@@ -1057,7 +1007,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.62);
   font-size: 0.8125rem;
   text-align: center;
   flex: 1;
@@ -1065,27 +1015,27 @@
 }
 
 .card-empty-state svg {
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .edit-card-btn {
   position: absolute;
   bottom: 0.5rem;
   left: 0.5rem;
-  background: rgba(99, 102, 241, 0.2);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
   padding: 0.375rem;
-  color: var(--teal-hover);
+  color: var(--volt);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .edit-card-btn:hover {
-  background: rgba(99, 102, 241, 0.3);
+  background: rgba(255, 255, 255, 0.15);
   transform: scale(1.1);
 }
 
@@ -1103,14 +1053,14 @@
   align-items: center;
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 2px solid rgba(99, 102, 241, 0.3);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.15);
   flex-shrink: 0;
 }
 
 .player-card-header h4 {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #ffffff;
+  color: #eceae3;
   margin: 0;
 }
 
@@ -1120,8 +1070,8 @@
   color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   padding: 0.375rem;
-  border-radius: 6px;
-  transition: all 0.3s ease;
+  border-radius: 2px;
+  transition: var(--t-ui);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1129,7 +1079,7 @@
 
 .close-card-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  color: #eceae3;
 }
 
 .player-card-form {
@@ -1161,21 +1111,21 @@
   width: 100%;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  color: #ffffff;
-  transition: all 0.3s ease;
+  border-radius: 2px;
+  color: #eceae3;
+  transition: var(--t-ui);
 }
 
 .player-card-form .form-input:focus,
 .player-card-form .form-select:focus {
   outline: none;
   border-color: var(--teal-pri);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.075);
   background: rgba(0, 0, 0, 0.4);
 }
 
 .player-card-form .form-input::placeholder {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.62);
 }
 
 .player-card-form .form-row {
@@ -1194,13 +1144,13 @@
 .btn-save-card {
   padding: 1rem 2rem;
   border: none;
-  border-radius: 8px;
-  background: linear-gradient(135deg, var(--teal-pri), var(--teal-hover));
-  color: #ffffff;
+  border-radius: 2px;
+  background: var(--volt);
+  color: var(--volt-ink);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   margin-top: 1.5rem;
   width: 100%;
   flex-shrink: 0;
@@ -1208,7 +1158,6 @@
 
 .btn-save-card:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
 }
 
 .btn-save-card:disabled {
@@ -1231,7 +1180,7 @@
 
 .bracket-modal {
   background: var(--surface-1);
-  border-radius: 16px;
+  border-radius: 2px;
   max-width: 1200px;
   width: 100%;
   max-height: 90vh;
@@ -1265,11 +1214,11 @@
 .round-title {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #ffffff;
+  color: #eceae3;
   text-align: center;
   margin-bottom: 1rem;
   padding-bottom: 1rem;
-  border-bottom: 2px solid rgba(99, 102, 241, 0.3);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.15);
 }
 
 .bracket-matches-column {
@@ -1288,15 +1237,14 @@
 .bracket-match {
   background: rgba(0, 0, 0, 0.3);
   border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  border-radius: 2px;
   padding: 1rem;
   width: 100%;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .bracket-match:hover:not(.static) {
-  border-color: rgba(99, 102, 241, 0.5);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .bracket-match.static {
@@ -1316,10 +1264,10 @@
   position: fixed;
   bottom: 2rem;
   right: 2rem;
-  background: rgba(99, 102, 241, 0.9);
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.4);
+  color: #eceae3;
   padding: 0.75rem 1.5rem;
-  border-radius: 8px;
+  border-radius: 2px;
   font-size: 0.875rem;
   font-weight: 500;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -1358,8 +1306,8 @@
 
 .bracket-match.final-match {
   border-width: 3px;
-  border-color: rgba(251, 191, 36, 0.5);
-  background: rgba(251, 191, 36, 0.05);
+  border-color: rgba(215, 255, 63, 0.5);
+  background: rgba(215, 255, 63, 0.05);
 }
 
 .match-team {
@@ -1367,10 +1315,10 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem;
-  border-radius: 8px;
+  border-radius: 2px;
   margin-bottom: 0.5rem;
   background: rgba(255, 255, 255, 0.05);
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .match-team.winner {
@@ -1384,13 +1332,13 @@
 
 .team-name {
   font-weight: 600;
-  color: #ffffff;
+  color: #eceae3;
   font-size: 0.9375rem;
 }
 
 .team-score {
   font-weight: 700;
-  color: var(--teal-hover);
+  color: var(--volt);
   font-size: 1.125rem;
   min-width: 30px;
   text-align: right;
@@ -1406,7 +1354,7 @@
 
 .match-divider .match-bestof {
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.68);
   text-transform: uppercase;
 }
 
@@ -1423,10 +1371,10 @@
   gap: 0.5rem;
   margin-top: 1rem;
   padding: 0.75rem;
-  background: rgba(251, 191, 36, 0.2);
-  border: 1px solid rgba(251, 191, 36, 0.5);
-  border-radius: 8px;
-  color: #fbbf24;
+  background: rgba(215, 255, 63, 0.2);
+  border: 1px solid rgba(215, 255, 63, 0.5);
+  border-radius: 2px;
+  color: #d7ff3f;
   font-weight: 700;
   font-size: 1rem;
 }
@@ -1443,13 +1391,13 @@
 .btn-point {
   padding: 0.5rem 0.75rem;
   border: 1px solid rgba(34, 197, 94, 0.3);
-  border-radius: 6px;
+  border-radius: 2px;
   background: rgba(34, 197, 94, 0.1);
-  color: #22c55e;
+  color: var(--volt);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .btn-point:disabled {
@@ -1475,7 +1423,7 @@
   position: absolute;
   width: 2rem;
   height: 2px;
-  background: rgba(99, 102, 241, 0.3);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .bracket-line-left {
@@ -1553,18 +1501,18 @@
 .teams-list-container {
   flex: 0 0 300px;
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 12px;
+  border-radius: 2px;
   padding: 1.5rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .teams-list-container h4 {
-  color: #ffffff;
+  color: #eceae3;
   font-size: 1.125rem;
   font-weight: 700;
   margin-bottom: 1rem;
   padding-bottom: 0.75rem;
-  border-bottom: 2px solid rgba(99, 102, 241, 0.3);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.15);
 }
 
 .teams-list {
@@ -1580,17 +1528,17 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem;
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
   cursor: grab;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   position: relative;
 }
 
 .team-item:hover {
-  background: rgba(99, 102, 241, 0.2);
-  border-color: rgba(99, 102, 241, 0.5);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
   transform: translateX(4px);
 }
 
@@ -1603,38 +1551,38 @@
   height: 32px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid rgba(99, 102, 241, 0.5);
+  border: 2px solid rgba(255, 255, 255, 0.25);
 }
 
 .team-name-item {
   flex: 1;
-  color: #ffffff;
+  color: #eceae3;
   font-weight: 600;
   font-size: 0.9375rem;
 }
 
 .remove-team-btn {
-  background: rgba(239, 68, 68, 0.2);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: 4px;
+  background: rgba(255, 90, 54, 0.2);
+  border: 1px solid rgba(255, 90, 54, 0.3);
+  border-radius: 2px;
   padding: 0.25rem;
-  color: #ef4444;
+  color: #ff5a36;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .remove-team-btn:hover {
-  background: rgba(239, 68, 68, 0.3);
+  background: rgba(255, 90, 54, 0.3);
   transform: scale(1.1);
 }
 
 .bracket-canvas-container {
   flex: 1;
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 12px;
+  border-radius: 2px;
   padding: 1.5rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
@@ -1642,12 +1590,12 @@
 }
 
 .bracket-canvas-container h4 {
-  color: #ffffff;
+  color: #eceae3;
   font-size: 1.125rem;
   font-weight: 700;
   margin-bottom: 1rem;
   padding-bottom: 0.75rem;
-  border-bottom: 2px solid rgba(99, 102, 241, 0.3);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.15);
 }
 
 .bracket-slots-container {
@@ -1662,18 +1610,18 @@
 .bracket-slot {
   min-height: 100px;
   border: 2px dashed rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
+  border-radius: 2px;
   padding: 1rem;
   background: rgba(0, 0, 0, 0.2);
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .bracket-slot.empty {
-  border-color: rgba(99, 102, 241, 0.3);
-  background: rgba(99, 102, 241, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.025);
 }
 
 .bracket-slot.filled {
@@ -1682,12 +1630,12 @@
 }
 
 .bracket-slot:hover {
-  border-color: rgba(99, 102, 241, 0.5);
-  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .slot-placeholder {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.62);
   font-size: 0.875rem;
   text-align: center;
   font-style: italic;
@@ -1704,7 +1652,7 @@
 
 .bracket-canvas-header h4 {
   margin: 0;
-  color: #fff;
+  color: #eceae3;
   font-size: 1.125rem;
 }
 
@@ -1716,19 +1664,19 @@
 .bracket-view-toggle .toggle-btn {
   padding: 0.4rem 0.75rem;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
+  border-radius: 2px;
   background: rgba(0, 0, 0, 0.3);
   color: rgba(255, 255, 255, 0.7);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--t-ui);
 }
 
 .bracket-view-toggle .toggle-btn.active {
-  background: rgba(99, 102, 241, 0.3);
-  border-color: rgba(99, 102, 241, 0.6);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #eceae3;
 }
 
 .bracket-canvas-wrapper {
@@ -1743,20 +1691,20 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  border: 1px solid rgba(99, 102, 241, 0.5);
-  border-radius: 8px;
-  background: rgba(99, 102, 241, 0.15);
-  color: #a5b4fc;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.075);
+  color: var(--teal-accent);
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .btn-auto-bracket:hover:not(:disabled) {
-  background: rgba(99, 102, 241, 0.25);
+  background: rgba(255, 255, 255, 0.125);
   border-color: var(--teal-pri);
-  color: #fff;
+  color: #eceae3;
 }
 
 .btn-auto-bracket:disabled {
@@ -1777,13 +1725,13 @@
 .bracket-match-slot {
   background: rgba(0, 0, 0, 0.4);
   border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  border-radius: 2px;
   padding: 1.5rem;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .bracket-match-slot:hover {
-  border-color: rgba(99, 102, 241, 0.5);
+  border-color: rgba(255, 255, 255, 0.25);
   background: rgba(0, 0, 0, 0.5);
 }
 
@@ -1808,10 +1756,10 @@
   flex: 1;
   min-height: 120px;
   border: 2px dashed rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
+  border-radius: 2px;
   padding: 1rem;
   background: rgba(0, 0, 0, 0.2);
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1819,8 +1767,8 @@
 }
 
 .match-team-slot.empty {
-  border-color: rgba(99, 102, 241, 0.3);
-  background: rgba(99, 102, 241, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.025);
 }
 
 .match-team-slot.filled {
@@ -1829,8 +1777,8 @@
 }
 
 .match-team-slot:hover {
-  border-color: rgba(99, 102, 241, 0.5);
-  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .match-vs {
@@ -1838,9 +1786,9 @@
   font-weight: 700;
   color: rgba(255, 255, 255, 0.9);
   padding: 0.5rem 1rem;
-  background: rgba(99, 102, 241, 0.2);
-  border-radius: 8px;
-  border: 1px solid rgba(99, 102, 241, 0.4);
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   flex-shrink: 0;
 }
 
@@ -1854,13 +1802,13 @@
 
 .match-team-slot .slot-team span {
   font-weight: 600;
-  color: #ffffff;
+  color: #eceae3;
   text-align: center;
 }
 
 /* Estilos para lista de equipos disponibles */
 .no-teams-message {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.68);
   text-align: center;
   padding: 2rem;
   font-style: italic;
@@ -1880,11 +1828,11 @@
 .btn-download-excel {
   padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 2px;
   font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -1892,7 +1840,7 @@
 
 .btn-edit-bracket {
   background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  color: #eceae3;
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -1901,14 +1849,13 @@
 }
 
 .btn-download-excel {
-  background: linear-gradient(135deg, #22c55e, #16a34a);
-  color: #ffffff;
+  background: var(--volt);
+  color: var(--volt-ink);
 }
 
 .btn-download-excel:hover {
-  background: linear-gradient(135deg, #16a34a, #15803d);
+  background: var(--accent-hover);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
 }
 
 .match-team-slot .remove-slot-btn {
@@ -1922,7 +1869,7 @@
   align-items: center;
   gap: 0.75rem;
   width: 100%;
-  color: #ffffff;
+  color: #eceae3;
   font-weight: 600;
   font-size: 0.9375rem;
   position: relative;
@@ -1932,21 +1879,21 @@
   position: absolute;
   top: -0.5rem;
   right: -0.5rem;
-  background: rgba(239, 68, 68, 0.9);
+  background: rgba(255, 90, 54, 0.9);
   border: none;
   border-radius: 50%;
   width: 24px;
   height: 24px;
-  color: #ffffff;
+  color: #eceae3;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .remove-slot-btn:hover {
-  background: #ef4444;
+  background: #ff5a36;
   transform: scale(1.1);
 }
 
@@ -1959,37 +1906,107 @@
   margin-top: auto;
 }
 
-/* Móvil: títulos centrados, texto justificado, botones centrados debajo del título */
+/* Móvil: acciones de administración apiladas */
 @media (max-width: 768px) {
-  .hero-content,
-  .hero-content h1,
-  .tournaments-header,
-  .section-title {
-    text-align: center;
-  }
-  .hero-content p,
-  .empty-state p,
-  .empty-state .empty-hint {
-    text-align: justify;
-  }
   .tournaments-header {
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
-  }
-  .tournaments-header .section-title {
-    width: 100%;
+    align-items: stretch;
   }
   .tournaments-header-actions {
-    flex-direction: column;
     width: 100%;
-    align-items: center;
     gap: 0.5rem;
   }
   .tournaments-header-actions .btn-create-tournament,
   .tournaments-header-actions .btn-create-test-tournament {
-    width: 100%;
-    max-width: 280px;
+    flex: 1 1 200px;
     justify-content: center;
   }
 }
+
+.tournaments-content {
+  padding: clamp(40px, 6vw, 72px) 0 clamp(56px, 8vw, 96px);
+  scroll-margin-top: 1rem;
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  font-weight: 500;
+  line-height: 1.05;
+  color: var(--white);
+  margin: 0;
+}
+
+.section-title-sub {
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  margin-bottom: 0;
+}
+
+.clasificaciones-text {
+  margin: 0;
+  max-width: 68ch;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: rgba(236, 234, 227, 0.78);
+}
+
+.clasificaciones-text strong { color: var(--teal-accent); font-weight: 600; }
+
+.empty-state {
+  padding: clamp(32px, 5vw, 56px) 24px;
+  text-align: center;
+  background: var(--surface-1);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  color: rgba(236, 234, 227, 0.82);
+}
+
+.empty-state p { margin: 0 auto; max-width: 56ch; }
+
+.empty-hint {
+  margin-top: 8px !important;
+  font-size: 0.9375rem;
+  color: var(--teal-muted);
+}
+
+/* --- Inscripciones: estado del equipo y revisión del organizador --- */
+.reg-box {
+  margin: 0 0 1rem; padding: 0.875rem 1rem; border-radius: var(--radius-md, 2px);
+  background: var(--surface-2, #22221f); box-shadow: inset 0 0 0 1px var(--border);
+}
+.reg-box--mine { box-shadow: inset 0 0 0 1px var(--border-strong); }
+.reg-box__head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; cursor: default; }
+details.reg-box > summary { cursor: pointer; list-style: none; }
+details.reg-box > summary::-webkit-details-marker { display: none; }
+.reg-box__title { color: var(--white); font-size: 0.95rem; }
+.reg-box__note { margin: 0.5rem 0 0; color: var(--teal-muted); font-size: 0.875rem; }
+.reg-box__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+.reg-pill {
+  flex-shrink: 0; padding: 0.2rem 0.6rem; border-radius: 2px; font-size: 0.75rem; font-weight: 700;
+  background: rgba(215, 255, 63, 0.14); color: #d7ff3f;
+}
+.reg-pill[data-status='approved'] { background: var(--volt); color: var(--volt-ink); }
+.reg-pill[data-status='waitlisted'] { background: rgba(255, 255, 255, 0.08); color: var(--text-secondary); }
+.reg-count {
+  min-width: 1.75rem; padding: 0.15rem 0.5rem; border-radius: 2px; text-align: center;
+  background: var(--volt); color: var(--volt-ink); font-weight: 700; font-size: 0.8rem; font-variant-numeric: tabular-nums;
+}
+.reg-row {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem;
+  padding: 0.75rem 0; border-top: 1px solid var(--border); margin-top: 0.75rem;
+}
+.reg-row__info { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; color: var(--teal-muted); font-size: 0.85rem; }
+.reg-row__info strong { color: var(--white); font-size: 0.95rem; }
+.reg-row__riot { font-family: var(--font-mono, monospace); font-size: 0.78rem; overflow-wrap: anywhere; }
+.reg-row__actions { display: flex; gap: 0.5rem; }
+.reg-btn {
+  min-height: 40px; padding: 0 0.9rem; border-radius: var(--radius-sm, 2px); border: 0; cursor: pointer;
+  font: inherit; font-size: 0.875rem; font-weight: 600; color: var(--white);
+  background: rgba(236, 234, 227, 0.06); box-shadow: inset 0 0 0 1px var(--border);
+  transition: background-color 160ms ease;
+}
+.reg-btn:hover:not(:disabled) { background: rgba(236, 234, 227, 0.12); }
+.reg-btn--primary { background: var(--volt); color: var(--volt-ink); box-shadow: none; }
+.reg-btn--primary:hover:not(:disabled) { background: var(--accent-hover); }
+.reg-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.reg-btn:focus-visible { outline: 2px solid var(--teal-accent); outline-offset: 2px; }

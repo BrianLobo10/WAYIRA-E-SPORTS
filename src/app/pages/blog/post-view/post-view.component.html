@@ -28,7 +28,7 @@
               <div class="carousel-container">
                 @for (image of post()!.images!; track $index) {
                   <div class="carousel-slide" [class.active]="$index === getCurrentImageIndex()">
-                    <img [src]="image" [alt]="post()!.content">
+                    <img loading="lazy" decoding="async" [src]="image" [alt]="post()!.content">
                   </div>
                 }
               </div>
@@ -73,7 +73,7 @@
           <div class="post-header-section">
             <div class="post-author">
               @if (post()!.authorPhoto) {
-                <img 
+                <img loading="lazy" decoding="async" 
                   [src]="post()!.authorPhoto" 
                   [alt]="post()!.authorName" 
                   class="author-avatar"
@@ -129,7 +129,7 @@
                   <div class="comment-item">
                     <div class="comment-header">
                       @if (comment.authorPhoto) {
-                        <img 
+                        <img loading="lazy" decoding="async" 
                           [src]="comment.authorPhoto" 
                           [alt]="comment.authorName" 
                           class="comment-avatar"
@@ -176,7 +176,7 @@
                           <div class="reply-item">
                             <div class="comment-header">
                               @if (reply.authorPhoto) {
-                                <img 
+                                <img loading="lazy" decoding="async" 
                                   [src]="reply.authorPhoto" 
                                   [alt]="reply.authorName" 
                                   class="comment-avatar reply-avatar"

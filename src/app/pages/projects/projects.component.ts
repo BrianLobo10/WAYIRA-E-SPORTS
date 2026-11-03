@@ -4,8 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { SectionHeaderComponent } from '../../components/section-header/section-header.component';
 import { UniversalCardComponent } from '../../components/universal-card/universal-card.component';
 import { CardsGridComponent } from '../../components/cards-grid/cards-grid.component';
-import { FirebaseService, ActiveProject } from '../../services/firebase.service';
-import { Subscription } from 'rxjs';
+import type { ActiveProject } from '../../models';
+import { ContentService } from '../../services/content.service';
+import { RevealDirective } from '../../directives/reveal.directive';
 
 const DEFAULT_PROJECTS: ActiveProject[] = [
   { icon: 'trophy', title: 'Liga Wayira 2024', description: 'Torneo nacional de League of Legends con premios en efectivo y reconocimiento profesional', status: 'En curso', date: '2024' },
@@ -17,13 +18,12 @@ const DEFAULT_PROJECTS: ActiveProject[] = [
 @Component({
   selector: 'app-projects',
   standalone: true,
-  imports: [CommonModule, FormsModule, SectionHeaderComponent, UniversalCardComponent, CardsGridComponent],
+  imports: [RevealDirective, CommonModule, FormsModule, SectionHeaderComponent, UniversalCardComponent, CardsGridComponent],
   templateUrl: './projects.component.html',
   styleUrls: ['./projects.component.css']
 })
 export class ProjectsComponent implements OnInit, OnDestroy {
-  private firebaseService = inject(FirebaseService);
-  private sub?: Subscription;
+  private content = inject(ContentService);
 
   projects = signal<ActiveProject[]>([]);
   isAdmin = signal(false);
@@ -34,22 +34,24 @@ export class ProjectsComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.checkAdminStatus();
-    this.sub = this.firebaseService.getProjectsRealtime().subscribe((items) => {
+    void this.loadProjects();
+  }
+
+  ngOnDestroy() {}
+
+  async loadProjects() {
+    try {
+      const items = await this.content.getProjects<ActiveProject>();
       this.projects.set(items.length > 0 ? items : DEFAULT_PROJECTS);
-    });
+    } catch {
+      this.projects.set(DEFAULT_PROJECTS);
+    }
   }
 
-  ngOnDestroy() {
-    this.sub?.unsubscribe();
-  }
-
+  /** Puede editar quien tenga permiso de contenido del sitio (Editor o Administrador). */
   async checkAdminStatus() {
     try {
-      const user = this.firebaseService.getCurrentUser();
-      if (user) {
-        const admin = await this.firebaseService.isAdmin(user.uid);
-        this.isAdmin.set(admin);
-      }
+      this.isAdmin.set(await this.content.canEditSiteContent());
     } catch {
       this.isAdmin.set(false);
     }
@@ -93,11 +95,12 @@ export class ProjectsComponent implements OnInit, OnDestroy {
     }
     this.saving.set(true);
     try {
-      await this.firebaseService.setProjects(list);
+      await this.content.saveProjects(list);
+      this.projects.set(list);
       this.closeEditModal();
     } catch (e) {
       console.error(e);
-      alert('Error al guardar. Revisa la consola y las reglas de Firestore.');
+      alert(e instanceof Error ? e.message : 'No se pudo guardar.');
     } finally {
       this.saving.set(false);
     }

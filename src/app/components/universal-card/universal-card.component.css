@@ -1,258 +1,88 @@
+:host { display: block; height: 100%; }
+
 .universal-card {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-  border: 1px solid var(--border-card, rgba(255, 255, 255, 0.1));
-  border-radius: 16px;
-  padding: 2rem;
-  text-align: center;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
   position: relative;
-  overflow: hidden;
-  height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  height: 100%;
+  padding: 24px;
+  text-align: left;
+  background: var(--surface-1);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+  transition: transform 220ms var(--ease-wayira), box-shadow 220ms var(--ease-out), background-color 220ms var(--ease-out);
 }
 
 .universal-card::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  inset: 0 0 auto;
   height: 2px;
-  background: linear-gradient(90deg, #6366f1, #4f46e5, #6366f1);
+  background: var(--teal-accent);
   transform: scaleX(0);
-  transition: transform 0.3s ease;
+  transform-origin: left;
+  transition: transform 320ms var(--ease-wayira);
+  display: none;
 }
 
-.universal-card:hover::before {
-  transform: scaleX(1);
+@media (hover: hover) {
+  .universal-card:hover {
+    transform: translateY(-3px);
+    background: var(--surface-2);
+    box-shadow: var(--shadow-2);
+  }
+  .universal-card:hover::before { transform: scaleX(1); }
 }
 
-.universal-card:hover {
-  transform: translateY(-6px);
-  border-color: var(--border-accent-strong, rgba(1, 108, 108, 0.5));
-  box-shadow: 0 16px 36px rgba(1, 108, 108, 0.12);
-}
-
-.universal-card:focus-within {
-  outline: 2px solid var(--border-accent-strong, rgba(1, 108, 108, 0.5));
-  outline-offset: 2px;
-}
-
-.card-service {
-  background: linear-gradient(135deg, rgba(15, 5, 32, 0.5), rgba(45, 27, 78, 0.3));
-  border-color: var(--border-accent, rgba(1, 108, 108, 0.35));
-}
-
-.card-service:hover {
-  background: linear-gradient(135deg, rgba(1, 108, 108, 0.08), rgba(45, 27, 78, 0.4));
-  border-color: var(--color-accent-teal, #016C6C);
-  box-shadow: 0 20px 40px rgba(1, 108, 108, 0.15);
-}
-
-.card-valor {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
-  border-color: var(--border-card, rgba(255, 255, 255, 0.1));
-}
-
-.card-valor:hover {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06));
-  border-color: var(--border-accent-strong, rgba(1, 108, 108, 0.5));
-  box-shadow: 0 15px 30px rgba(1, 108, 108, 0.12);
-}
-
-.card-about {
-  background: linear-gradient(135deg, rgba(1, 108, 108, 0.08), rgba(45, 27, 78, 0.3));
-  border-color: var(--border-accent, rgba(1, 108, 108, 0.35));
-}
-
-.card-about:hover {
-  background: linear-gradient(135deg, rgba(1, 108, 108, 0.12), rgba(45, 27, 78, 0.4));
-  border-color: var(--color-accent-teal, #016C6C);
-  box-shadow: 0 20px 40px rgba(1, 108, 108, 0.15);
-}
-
-.card-small {
-  padding: 1.5rem;
-  min-height: 200px;
-}
-
-.card-medium {
-  padding: 2rem;
-  min-height: 250px;
-}
-
-.card-large {
-  padding: 2.5rem;
-  min-height: 300px;
-}
+.card-about,
+.card-service { background: var(--surface-1); }
+.card-valor { background: rgba(34, 34, 31, 0.7); }
 
 .card-icon {
-  margin-bottom: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #6366f1;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 6px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--teal-accent);
   flex-shrink: 0;
 }
 
-.card-icon svg {
-  width: 3rem;
-  height: 3rem;
-}
-
-.card-small .card-icon svg {
-  width: 2.5rem;
-  height: 2.5rem;
-}
-
-.card-small .card-icon {
-  margin-bottom: 1rem;
-}
-
-.card-large .card-icon svg {
-  width: 3.5rem;
-  height: 3.5rem;
-}
-
-.card-large .card-icon {
-  margin-bottom: 2rem;
+.card-icon ::ng-deep svg {
+  width: 24px;
+  height: 24px;
 }
 
 .card-title {
-  color: #ffffff;
-  font-weight: 700;
-  margin-bottom: 1rem;
-  background: linear-gradient(135deg, #ffffff, #818cf8);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  flex-shrink: 0;
-}
-
-.card-small .card-title {
-  font-size: 1.25rem;
-  margin-bottom: 0.75rem;
-}
-
-.card-medium .card-title {
-  font-size: 1.5rem;
-}
-
-.card-large .card-title {
-  font-size: 1.75rem;
-  margin-bottom: 1.25rem;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.375rem;
+  line-height: 1.15;
+  color: var(--white);
 }
 
 .card-description {
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9375rem;
   line-height: 1.6;
-  flex-grow: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  color: var(--teal-muted);
 }
 
-.card-small .card-description {
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
+.card-small { padding: 20px; }
+.card-small .card-icon { width: 40px; height: 40px; }
+.card-small .card-icon ::ng-deep svg { width: 20px; height: 20px; }
+.card-small .card-title { font-size: 1.1875rem; }
+.card-small .card-description { font-size: 0.875rem; }
 
-.card-medium .card-description {
-  font-size: 1rem;
-}
-
-.card-large .card-description {
-  font-size: 1.1rem;
-  line-height: 1.7;
-}
-
-@media (max-width: 1200px) {
-  .universal-card {
-    padding: 1.75rem;
-  }
-  
-  .card-icon svg {
-    width: 2.75rem;
-    height: 2.75rem;
-  }
-  
-  .card-title {
-    font-size: 1.4rem;
-  }
-}
-
-@media (max-width: 768px) {
-  .universal-card {
-    padding: 1.5rem;
-    min-height: 220px;
-  }
-  
-  .card-icon svg {
-    width: 2.5rem;
-    height: 2.5rem;
-  }
-  
-  .card-icon {
-    margin-bottom: 1rem;
-  }
-  
-  .card-title {
-    font-size: 1.25rem;
-    margin-bottom: 0.75rem;
-  }
-  
-  .card-description {
-    font-size: 0.95rem;
-    line-height: 1.5;
-  }
-  
-  .card-small {
-    min-height: 180px;
-    padding: 1.25rem;
-  }
-  
-  .card-large {
-    min-height: 250px;
-    padding: 1.75rem;
-  }
-}
+.card-large { padding: 28px; }
+.card-large .card-title { font-size: 1.625rem; }
+.card-large .card-description { font-size: 1rem; }
 
 @media (max-width: 480px) {
-  .universal-card {
-    padding: 1.25rem;
-    min-height: 200px;
-  }
-  
-  .card-icon svg {
-    width: 2rem;
-    height: 2rem;
-  }
-  
-  .card-icon {
-    margin-bottom: 0.75rem;
-  }
-  
-  .card-title {
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
-  }
-  
-  .card-description {
-    font-size: 0.9rem;
-    line-height: 1.4;
-  }
-  
-  .card-small {
-    min-height: 160px;
-    padding: 1rem;
-  }
-  
-  .card-large {
-    min-height: 220px;
-    padding: 1.5rem;
-  }
+  .universal-card { padding: 18px; }
+  .card-small { padding: 16px; }
 }

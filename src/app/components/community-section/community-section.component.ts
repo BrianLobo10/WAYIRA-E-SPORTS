@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SOCIAL_LINKS } from '../../config/social.config';
+import { RevealDirective } from '../../directives/reveal.directive';
 
 interface SocialCard {
   name: string;
@@ -12,7 +13,7 @@ interface SocialCard {
 @Component({
   selector: 'app-community-section',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RevealDirective],
   templateUrl: './community-section.component.html',
   styleUrls: ['./community-section.component.css']
 })

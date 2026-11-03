@@ -1,6 +1,6 @@
 .post-view-page {
   min-height: 100vh;
-  background: #0f1419;
+  background: var(--surface-1);
   padding: 2rem 0;
 }
 
@@ -32,7 +32,7 @@
   width: 40px;
   height: 40px;
   border: 4px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #6366f1;
+  border-top-color: var(--teal-pri);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -42,9 +42,9 @@
 }
 
 .container {
-  max-width: 1200px;
+  max-width: var(--container);
   margin: 0 auto;
-  padding: 0 2rem;
+  padding: 0 var(--gutter);
 }
 
 .btn-back-top {
@@ -59,7 +59,7 @@
   font-size: 0.9375rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   margin-bottom: 2rem;
 }
 
@@ -71,17 +71,17 @@
 
 .btn-back {
   padding: 0.75rem 1.5rem;
-  background: #6366f1;
+  background: var(--teal-pri);
   border: none;
   border-radius: 8px;
   color: #ffffff;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .btn-back:hover {
-  background: #818cf8;
+  background: var(--teal-accent);
 }
 
 .post-view-content {
@@ -209,7 +209,7 @@
   color: #ffffff;
   cursor: pointer;
   z-index: 10;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .carousel-btn:hover {
@@ -242,11 +242,11 @@
   background: rgba(255, 255, 255, 0.4);
   border: none;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .carousel-dot.active {
-  background: #6366f1;
+  background: var(--teal-pri);
   width: 24px;
   border-radius: 5px;
 }
@@ -298,7 +298,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #6366f1, #818cf8);
+  background: var(--teal-pri);
   color: #ffffff;
   font-weight: 600;
   font-size: 1.2rem;
@@ -314,12 +314,12 @@
   font-weight: 600;
   color: #ffffff;
   text-decoration: none;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   font-size: 1rem;
 }
 
 .author-name-link:hover {
-  color: #818cf8;
+  color: var(--teal-accent);
   text-decoration: underline;
 }
 
@@ -358,7 +358,7 @@
   cursor: pointer;
   padding: 0.75rem 1rem;
   border-radius: 8px;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   font-size: 0.9375rem;
   font-weight: 500;
 }
@@ -370,12 +370,12 @@
 
 .reaction-btn.liked,
 .reaction-btn.disliked {
-  color: #6366f1;
+  color: var(--teal-pri);
 }
 
 .reaction-btn.liked svg,
 .reaction-btn.disliked svg {
-  fill: #6366f1;
+  fill: var(--teal-pri);
 }
 
 .comments-section {
@@ -409,7 +409,7 @@
 .empty-comments {
   text-align: center;
   padding: 3rem 1rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.68);
 }
 
 .comments-list {
@@ -449,7 +449,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #6366f1, #818cf8);
+  background: var(--teal-pri);
   color: #ffffff;
   font-weight: 600;
   font-size: 0.875rem;
@@ -460,11 +460,11 @@
   color: #ffffff;
   font-size: 0.9375rem;
   text-decoration: none;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .comment-author-link:hover {
-  color: #818cf8;
+  color: var(--teal-accent);
   text-decoration: underline;
 }
 
@@ -478,7 +478,7 @@
   word-wrap: break-word;
   background: rgba(255, 255, 255, 0.03);
   border-radius: 8px;
-  border-left: 2px solid rgba(99, 102, 241, 0.3);
+  border-left: 2px solid rgba(1, 136, 136, 0.3);
 }
 
 .comment-actions {
@@ -494,10 +494,10 @@
   gap: 0.375rem;
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.68);
   cursor: pointer;
   font-size: 0.8125rem;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
 }
@@ -517,7 +517,7 @@
 
 .reply-count {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.68);
   margin-left: 0.5rem;
 }
 
@@ -525,7 +525,7 @@
   margin-top: 1rem;
   margin-left: calc(36px + 0.75rem);
   padding-left: 1rem;
-  border-left: 2px solid rgba(99, 102, 241, 0.2);
+  border-left: 2px solid rgba(1, 136, 136, 0.2);
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -581,26 +581,26 @@
 
 .reply-input:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: var(--teal-pri);
 }
 
 .reply-input::placeholder {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.62);
 }
 
 .reply-send-btn {
   padding: 0.5rem 0.75rem;
   flex-shrink: 0;
-  background: #6366f1;
+  background: var(--teal-pri);
   border: none;
   border-radius: 6px;
   color: #ffffff;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .reply-send-btn:hover {
-  background: #818cf8;
+  background: var(--teal-accent);
 }
 
 .cancel-reply-btn {
@@ -611,7 +611,7 @@
   color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   font-size: 0.8125rem;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   flex-shrink: 0;
 }
 
@@ -640,28 +640,28 @@
 
 .comment-input:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: var(--teal-pri);
 }
 
 .comment-input::placeholder {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.62);
 }
 
 .send-btn {
   padding: 0.75rem 1rem;
-  background: #6366f1;
+  background: var(--teal-pri);
   border: none;
   border-radius: 8px;
   color: #ffffff;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .send-btn:hover {
-  background: #818cf8;
+  background: var(--teal-accent);
 }
 
 @media (max-width: 1024px) {

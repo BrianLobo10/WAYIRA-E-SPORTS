@@ -3,7 +3,8 @@ import { Subscription, forkJoin } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { FirebaseService, UserProfile, Post, Comment } from '../../services/firebase.service';
+import type { UserProfile, Post } from '../../models';
+import { CommunityService } from '../../services/community.service';
 import { RiotApiService, SummonerData, MatchData, ChampionMastery, LeagueEntry, ParticipantData } from '../../services/riot-api.service';
 import { ChampionService } from '../../services/champion.service';
 import { ProfileHeaderComponent } from '../../components/profile-header/profile-header.component';
@@ -30,7 +31,7 @@ import { readCachedUserProfile, writeCachedUserProfile } from '../../utils/profi
 export class ProfileComponent implements OnInit, OnDestroy {
   // Exponer URL global para usar en el template
   URL = URL;
-  private firebaseService = inject(FirebaseService);
+  private community = inject(CommunityService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private profileSubscription: Subscription | null = null;
@@ -42,11 +43,18 @@ export class ProfileComponent implements OnInit, OnDestroy {
   loading = signal(true);
   
   isOwnProfile = computed(() => {
-    const currentUser = this.firebaseService.getCurrentUser();
+    const currentUser = this.community.getCurrentUser();
     return currentUser && this.userId() === currentUser.uid;
   });
 
   isFollowing = signal(false);
+  /** PUUID de Riot obtenido en vivo al consultar la cuenta vinculada. */
+  riotPuuid = signal<string | null>(null);
+
+  /** Tiene cuenta de Riot vinculada (nombre, etiqueta y región). */
+  hasRiot(p: UserProfile | null | undefined): boolean {
+    return !!(p?.gameName && p?.tagLine && p?.region);
+  }
   showPostModal = signal(false);
   selectedPost = signal<Post | null>(null);
   newComment = signal('');
@@ -168,7 +176,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
         this.loadProfile(userId);
         this.loadPosts(userId);
       } else {
-        const currentUser = this.firebaseService.getCurrentUser();
+        const currentUser = this.community.getCurrentUser();
         if (currentUser) {
           this.userId.set(currentUser.uid);
           this.loadProfile(currentUser.uid);
@@ -187,8 +195,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
       this.profile.set(cached);
       this.loading.set(false);
       this.subscribeToProfileRealtime(userId);
-      if (cached.puuid && cached.region) {
-        this.firebaseService.checkAndUpdateUserSummonerName(userId);
+      if (this.hasRiot(cached)) {
+        this.community.checkAndUpdateUserSummonerName(userId);
         this.loadRiotWithCache(cached);
       } else {
         this.riotStats.set(null);
@@ -203,10 +211,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
     }
 
     try {
-      const currentUid = this.firebaseService.getCurrentUser()?.uid;
+      const currentUid = this.community.getCurrentUser()?.uid;
       const [profile, currentUserProfile] = await Promise.all([
-        this.firebaseService.getUserProfile(userId),
-        currentUid ? this.firebaseService.getUserProfile(currentUid) : Promise.resolve<UserProfile | null>(null)
+        this.community.getUserProfile(userId),
+        currentUid ? this.community.getUserProfile(currentUid) : Promise.resolve<UserProfile | null>(null)
       ]);
 
       if (profile) {
@@ -214,8 +222,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
         writeCachedUserProfile(userId, profile);
         if (!cached) {
           this.subscribeToProfileRealtime(userId);
-          if (profile.puuid && profile.region) {
-            this.firebaseService.checkAndUpdateUserSummonerName(userId);
+          if (this.hasRiot(profile)) {
+            this.community.checkAndUpdateUserSummonerName(userId);
             this.loadRiotWithCache(profile);
           } else {
             this.riotStats.set(null);
@@ -225,8 +233,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
             this.last4WeeksStats.set(null);
             this.championWinRatesFromMatches.set(new Map());
           }
-        } else if (profile.puuid && profile.region) {
-          this.firebaseService.checkAndUpdateUserSummonerName(userId);
+        } else if (this.hasRiot(profile)) {
+          this.community.checkAndUpdateUserSummonerName(userId);
           this.loadRiotWithCache(profile);
         }
       } else if (!cached) {
@@ -247,18 +255,18 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   loadPosts(userId: string) {
-    this.firebaseService.getUserPosts(userId).subscribe({
+    this.community.getUserPosts(userId).subscribe({
       next: (posts) => this.posts.set(posts),
       error: () => this.posts.set([])
     });
   }
 
   async loadCurrentUserProfile() {
-    const currentUser = this.firebaseService.getCurrentUser();
+    const currentUser = this.community.getCurrentUser();
     if (currentUser) {
       const fromCache = readCachedUserProfile(currentUser.uid);
       if (fromCache) this.currentUserProfile.set(fromCache);
-      const profile = await this.firebaseService.getUserProfile(currentUser.uid);
+      const profile = await this.community.getUserProfile(currentUser.uid);
       if (profile) {
         this.currentUserProfile.set(profile);
         writeCachedUserProfile(currentUser.uid, profile);
@@ -267,7 +275,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   async followUser() {
-    const currentUser = this.firebaseService.getCurrentUser();
+    const currentUser = this.community.getCurrentUser();
     const profile = this.profile();
     if (!currentUser || !profile || this.isOwnProfile()) return;
 
@@ -275,9 +283,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
     
     try {
       if (wasFollowing) {
-        await this.firebaseService.unfollowUser(currentUser.uid, profile.uid);
+        await this.community.unfollowUser(currentUser.uid, profile.uid);
       } else {
-        await this.firebaseService.followUser(currentUser.uid, profile.uid);
+        await this.community.followUser(currentUser.uid, profile.uid);
       }
       
       // Actualizar el estado inmediatamente (optimista)
@@ -285,8 +293,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
       
       // Recargar los perfiles en paralelo para actualizar contadores
       const [updatedProfile, updatedCurrentUserProfile] = await Promise.all([
-        this.firebaseService.getUserProfile(profile.uid),
-        this.firebaseService.getUserProfile(currentUser.uid)
+        this.community.getUserProfile(profile.uid),
+        this.community.getUserProfile(currentUser.uid)
       ]);
       
       if (updatedProfile) {
@@ -301,9 +309,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
         const following = updatedCurrentUserProfile.following || [];
         const isNowFollowing = following.includes(profile.uid);
         this.isFollowing.set(isNowFollowing);
-        console.log('Estado de seguimiento actualizado:', isNowFollowing);
-        console.log('Siguiendo del usuario actual:', following);
-        console.log('Seguidores del perfil objetivo:', updatedProfile?.followers || []);
       }
     } catch (error) {
       console.error('Error al seguir/dejar de seguir:', error);
@@ -366,13 +371,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   async likePost(post: Post) {
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.community.getCurrentUser();
     if (!user || !post.id) return;
-    await this.firebaseService.likePost(post.id, user.uid);
+    await this.community.likePost(post.id, user.uid);
     this.loadPosts(this.userId()!);
     // Actualizar el post seleccionado en tiempo real
     if (this.selectedPost()?.id === post.id) {
-      this.firebaseService.getPostById(post.id).subscribe({
+      this.community.getPostById(post.id).subscribe({
         next: (updatedPost) => {
           if (updatedPost) {
             this.selectedPost.set(updatedPost);
@@ -383,13 +388,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   async dislikePost(post: Post) {
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.community.getCurrentUser();
     if (!user || !post.id) return;
-    await this.firebaseService.dislikePost(post.id, user.uid);
+    await this.community.dislikePost(post.id, user.uid);
     this.loadPosts(this.userId()!);
     // Actualizar el post seleccionado en tiempo real
     if (this.selectedPost()?.id === post.id) {
-      this.firebaseService.getPostById(post.id).subscribe({
+      this.community.getPostById(post.id).subscribe({
         next: (updatedPost) => {
           if (updatedPost) {
             this.selectedPost.set(updatedPost);
@@ -400,10 +405,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   async addComment() {
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.community.getCurrentUser();
     if (!user || !this.selectedPost()?.id || !this.newComment().trim()) return;
 
-    await this.firebaseService.addComment(this.selectedPost()!.id!, {
+    await this.community.addComment(this.selectedPost()!.id!, {
       authorId: user.uid,
       authorName: this.currentUserProfile()!.displayName,
       authorPhoto: this.currentUserProfile()!.photoURL,
@@ -419,9 +424,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   async likeComment(commentIndex: number) {
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.community.getCurrentUser();
     if (!user || !this.selectedPost()?.id) return;
-    await this.firebaseService.likeComment(this.selectedPost()!.id!, commentIndex, user.uid);
+    await this.community.likeComment(this.selectedPost()!.id!, commentIndex, user.uid);
     this.loadPosts(this.userId()!);
     const updatedPost = this.posts().find(p => p.id === this.selectedPost()?.id);
     if (updatedPost) {
@@ -430,9 +435,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   async dislikeComment(commentIndex: number) {
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.community.getCurrentUser();
     if (!user || !this.selectedPost()?.id) return;
-    await this.firebaseService.dislikeComment(this.selectedPost()!.id!, commentIndex, user.uid);
+    await this.community.dislikeComment(this.selectedPost()!.id!, commentIndex, user.uid);
     this.loadPosts(this.userId()!);
     const updatedPost = this.posts().find(p => p.id === this.selectedPost()?.id);
     if (updatedPost) {
@@ -441,12 +446,12 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   isLiked(post: Post): boolean {
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.community.getCurrentUser();
     return user ? (post.likes || []).includes(user.uid) : false;
   }
 
   isDisliked(post: Post): boolean {
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.community.getCurrentUser();
     return user ? (post.dislikes || []).includes(user.uid) : false;
   }
 
@@ -477,7 +482,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     
     try {
       const followersProfiles = await Promise.all(
-        profile.followers.map(userId => this.firebaseService.getUserProfile(userId))
+        profile.followers.map(userId => this.community.getUserProfile(userId))
       );
       this.followersList.set(followersProfiles.filter(p => p !== null) as UserProfile[]);
     } catch (error) {
@@ -496,7 +501,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     
     try {
       const followingProfiles = await Promise.all(
-        profile.following.map(userId => this.firebaseService.getUserProfile(userId))
+        profile.following.map(userId => this.community.getUserProfile(userId))
       );
       this.followingList.set(followingProfiles.filter(p => p !== null) as UserProfile[]);
     } catch (error) {
@@ -643,7 +648,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     soloQRank: LeagueEntry | null
   ) {
     try {
-      await this.firebaseService.updateUserProfile(uid, {
+      await this.community.updateUserProfile(uid, {
         riotSnapshot: {
           stats,
           champions,
@@ -670,7 +675,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   loadRiotProfileData(profile: UserProfile, backgroundRefresh = false) {
     const region = profile.region!;
-    const puuid = profile.puuid!;
     const uid = profile.uid;
     if (!backgroundRefresh) {
       this.loadingRiot.set(true);
@@ -685,6 +689,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
     this.riotApiService.getSummoner(region, profile.gameName!, profile.tagLine!).subscribe({
       next: (summoner) => {
+        const puuid = summoner.puuid;
+        this.riotPuuid.set(puuid);
         let wins = 0, losses = 0;
         const leagues = summoner.leagues || [];
         leagues.forEach((l: LeagueEntry) => {
@@ -835,14 +841,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   async confirmCoverChange() {
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.community.getCurrentUser();
     const profile = this.profile();
     const file = this.editCoverFile();
     if (!user || !profile || !file || this.userId() !== user.uid) return;
     this.uploadingCover.set(true);
     try {
-      const url = await this.firebaseService.uploadImage(file, `covers/${user.uid}/${Date.now()}_${file.name}`);
-      await this.firebaseService.updateUserProfile(user.uid, { coverImageURL: url });
+      const url = await this.community.uploadImage(file, 'covers');
+      await this.community.updateUserProfile(user.uid, { coverImageURL: url });
       this.profile.set({ ...profile, coverImageURL: url });
       this.cancelCoverChange();
     } catch (e) {
@@ -876,7 +882,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   /** Última partida con el participante del usuario para la tarjeta de actividad reciente. */
   getLastMatchForCard(): { match: MatchData; participant: ParticipantData } | null {
     const matches = this.recentMatches();
-    const puuid = this.profile()?.puuid;
+    const puuid = this.riotPuuid() ?? this.profile()?.puuid;
     if (!puuid || !matches?.length) return null;
     const m = matches[0];
     const part = m.info?.participants?.find((p: any) => p.puuid === puuid);
@@ -1151,13 +1157,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   async linkRiotAccount() {
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.community.getCurrentUser();
     const profile = this.profile();
     const found = this.foundLinkSummoner();
     if (!user || !profile || !found || user.uid !== profile.uid) return;
     this.linkingRiot.set(true);
     try {
-      await this.firebaseService.updateUserProfile(user.uid, {
+      await this.community.updateUserProfile(user.uid, {
         gameName: found.gameName,
         tagLine: found.tagLine,
         region: this.editRegion(),
@@ -1165,7 +1171,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       });
       this.foundLinkSummoner.set(null);
       await this.loadProfile(user.uid);
-      if (this.profile()?.puuid && this.profile()?.region) {
+      if (this.hasRiot(this.profile())) {
         this.loadRiotProfileData(this.profile()!);
       }
     } catch (e) {
@@ -1178,11 +1184,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   async unlinkRiotAccount() {
     if (!confirm('¿Desvincular cuenta Riot? Las estadísticas dejarán de mostrarse.')) return;
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.community.getCurrentUser();
     const profile = this.profile();
     if (!user || !profile || user.uid !== profile.uid) return;
     try {
-      await this.firebaseService.updateUserProfile(user.uid, {
+      await this.community.updateUserProfile(user.uid, {
         gameName: undefined,
         tagLine: undefined,
         region: undefined,
@@ -1294,7 +1300,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   async saveProfile() {
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.community.getCurrentUser();
     const profile = this.profile();
     if (!user || !profile) return;
 
@@ -1304,11 +1310,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
       if (this.editPhotoFile()) {
         const file = this.editPhotoFile()!;
-        photoURL = await this.firebaseService.uploadImage(file, `profiles/${user.uid}/${Date.now()}_${file.name}`);
+        photoURL = await this.community.uploadImage(file, 'avatars');
       } else if (this.foundSummoner()) {
         // Si se buscó un invocador, usar su icono de perfil
         photoURL = this.editPhotoPreview() || null;
-        console.log('Guardando foto del invocador:', photoURL);
       } else if (this.selectedChampion()) {
         // Si se seleccionó un campeón, usar su imagen
         photoURL = this.editPhotoPreview() || null;
@@ -1323,11 +1328,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
       // Asegurarse de incluir null explícitamente si no hay foto
       if (photoURL !== profile.photoURL || this.foundSummoner() || this.selectedChampion()) {
         updateData.photoURL = photoURL !== undefined ? photoURL : null;
-        console.log('Actualizando photoURL:', updateData.photoURL);
       }
 
-      await this.firebaseService.updateUserProfile(user.uid, updateData);
-      console.log('Perfil actualizado en Firestore:', updateData);
+      await this.community.updateUserProfile(user.uid, updateData);
 
       // Esperar un poco para que se propaguen los cambios
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -1337,8 +1340,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       await this.loadCurrentUserProfile();
       
       // Forzar actualización del signal del perfil
-      const updatedProfile = await this.firebaseService.getUserProfile(user.uid);
-      console.log('Perfil recargado:', updatedProfile);
+      const updatedProfile = await this.community.getUserProfile(user.uid);
       this.profile.set(updatedProfile);
       
       // Recargar los posts para actualizar las fotos en las publicaciones
@@ -1356,7 +1358,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   async createPostFromProfile() {
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.community.getCurrentUser();
     if (!user) {
       alert('Debes iniciar sesión para publicar');
       return;
@@ -1374,17 +1376,17 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
       // Subir imágenes
       for (const file of this.newPostImages()) {
-        const url = await this.firebaseService.uploadImage(file, `posts/${user.uid}/${Date.now()}_${file.name}`);
+        const url = await this.community.uploadImage(file, 'post-media');
         images.push(url);
       }
 
       // Subir video
       let videoUrl: string | undefined;
       if (this.newPostVideo()) {
-        videoUrl = await this.firebaseService.uploadVideo(this.newPostVideo()!, `posts/${user.uid}/${Date.now()}_${this.newPostVideo()!.name}`);
+        videoUrl = await this.community.uploadVideo(this.newPostVideo()!);
       }
 
-      await this.firebaseService.createPost({
+      await this.community.createPost({
         authorId: user.uid,
         authorName: currentUserProfile?.displayName || user.displayName || 'Usuario',
         authorPhoto: currentUserProfile?.photoURL || user.photoURL || null,
@@ -1496,7 +1498,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     }
 
     // Suscribirse a cambios en tiempo real usando el método del servicio
-    this.profileSubscription = this.firebaseService.getUserProfileRealtime(userId).subscribe({
+    this.profileSubscription = this.community.getUserProfileRealtime(userId).subscribe({
       next: (updatedProfile) => {
         if (updatedProfile) {
           this.profile.set(updatedProfile);

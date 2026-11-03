@@ -1,6 +1,6 @@
 import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import type { UserProfile } from '../../services/firebase.service';
+import type { UserProfile } from '../../models';
 
 @Component({
   selector: 'app-profile-header',

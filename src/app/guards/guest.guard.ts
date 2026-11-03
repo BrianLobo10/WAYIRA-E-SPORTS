@@ -1,19 +1,20 @@
 import { inject } from '@angular/core';
 import { Router, CanActivateFn } from '@angular/router';
-import { FirebaseService } from '../services/firebase.service';
+import { AuthService } from '../services/auth.service';
+import { SecureStorageService } from '../services/secure-storage.service';
+import { getStoredReturnUrl, safeInternalPath } from './session.guard';
 
-export const guestGuard: CanActivateFn = async (route, state) => {
-  const firebaseService = inject(FirebaseService);
+/** Login y registro solo sin sesión. Al volver de Google/Discord ya con sesión, lleva a donde iba el usuario. */
+export const guestGuard: CanActivateFn = async (route) => {
+  const auth = inject(AuthService);
   const router = inject(Router);
+  const storage = inject(SecureStorageService);
 
-  // Esperar a que Firebase Auth emita el primer estado (evita mostrar login y luego redirigir)
-  await firebaseService.waitForAuthInit(3000);
-  const user = firebaseService.getCurrentUser();
-
-  if (user) {
-    router.navigate(['/']);
-    return false;
+  await auth.waitForInit();
+  if (auth.isAuthenticated()) {
+    const next = safeInternalPath(route.queryParamMap.get('next'))
+      ?? getStoredReturnUrl(route.queryParamMap.get('r'), storage);
+    return router.parseUrl(next);
   }
   return true;
 };
-

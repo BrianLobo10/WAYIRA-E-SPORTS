@@ -39,7 +39,7 @@ export class TwitchLiveService implements OnDestroy {
     this.loading.set(true);
     try {
       const data = await firstValueFrom(
-        this.http.get<TwitchLiveResponse>(`${environment.apiUrl}/twitch/live`)
+        this.http.get<TwitchLiveResponse>(`${environment.supabase.functionsUrl}/social/live`)
       );
       this.isLive.set(!!data.live);
       return this.isLive();

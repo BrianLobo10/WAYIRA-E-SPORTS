@@ -1,12 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import {
-  Firestore,
-  doc,
-  getDoc,
-  setDoc,
-  deleteDoc,
-  serverTimestamp
-} from '@angular/fire/firestore';
+import { SupabaseService } from './supabase.service';
 
 export interface PotatoChatMessage {
   text: string;
@@ -24,13 +17,10 @@ const GUEST_WELCOME: PotatoChatMessage = {
   text: '¡Hola! Soy POTATO 🥔 Inicia sesión para que recuerde nuestra conversación. Mientras tanto, pregúntame sobre torneos, LoL o la web.'
 };
 
+/** Historial de POTATO por usuario (tabla potato_chat_sessions; solo el dueño lo ve). */
 @Injectable({ providedIn: 'root' })
 export class PotatoChatService {
-  private firestore = inject(Firestore);
-
-  private docRef(uid: string) {
-    return doc(this.firestore, 'users', uid, 'potatoChat', 'session');
-  }
+  private readonly sb = inject(SupabaseService).client;
 
   welcome(forGuest = false): PotatoChatMessage[] {
     return [forGuest ? { ...GUEST_WELCOME } : { ...WELCOME }];
@@ -38,10 +28,10 @@ export class PotatoChatService {
 
   async load(uid: string): Promise<PotatoChatMessage[]> {
     try {
-      const snap = await getDoc(this.docRef(uid));
-      if (!snap.exists()) return this.welcome();
-      const data = snap.data();
-      const list = (data['messages'] as PotatoChatMessage[]) || [];
+      const { data } = await this.sb.from('potato_chat_sessions').select('messages').eq('user_id', uid).maybeSingle();
+      const list = ((data as { messages: PotatoChatMessage[] } | null)?.messages ?? []).filter(
+        (m) => m && typeof m.text === 'string' && (m.sender === 'user' || m.sender === 'bot')
+      );
       return list.length > 0 ? list : this.welcome();
     } catch {
       return this.welcome();
@@ -54,13 +44,20 @@ export class PotatoChatService {
       sender: m.sender,
       at: m.at ?? Date.now()
     }));
-    await setDoc(this.docRef(uid), {
-      messages: trimmed,
-      updatedAt: serverTimestamp()
-    });
+    // Actualiza si ya existe; si no, crea la fila
+    const { data, error } = await this.sb
+      .from('potato_chat_sessions')
+      .update({ messages: trimmed })
+      .eq('user_id', uid)
+      .select('user_id');
+    if (error) throw error;
+    if (!data?.length) {
+      const { error: insertError } = await this.sb.from('potato_chat_sessions').insert({ user_id: uid, messages: trimmed });
+      if (insertError) throw insertError;
+    }
   }
 
   async clear(uid: string): Promise<void> {
-    await deleteDoc(this.docRef(uid));
+    await this.sb.from('potato_chat_sessions').delete().eq('user_id', uid);
   }
 }

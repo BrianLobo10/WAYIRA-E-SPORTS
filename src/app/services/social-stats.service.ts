@@ -1,6 +1,5 @@
-import { Injectable, inject, signal, OnDestroy } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Firestore, doc, onSnapshot } from '@angular/fire/firestore';
 import { environment } from '../../environments/environment';
 import { firstValueFrom, Subscription } from 'rxjs';
 
@@ -14,43 +13,13 @@ export interface SocialStats {
 }
 
 @Injectable({ providedIn: 'root' })
-export class SocialStatsService implements OnDestroy {
+export class SocialStatsService {
   private http = inject(HttpClient);
-  private firestore = inject(Firestore);
-  private firestoreUnsub: (() => void) | null = null;
 
   stats = signal<SocialStats | null>(null);
   loading = signal(false);
   private lastFetch = 0;
   private readonly cacheMs = 5 * 60 * 1000;
-
-  constructor() {
-    this.watchFirestore();
-  }
-
-  ngOnDestroy() {
-    this.firestoreUnsub?.();
-  }
-
-  private watchFirestore() {
-    const ref = doc(this.firestore, 'config/socialStats');
-    this.firestoreUnsub = onSnapshot(
-      ref,
-      (snap) => {
-        if (!snap.exists()) return;
-        const data = snap.data() as Partial<SocialStats>;
-        this.stats.update((current) => ({
-          discord: data.discord ?? current?.discord ?? null,
-          twitch: data.twitch ?? current?.twitch ?? null,
-          instagram: data.instagram ?? current?.instagram ?? null,
-          registeredUsers: data.registeredUsers ?? current?.registeredUsers ?? null,
-          twitchLive: data.twitchLive ?? current?.twitchLive ?? null,
-          updatedAt: data.updatedAt ?? current?.updatedAt
-        }));
-      },
-      () => {}
-    );
-  }
 
   async load(force = false): Promise<SocialStats | null> {
     const now = Date.now();
@@ -60,7 +29,7 @@ export class SocialStatsService implements OnDestroy {
     this.loading.set(true);
     try {
       const data = await firstValueFrom(
-        this.http.get<SocialStats>(`${environment.apiUrl}/social-stats`)
+        this.http.get<SocialStats>(`${environment.supabase.functionsUrl}/social/stats`)
       );
       this.stats.set(data);
       this.lastFetch = now;

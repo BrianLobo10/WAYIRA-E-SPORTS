@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import type { PlayerInfo, Team } from '../services/firebase.service';
+import type { PlayerInfo, Team } from '../models';
 
 const ROSTER_ROLES = ['Top', 'Jungle', 'Mid', 'ADC', 'Support'] as const;
 

@@ -13,10 +13,12 @@
     }
   },
   "include": [
-    "src/**/*.ts",
-    "src/app/services/firebase.service.ts"
+    "src/**/*.ts"
   ],
   "exclude": [
-    "src/**/*.spec.ts"
+    "src/**/*.spec.ts",
+    "src/app/services/firebase.service.ts",
+    "src/app/pages/blog/**",
+    "src/environments/firebase.config.ts"
   ]
 }

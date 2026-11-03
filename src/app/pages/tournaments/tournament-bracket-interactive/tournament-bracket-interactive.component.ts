@@ -1,8 +1,11 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
+  HostListener,
   OnDestroy,
   OnInit,
+  ViewChild,
   computed,
   inject,
   signal
@@ -10,27 +13,43 @@ import {
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription, debounceTime, Subject } from 'rxjs';
-import { FirebaseService, BracketMatch, Tournament } from '../../../services/firebase.service';
+import type { BracketMatch, Tournament } from '../../../models';
+import { TournamentService } from '../../../services/tournament.service';
 import { TournamentBracketEngineService } from '../../../services/tournament-bracket-engine.service';
 
+/** Partido ubicado en el lienzo (en píxeles). */
 export interface BracketVisualNode {
   match: BracketMatch;
-  cx: number;
-  cy: number;
-  w: number;
-  h: number;
+  x: number;
+  y: number;
   layer: 'upper' | 'lower';
 }
 
-/** Conector SVG ortogonal anclado a bordes de tarjeta */
+/** Conector entre un partido y el siguiente. `done` = el partido de origen ya tiene ganador. */
 export interface BracketConnectorPath {
   id: string;
   d: string;
-  kind: 'upper' | 'lower' | 'cross';
+  layer: 'upper' | 'lower';
+  done: boolean;
 }
 
-/** Alto lógico del canvas (debe coincidir con viewBox y % en la plantilla). Más alto = más aire en el upper. */
-const TBI_VB_H = 255;
+export interface BracketColumnLabel {
+  x: number;
+  y: number;
+  label: string;
+}
+
+/** Medidas del bracket (px). Tarjetas grandes y legibles, columnas de izquierda a derecha. */
+const CARD_W = 232;
+const ROW_H = 36;
+const CARD_H = ROW_H * 2;
+const V_GAP = 20;
+const COL_GAP = 64;
+const PAD = 32;
+const HEAD_H = 44;
+const SECTION_GAP = 64;
+/** Máximo de pasos que se pueden deshacer. */
+const HISTORY_LIMIT = 60;
 
 @Component({
   selector: 'app-tournament-bracket-interactive',
@@ -43,10 +62,12 @@ const TBI_VB_H = 255;
 export class TournamentBracketInteractiveComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
-  private firebase: FirebaseService = inject(FirebaseService);
+  private firebase = inject(TournamentService);
   private engine: TournamentBracketEngineService = inject(TournamentBracketEngineService);
 
-  readonly vbHeight = TBI_VB_H;
+  readonly cardW = CARD_W;
+  readonly rowH = ROW_H;
+  @ViewChild('scrollHost') scrollHost?: ElementRef<HTMLDivElement>;
 
   tournament = signal<Tournament | null>(null);
   loading = signal(true);
@@ -62,8 +83,22 @@ export class TournamentBracketInteractiveComponent implements OnInit, OnDestroy 
   /** Evita duplicar incremento de victorias al persistir varias veces */
   private lastPersistedStatus: string | null = null;
 
-  nodes = computed(() => this.buildNodes(this.tournament()));
-  paths = computed(() => this.buildPaths(this.nodes(), this.tournament()));
+  private layout = computed(() => this.buildLayout(this.tournament()));
+  nodes = computed(() => this.layout().nodes);
+  paths = computed(() => this.layout().paths);
+  columns = computed(() => this.layout().columns);
+  sections = computed(() => this.layout().sections);
+  stageW = computed(() => this.layout().width);
+  stageH = computed(() => this.layout().height);
+
+  /** Historial para deshacer / rehacer (solo en esta sesión del navegador). */
+  private past = signal<Tournament[]>([]);
+  private future = signal<Tournament[]>([]);
+  canUndo = computed(() => this.editable() && this.past().length > 0);
+  canRedo = computed(() => this.editable() && this.future().length > 0);
+  lastAction = signal<string | null>(null);
+  /** Campeón guardado la última vez, para descontar la victoria si se deshace el cierre del torneo. */
+  private lastPersistedChampion: { id?: string; name?: string } = {};
 
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('tournamentId');
@@ -98,6 +133,7 @@ export class TournamentBracketInteractiveComponent implements OnInit, OnDestroy 
         this.grandFinalBestOf.set(t.grandFinalBestOf === 1 ? 1 : 3);
         this.redemptionFinalBestOf.set(t.redemptionFinalBestOf === 1 ? 1 : 3);
         this.lastPersistedStatus = t.status ?? null;
+        this.lastPersistedChampion = { id: t.championTeamId, name: t.championTeamName };
         const user = this.firebase.getCurrentUser();
         if (user) {
           const admin = await this.firebase.isAdmin(user.uid);
@@ -106,6 +142,8 @@ export class TournamentBracketInteractiveComponent implements OnInit, OnDestroy 
           this.editable.set(false);
         }
         this.loading.set(false);
+        // Si el bracket es más ancho que la pantalla, se ajusta para verlo completo
+        setTimeout(() => this.fitToScreen(true));
       })
     );
   }
@@ -115,8 +153,67 @@ export class TournamentBracketInteractiveComponent implements OnInit, OnDestroy 
   }
 
   setZoom(delta: number) {
-    const z = Math.min(2, Math.max(0.5, this.zoom() + delta));
+    const z = Math.min(1.6, Math.max(0.4, this.zoom() + delta));
     this.zoom.set(Math.round(z * 100) / 100);
+  }
+
+  /** Ajusta el zoom para que el bracket quepa a lo ancho (sin agrandar más del 100 % al abrir). */
+  fitToScreen(onlyShrink = false) {
+    const host = this.scrollHost?.nativeElement;
+    if (!host || !this.stageW()) return;
+    let z = (host.clientWidth - 8) / this.stageW();
+    if (onlyShrink) z = Math.min(1, z);
+    this.zoom.set(Math.round(Math.min(1.6, Math.max(0.4, z)) * 100) / 100);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Deshacer / rehacer
+  // ---------------------------------------------------------------------------
+
+  /** Guarda el estado actual en el historial y aplica el nuevo. */
+  private commit(next: Tournament, action: string) {
+    const current = this.tournament();
+    if (current) this.past.update((p) => [...p.slice(-(HISTORY_LIMIT - 1)), current]);
+    this.future.set([]);
+    this.tournament.set(next);
+    this.lastAction.set(action);
+    this.save$.next();
+  }
+
+  undo() {
+    const past = this.past();
+    const current = this.tournament();
+    if (!this.editable() || !past.length || !current) return;
+    this.future.update((f) => [current, ...f]);
+    this.past.set(past.slice(0, -1));
+    this.tournament.set(past[past.length - 1]);
+    this.lastAction.set('Cambio deshecho');
+    this.save$.next();
+  }
+
+  redo() {
+    const [next, ...rest] = this.future();
+    const current = this.tournament();
+    if (!this.editable() || !next || !current) return;
+    this.past.update((p) => [...p, current]);
+    this.future.set(rest);
+    this.tournament.set(next);
+    this.lastAction.set('Cambio rehecho');
+    this.save$.next();
+  }
+
+  /** Ctrl+Z deshace, Ctrl+Y o Ctrl+Shift+Z rehace. */
+  @HostListener('document:keydown', ['$event'])
+  onKey(e: KeyboardEvent) {
+    if (!(e.ctrlKey || e.metaKey) || (e.target as HTMLElement)?.closest?.('input, textarea')) return;
+    const key = e.key.toLowerCase();
+    if (key === 'z' && !e.shiftKey) {
+      e.preventDefault();
+      this.undo();
+    } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
+      e.preventDefault();
+      this.redo();
+    }
   }
 
   async setGrandFinalMode(mode: 1 | 3) {
@@ -156,8 +253,9 @@ export class TournamentBracketInteractiveComponent implements OnInit, OnDestroy 
     if (!res) return;
     let next: Tournament = { ...effective, bracket: res.bracket, lowerBracket: res.lowerBracket };
     next = this.engine.finalizeTournamentIfComplete(next);
-    this.tournament.set(next);
-    this.save$.next();
+    const m = [...(t.bracket || []), ...(t.lowerBracket || [])].find((x) => x.id === matchId);
+    const name = m?.team1Id === winnerId ? m?.team1Name : m?.team2Name;
+    this.commit(next, `Punto para ${name ?? 'el equipo'}`);
   }
 
   swapSides(matchId: string) {
@@ -166,8 +264,7 @@ export class TournamentBracketInteractiveComponent implements OnInit, OnDestroy 
     if (!t?.bracket) return;
     const res = this.engine.swapTeamsInMatch(t.bracket, t.lowerBracket || [], matchId);
     if (!res) return;
-    this.tournament.set({ ...t, bracket: res.bracket, lowerBracket: res.lowerBracket });
-    this.save$.next();
+    this.commit({ ...t, bracket: res.bracket, lowerBracket: res.lowerBracket }, 'Lados intercambiados');
   }
 
   onDragStart(event: DragEvent, matchId: string, slot: 'team1' | 'team2') {
@@ -224,8 +321,7 @@ export class TournamentBracketInteractiveComponent implements OnInit, OnDestroy 
     srcList[si] = { ...srcList[si], [sKey]: bId, [sName]: bNa ?? 'TBD' };
     dstList[di] = { ...dstList[di], [tKey]: aId, [tName]: aNa ?? 'TBD' };
 
-    this.tournament.set({ ...t, bracket: b, lowerBracket: l });
-    this.save$.next();
+    this.commit({ ...t, bracket: b, lowerBracket: l }, 'Equipo movido');
   }
 
   private async persistNow() {
@@ -239,21 +335,24 @@ export class TournamentBracketInteractiveComponent implements OnInit, OnDestroy 
         grandFinalBestOf: this.grandFinalBestOf(),
         redemptionFinalBestOf: this.redemptionFinalBestOf()
       };
-      if (t.status === 'finished') {
-        payload['status'] = t.status;
-        if (t.finishedAt) payload['finishedAt'] = t.finishedAt;
-        if (t.championTeamId) payload['championTeamId'] = t.championTeamId;
-        if (t.championTeamName) payload['championTeamName'] = t.championTeamName;
-        if (t.redemptionChampionTeamId) payload['redemptionChampionTeamId'] = t.redemptionChampionTeamId;
-        if (t.redemptionChampionTeamName) payload['redemptionChampionTeamName'] = t.redemptionChampionTeamName;
-      }
+      // Estado y campeones siempre: así deshacer el cierre del torneo también lo reabre
+      payload['status'] = t.status;
+      payload['finishedAt'] = t.status === 'finished' ? t.finishedAt : null;
+      payload['championTeamId'] = t.championTeamId;
+      payload['championTeamName'] = t.championTeamName;
+      payload['redemptionChampionTeamId'] = t.redemptionChampionTeamId;
+      payload['redemptionChampionTeamName'] = t.redemptionChampionTeamName;
       await this.firebase.updateTournament(t.id, payload as any);
       if (t.status === 'finished' && prev !== 'finished' && t.championTeamId) {
         await this.firebase.incrementTeamTournamentWins(t.championTeamId, t.championTeamName ?? '—');
+      } else if (prev === 'finished' && t.status !== 'finished' && this.lastPersistedChampion.id) {
+        await this.firebase.decrementTeamTournamentWins(this.lastPersistedChampion.id);
       }
       this.lastPersistedStatus = t.status ?? null;
+      this.lastPersistedChampion = { id: t.championTeamId, name: t.championTeamName };
     } catch (e) {
       console.error(e);
+      this.lastAction.set('No se pudo guardar el último cambio. Revisa tu conexión.');
     }
   }
 
@@ -287,149 +386,106 @@ export class TournamentBracketInteractiveComponent implements OnInit, OnDestroy 
 
   trackById = (_: number, n: BracketVisualNode) => n.match.id;
 
+  /** Partido con resultado (Bo3: puntos por mapa). */
+  score(m: BracketMatch, side: 1 | 2): number | null {
+    const v = side === 1 ? m.score1 : m.score2;
+    if (!m.team1Id || !m.team2Id) return null;
+    return (m.bestOf ?? 1) > 1 || this.showBo3Ui(m) || m.winnerId ? (v ?? 0) : null;
+  }
+
+  canPick(m: BracketMatch, t: Tournament): boolean {
+    return this.editable() && t.status !== 'finished' && !!m.team1Id && !!m.team2Id && !m.winnerId;
+  }
+
   /**
-   * Posiciones alineadas con `bracket-canvas`: rejilla por roundIndex/slotIndex
-   * (misma lógica que generateBracketWithOrder en firebase.service).
+   * Bracket clásico de izquierda a derecha:
+   * - Superior arriba (octavos → … → gran final), redención debajo.
+   * - Cada partido queda a la altura media de los dos que lo alimentan, así las líneas son limpias.
    */
-  private buildNodes(t: Tournament | null): BracketVisualNode[] {
-    if (!t?.bracket?.length) return [];
-    const upperAll = (t.bracket || []).filter((m: BracketMatch) => m.bracketType !== 'lower');
-    const lowerAll = t.lowerBracket || [];
-    const upper = upperAll.filter((m: BracketMatch) => !this.engine.isGrandFinalMatch(m, t));
-    const grandFinal = upperAll.filter((m: BracketMatch) => this.engine.isGrandFinalMatch(m, t));
-
-    const cardW = 5.65;
-    /** Alto mínimo lógico (conectores + minHeight). Debe ser < delta cy entre octavos (~18–20 vb). */
-    const upperH = 10;
-    const lowerH = 8.5;
-    /**
-     * Franja Y del upper: S grande ⇒ más separación real entre cuadros apilados (octavos).
-     * Fórmula clave: deltaCy ≈ (usableY/countPerSide/100)*S — debe superar claramente upperH.
-     */
-    const upperSideStripeTop = 1;
-    const upperSideStripeBottom = 100;
-    /** Debajo del máximo cy del upper (~84) para no montar sobre octavos/cuartos */
-    const grandFinalBaseCy = 93;
-    const lowerTop = 104;
-    const lowerBottom = TBI_VB_H;
-
-    const { totalRounds, powerTeams } = this.inferBracketGeometry(t);
-    const sideRounds = Math.max(1, totalRounds - 1);
-    /** Columnas un poco más juntas (menos hueco horizontal entre rondas). */
-    const colSpread = 30;
-    const xLeftBase = 10;
-    const xRightBase = 90;
+  private buildLayout(t: Tournament | null) {
+    const empty = { nodes: [] as BracketVisualNode[], paths: [] as BracketConnectorPath[], columns: [] as BracketColumnLabel[],
+      sections: [] as { label: string; y: number }[], width: 0, height: 0 };
+    if (!t?.bracket?.length) return empty;
 
     const nodes: BracketVisualNode[] = [];
+    const columns: BracketColumnLabel[] = [];
+    const sections: { label: string; y: number }[] = [];
+    const center = new Map<string, number>();
+    let maxCols = 0;
 
-    const mapY01ToCyStripe = (y01: number) =>
-      upperSideStripeTop + (y01 / 100) * (upperSideStripeBottom - upperSideStripeTop);
-
-    for (const m of upper) {
-      const pos = this.upperMatchColumnPosition(m, powerTeams, sideRounds, colSpread, xLeftBase, xRightBase);
-      if (!pos) continue;
-      nodes.push({ match: m, cx: pos.cx, cy: mapY01ToCyStripe(pos.y01), w: cardW, h: upperH, layer: 'upper' });
-    }
-
-    grandFinal.forEach((m, i) => {
-      nodes.push({
-        match: m,
-        cx: 50,
-        cy: grandFinalBaseCy + i * (upperH + 5),
-        w: cardW + 1,
-        h: upperH,
-        layer: 'upper'
-      });
-    });
-
-    if (lowerAll.length) {
-      const lowerByRound = this.groupMatchesByRound(lowerAll);
-      const lowerRounds = [...lowerByRound.keys()].sort((a, b) => a - b);
-      const nCols = Math.max(1, lowerRounds.length);
-      lowerRounds.forEach((r, colIdx) => {
-        const row = [...(lowerByRound.get(r) || [])].sort((a, b) => (a.slotIndex ?? 0) - (b.slotIndex ?? 0));
-        const n = row.length;
-        const frac = nCols <= 1 ? 0.5 : colIdx / (nCols - 1);
-        /** Redención: columnas un poco más juntas, alineado al upper más compacto en X */
-        const cx = 12 + frac * 62;
+    const placeSection = (matches: BracketMatch[], layer: 'upper' | 'lower', top: number): number => {
+      const byRound = this.groupMatchesByRound(matches);
+      const rounds = [...byRound.keys()].sort((a, b) => a - b);
+      maxCols = Math.max(maxCols, rounds.length);
+      let bottom = top;
+      rounds.forEach((r, col) => {
+        const row = byRound.get(r)!;
+        const x = PAD + col * (CARD_W + COL_GAP);
+        const label = this.columnLabel(row[0], t);
+        columns.push({ x, y: top, label });
+        let cursor = top + HEAD_H; // siguiente hueco libre de la columna
         row.forEach((m, i) => {
-          const vmL = 14;
-          const y01 =
-            n <= 1 ? 50 : vmL + ((i + 0.5) / n) * (100 - 2 * vmL);
-          const cy = lowerTop + (y01 / 100) * (lowerBottom - lowerTop);
-          nodes.push({ match: m, cx, cy, w: cardW, h: lowerH, layer: 'lower' });
+          // Alimentadores de la misma sección (el perdedor que baja del superior no cuenta)
+          const feeders = matches.filter((f) => f.nextMatchId === m.id && center.has(f.id)).map((f) => center.get(f.id)!);
+          let cy = feeders.length
+            ? feeders.reduce((a, b) => a + b, 0) / feeders.length
+            : top + HEAD_H + i * (CARD_H + V_GAP) + CARD_H / 2;
+          cy = Math.max(cy, cursor + CARD_H / 2); // nunca encimar tarjetas
+          center.set(m.id, cy);
+          cursor = cy + CARD_H / 2 + V_GAP;
+          nodes.push({ match: m, x, y: cy - CARD_H / 2, layer });
+          bottom = Math.max(bottom, cy + CARD_H / 2);
         });
       });
+      return bottom;
+    };
+
+    const upper = (t.bracket || []).filter((m) => m.bracketType !== 'lower');
+    const lower = t.lowerBracket || [];
+    const hasLower = lower.length > 0;
+
+    if (hasLower) sections.push({ label: 'Bracket superior', y: PAD });
+    const upperTop = PAD + (hasLower ? 28 : 0);
+    let height = placeSection(upper, 'upper', upperTop);
+    if (hasLower) {
+      const lowerTop = height + SECTION_GAP;
+      sections.push({ label: 'Bracket de redención', y: lowerTop });
+      height = placeSection(lower, 'lower', lowerTop + 28);
     }
 
-    return nodes;
+    // Conectores: borde derecho del partido → fila (equipo 1 o 2) del siguiente
+    const byId = new Map(nodes.map((n) => [n.match.id, n]));
+    const paths: BracketConnectorPath[] = [];
+    for (const n of nodes) {
+      const next = n.match.nextMatchId ? byId.get(n.match.nextMatchId) : undefined;
+      if (!next || next.layer !== n.layer || next.x <= n.x) continue;
+      const x0 = n.x + CARD_W;
+      const y0 = n.y + CARD_H / 2;
+      const x1 = next.x;
+      const y1 = next.y + (n.match.nextMatchSlot === 'team2' ? ROW_H * 1.5 : ROW_H / 2);
+      const xm = x0 + COL_GAP / 2;
+      paths.push({
+        id: `p-${n.match.id}`,
+        d: `M ${x0} ${y0} H ${xm} V ${y1} H ${x1}`,
+        layer: n.layer,
+        done: !!n.match.winnerId
+      });
+    }
+
+    return {
+      nodes,
+      paths,
+      columns,
+      sections,
+      width: PAD * 2 + maxCols * CARD_W + Math.max(0, maxCols - 1) * COL_GAP,
+      height: height + PAD
+    };
   }
 
-  /**
-   * Winner bracket: columnas por ronda (como el lower), con más separación horizontal hacia el centro.
-   */
-  private upperMatchColumnPosition(
-    m: BracketMatch,
-    powerTeams: number,
-    sideRounds: number,
-    colSpread: number,
-    xLeftBase: number,
-    xRightBase: number
-  ): { cx: number; y01: number } | null {
-    const ri = m.roundIndex ?? 0;
-    const si = m.slotIndex ?? 0;
-
-    if (ri >= sideRounds) {
-      return null;
-    }
-
-    const matchesThisRound = Math.max(1, powerTeams / Math.pow(2, ri + 1));
-    const half = matchesThisRound / 2;
-    const countPerSide = Math.max(1, half);
-    const isLeft = si < half;
-    const localIndex = isLeft ? si : si - half;
-    /**
-     * vMargin bajo + franja S alta ⇒ usableY grande ⇒ delta cy entre octavos ~18–20 vb (sin solapes).
-     * (vMargin muy alto reduce usableY y aprieta octavos aunque “suene” a más margen.)
-     */
-    const vMargin = 12;
-    const usableY = 100 - 2 * vMargin;
-    const y01 = vMargin + ((localIndex + 0.5) / countPerSide) * usableY;
-
-    const colFrac = sideRounds <= 1 ? 0 : ri / (sideRounds - 1);
-    const xLeft = xLeftBase + colFrac * colSpread;
-    const xRight = xRightBase - colFrac * colSpread;
-    let cx = isLeft ? xLeft : xRight;
-
-    /**
-     * Ronda de 2 partidos hacia el centro (p. ej. semis de 16): sin esto cx ~48/52 y los cuadros se solapan.
-     * No aplicar en ronda 0 (p. ej. 4 equipos: dos semis ya van en x extremos).
-     */
-    if (ri >= 1 && matchesThisRound === 2 && half === 1) {
-      const semiOut = 2.4;
-      cx += isLeft ? -semiOut : semiOut;
-    }
-
-    return { cx, y01 };
-  }
-
-  private inferBracketGeometry(t: Tournament): { totalRounds: number; powerTeams: number } {
-    const upper = (t.bracket || []).filter(
-      (m: BracketMatch) => m.bracketType !== 'lower' && !this.engine.isGrandFinalMatch(m, t)
-    );
-    const firstRoundCount = upper.filter((m) => (m.roundIndex ?? 0) === 0).length;
-    let powerTeams: number;
-    if (firstRoundCount > 0) {
-      powerTeams = firstRoundCount * 2;
-    } else {
-      const cfg =
-        typeof t.configuredRounds === 'number' && t.configuredRounds > 0
-          ? t.configuredRounds
-          : Math.max(1, Math.ceil(Math.log2(Math.max(2, t.maxTeams ?? (t.teams || []).length ?? 8))));
-      powerTeams = Math.pow(2, cfg);
-    }
-    const totalRounds = Math.max(1, Math.round(Math.log2(powerTeams)));
-    return { totalRounds, powerTeams };
+  private columnLabel(m: BracketMatch, t: Tournament): string {
+    if (this.engine.isGrandFinalMatch(m, t)) return 'Gran Final';
+    if (this.engine.isLowerFinalMatch(m)) return 'Final de redención';
+    return (m.roundLabel || m.round || '') as string;
   }
 
   private groupMatchesByRound(matches: BracketMatch[]): Map<number, BracketMatch[]> {
@@ -443,105 +499,5 @@ export class TournamentBracketInteractiveComponent implements OnInit, OnDestroy 
       arr.sort((a, b) => (a.slotIndex ?? 0) - (b.slotIndex ?? 0));
     }
     return byRound;
-  }
-
-  private buildPaths(nodes: BracketVisualNode[], t: Tournament | null): BracketConnectorPath[] {
-    if (!t) return [];
-    const map = new Map(nodes.map(n => [n.match.id, n]));
-    const all = [...(t.bracket || []), ...(t.lowerBracket || [])];
-    const paths: BracketConnectorPath[] = [];
-    for (const m of all) {
-      if (!m.nextMatchId) continue;
-      const a = map.get(m.id);
-      const b = map.get(m.nextMatchId);
-      if (!a || !b) continue;
-      const d = this.buildOrthogonalConnector(a, b);
-      if (!d) continue;
-      const kind =
-        a.layer === 'lower' && b.layer === 'lower'
-          ? 'lower'
-          : a.layer === 'upper' && b.layer === 'upper'
-            ? 'upper'
-            : 'cross';
-      paths.push({
-        id: `p-${m.id}-${m.nextMatchId}`,
-        d,
-        kind
-      });
-    }
-    return paths;
-  }
-
-  /**
-   * Conector tipo bracket: sale por el borde que mira al siguiente nodo y entra por el borde opuesto.
-   * Trazo ortogonal (codos) con segmentos H-V-H o V-H-V según la geometría.
-   */
-  private buildOrthogonalConnector(a: BracketVisualNode, b: BracketVisualNode): string | null {
-    const aL = a.cx - a.w / 2;
-    const aR = a.cx + a.w / 2;
-    const aT = a.cy - a.h / 2;
-    const aB = a.cy + a.h / 2;
-    const bL = b.cx - b.w / 2;
-    const bR = b.cx + b.w / 2;
-    const bT = b.cy - b.h / 2;
-    const bB = b.cy + b.h / 2;
-
-    let x0: number;
-    let y0: number;
-    let x1: number;
-    let y1: number;
-
-    const dxCenter = b.cx - a.cx;
-    const dyCenter = b.cy - a.cy;
-
-    if (Math.abs(dxCenter) > 0.4) {
-      if (dxCenter > 0) {
-        x0 = aR;
-        y0 = a.cy;
-        x1 = bL;
-        y1 = b.cy;
-      } else {
-        x0 = aL;
-        y0 = a.cy;
-        x1 = bR;
-        y1 = b.cy;
-      }
-    } else {
-      if (dyCenter > 0) {
-        x0 = a.cx;
-        y0 = aB;
-        x1 = b.cx;
-        y1 = bT;
-      } else {
-        x0 = a.cx;
-        y0 = aT;
-        x1 = b.cx;
-        y1 = bB;
-      }
-    }
-
-    const eps = 0.15;
-    if (Math.abs(x1 - x0) < eps && Math.abs(y1 - y0) < eps) {
-      return null;
-    }
-
-    if (Math.abs(x1 - x0) < eps) {
-      return `M ${x0} ${y0} L ${x1} ${y1}`;
-    }
-    if (Math.abs(y1 - y0) < eps) {
-      return `M ${x0} ${y0} L ${x1} ${y1}`;
-    }
-
-    const horizDominant = Math.abs(x1 - x0) >= Math.abs(y1 - y0);
-    const stub = 1.2;
-    if (horizDominant) {
-      const dir = x1 > x0 ? 1 : -1;
-      const xStart = x0 + stub * dir;
-      const xEnd = x1 - stub * dir;
-      const xMid = (xStart + xEnd) / 2;
-      return `M ${x0} ${y0} L ${xStart} ${y0} L ${xMid} ${y0} L ${xMid} ${y1} L ${xEnd} ${y1} L ${x1} ${y1}`;
-    }
-    const yMid = (y0 + y1) / 2;
-    return `M ${x0} ${y0} L ${x0} ${yMid} L ${x1} ${yMid} L ${x1} ${y1}`;
   }
 }

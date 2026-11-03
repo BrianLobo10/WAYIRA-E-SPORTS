@@ -29,9 +29,9 @@
 
 .potato__label {
   font-family: var(--font-display);
-  font-weight: 700;
+  font-weight: 500;
   font-size: 0.875rem;
-  letter-spacing: 0.08em;
+  letter-spacing: -0.02em;
 }
 
 .potato__panel {
@@ -44,7 +44,7 @@
   flex-direction: column;
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 2px;
   overflow: hidden;
   box-shadow: 0 24px 56px rgba(0, 0, 0, 0.5);
 }
@@ -76,7 +76,7 @@
   font-size: 1.35rem;
   background: var(--surface-3);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 2px;
   flex-shrink: 0;
 }
 
@@ -100,7 +100,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #4ade80;
+  background: #d7ff3f;
   box-shadow: 0 0 8px rgba(74, 222, 128, 0.5);
 }
 
@@ -125,7 +125,7 @@
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: 8px;
+  border-radius: 2px;
   background: transparent;
   color: var(--teal-muted);
   cursor: pointer;
@@ -159,7 +159,7 @@
   width: 100%;
   padding: 10px 12px;
   border: none;
-  border-radius: 6px;
+  border-radius: 2px;
   background: none;
   color: var(--white);
   font-size: 0.8125rem;
@@ -169,7 +169,7 @@
 
 .potato__menu-item .material-icons {
   font-size: 18px;
-  color: var(--teal-pri);
+  color: var(--text-secondary);
 }
 
 .potato__menu-item:hover {
@@ -178,7 +178,7 @@
 
 .potato__confirm {
   padding: 12px 14px;
-  background: rgba(255, 64, 85, 0.08);
+  background: rgba(255, 90, 54, 0.08);
   border-bottom: 1px solid var(--border);
 }
 
@@ -243,7 +243,7 @@
 .potato__bubble {
   max-width: 82%;
   padding: 10px 14px;
-  border-radius: 14px 14px 14px 4px;
+  border-radius: 2px 2px 2px 2px;
   font-size: 0.875rem;
   line-height: 1.5;
   background: var(--surface-1);
@@ -253,9 +253,9 @@
 }
 
 .potato__bubble--user {
-  border-radius: 14px 14px 4px 14px;
-  background: rgba(1, 108, 108, 0.28);
-  border-color: rgba(1, 196, 196, 0.25);
+  border-radius: 2px 2px 2px 2px;
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(215, 255, 63, 0.15);
 }
 
 .potato__bubble--typing {
@@ -308,7 +308,7 @@
 .potato__input:focus {
   outline: none;
   border-color: var(--teal-pri);
-  box-shadow: 0 0 0 2px rgba(1, 108, 108, 0.2);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
 }
 
 .potato__send {

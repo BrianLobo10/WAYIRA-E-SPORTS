@@ -1,21 +1,14 @@
 import { inject } from '@angular/core';
 import { Router, CanActivateFn } from '@angular/router';
-import { FirebaseService } from '../services/firebase.service';
+import { AuthService } from '../services/auth.service';
 
 export const authGuard: CanActivateFn = async (route, state) => {
-  const firebaseService = inject(FirebaseService);
+  const auth = inject(AuthService);
   const router = inject(Router);
 
-  // Esperar a que Firebase Auth emita el primer estado (evita flash de login al recargar)
-  await firebaseService.waitForAuthInit(3000);
-  const user = firebaseService.getCurrentUser();
-
-  if (!user) {
-    router.navigate(['/login'], {
-      queryParams: { returnUrl: state.url }
-    });
-    return false;
+  await auth.waitForInit();
+  if (!auth.isAuthenticated()) {
+    return router.createUrlTree(['/login'], { queryParams: { next: state.url } });
   }
   return true;
 };
-

@@ -1,5 +1,6 @@
 <div class="search-container">
   <div class="search-hero">
+    <span class="kicker">04 · Buscar</span>
     <h1>Buscar <span>invocador</span></h1>
     <p>Encuentra estadísticas y ranking de cualquier invocador</p>
   </div>
@@ -60,7 +61,7 @@
     </form>
 
     @if (error()) {
-      <div class="error-message">
+      <div class="error-message" role="alert">
         <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
           <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
         </svg>
@@ -73,7 +74,7 @@
     <div class="results-container">
       <div class="profile-card">
         <div class="profile-header">
-          <img 
+          <img referrerpolicy="no-referrer" 
             [src]="getProfileIconUrl(summoner()!.profileIconId)" 
             [alt]="summoner()!.gameName"
             class="profile-icon"
@@ -85,7 +86,7 @@
               <span class="tagline">#{{ summoner()!.tagLine }}</span>
               @if (getCurrentLeague(); as league) {
                 <span class="inline-rank-badge" [style.border-color]="getTierColor(league.tier)">
-                  <img class="inline-rank-icon" [src]="getRankImageUrl(league.tier)" [alt]="league.tier">
+                  <img referrerpolicy="no-referrer" loading="lazy" decoding="async" class="inline-rank-icon" [src]="getRankImageUrl(league.tier)" [alt]="league.tier">
                   <span>{{ getLeagueDisplayName(league) }}</span>
                 </span>
               }
@@ -120,7 +121,7 @@
             <div class="mastery-grid">
               @for (champ of championMastery(); track champ.championId) {
                 <div class="mastery-card">
-                  <img 
+                  <img referrerpolicy="no-referrer" loading="lazy" decoding="async" 
                     [src]="getChampionImageUrl(champ.championId)" 
                     [alt]="getChampionNameById(champ.championId)"
                     class="champion-icon"
@@ -182,7 +183,7 @@
                   </div>
 
                   <div class="match-champion">
-                    <img 
+                    <img referrerpolicy="no-referrer" loading="lazy" decoding="async" 
                       [src]="'https://ddragon.leagueoflegends.com/cdn/14.24.1/img/champion/' + participant.championName + '.png'" 
                       [alt]="participant.championName"
                       class="match-champion-icon"
@@ -272,7 +273,7 @@
                 <div class="player-card" 
                      (click)="searchPlayer(participant.summonerName)"
                      [title]="'Click para buscar a ' + participant.summonerName">
-                  <img 
+                  <img referrerpolicy="no-referrer" loading="lazy" decoding="async" 
                     [src]="'https://ddragon.leagueoflegends.com/cdn/14.24.1/img/champion/' + participant.championName + '.png'" 
                     [alt]="participant.championName"
                     class="player-champion-icon"
@@ -286,7 +287,7 @@
                   <div class="player-items">
                     @for (item of [participant.item0, participant.item1, participant.item2, participant.item3, participant.item4, participant.item5, participant.item6]; track $index) {
                       <div class="item-slot" *ngIf="item > 0">
-                        <img 
+                        <img referrerpolicy="no-referrer" loading="lazy" decoding="async" 
                           [src]="'https://ddragon.leagueoflegends.com/cdn/14.24.1/img/item/' + item + '.png'" 
                           [alt]="'Item ' + item"
                           class="item-icon"
@@ -313,7 +314,7 @@
                 <div class="player-card" 
                      (click)="searchPlayer(participant.summonerName)"
                      [title]="'Click para buscar a ' + participant.summonerName">
-                  <img 
+                  <img referrerpolicy="no-referrer" loading="lazy" decoding="async" 
                     [src]="'https://ddragon.leagueoflegends.com/cdn/14.24.1/img/champion/' + participant.championName + '.png'" 
                     [alt]="participant.championName"
                     class="player-champion-icon"
@@ -327,7 +328,7 @@
                   <div class="player-items">
                     @for (item of [participant.item0, participant.item1, participant.item2, participant.item3, participant.item4, participant.item5, participant.item6]; track $index) {
                       <div class="item-slot" *ngIf="item > 0">
-                        <img 
+                        <img referrerpolicy="no-referrer" loading="lazy" decoding="async" 
                           [src]="'https://ddragon.leagueoflegends.com/cdn/14.24.1/img/item/' + item + '.png'" 
                           [alt]="'Item ' + item"
                           class="item-icon"

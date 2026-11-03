@@ -10,7 +10,7 @@ import {
   signal
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Team } from '../../services/firebase.service';
+import { Team } from '../../models';
 
 export interface BracketSlotMatch {
   team1: Team | null;

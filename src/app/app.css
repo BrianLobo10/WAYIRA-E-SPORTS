@@ -1,14 +1,14 @@
 :host {
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  font-family: var(--font-family);
+  font-family: var(--font-body);
   font-size: 16px;
-  color: #FFFFFF;
+  color: var(--white);
   box-sizing: border-box;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
   isolation: isolate;
 }
@@ -17,113 +17,8 @@
   position: fixed;
   inset: 0;
   z-index: 0;
-  overflow: hidden;
   pointer-events: none;
   background: var(--bg);
-}
-
-.ambient-bubble {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(72px);
-  will-change: transform;
-}
-
-.ambient-bubble--1 {
-  width: 420px;
-  height: 420px;
-  top: -8%;
-  left: -6%;
-  background: radial-gradient(circle, rgba(1, 108, 108, 0.28) 0%, transparent 72%);
-  animation: bubble-drift-1 22s var(--ease-wayira) infinite;
-}
-
-.ambient-bubble--2 {
-  width: 280px;
-  height: 280px;
-  top: 18%;
-  right: 8%;
-  background: radial-gradient(circle, rgba(1, 196, 196, 0.2) 0%, transparent 70%);
-  animation: bubble-drift-2 18s var(--ease-wayira) infinite;
-}
-
-.ambient-bubble--3 {
-  width: 360px;
-  height: 360px;
-  bottom: 12%;
-  left: 22%;
-  background: radial-gradient(circle, rgba(1, 136, 136, 0.16) 0%, transparent 68%);
-  animation: bubble-drift-3 26s var(--ease-wayira) infinite;
-}
-
-.ambient-bubble--4 {
-  width: 190px;
-  height: 190px;
-  top: 42%;
-  left: 52%;
-  background: radial-gradient(circle, rgba(255, 184, 0, 0.1) 0%, transparent 72%);
-  animation: bubble-drift-4 16s var(--ease-wayira) infinite;
-}
-
-.ambient-bubble--5 {
-  width: 520px;
-  height: 520px;
-  bottom: -12%;
-  right: -8%;
-  background: radial-gradient(circle, rgba(1, 79, 79, 0.22) 0%, transparent 74%);
-  animation: bubble-drift-5 30s var(--ease-wayira) infinite;
-}
-
-.ambient-bubble--6 {
-  width: 240px;
-  height: 240px;
-  top: 8%;
-  left: 38%;
-  background: radial-gradient(circle, rgba(255, 64, 85, 0.07) 0%, transparent 70%);
-  animation: bubble-drift-6 20s var(--ease-wayira) infinite;
-}
-
-@keyframes bubble-drift-1 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(28px, 22px) scale(1.06); }
-}
-
-@keyframes bubble-drift-2 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-24px, 18px) scale(0.94); }
-}
-
-@keyframes bubble-drift-3 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(20px, -26px) scale(1.04); }
-}
-
-@keyframes bubble-drift-4 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-16px, -14px) scale(1.08); }
-}
-
-@keyframes bubble-drift-5 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-30px, -20px) scale(0.96); }
-}
-
-@keyframes bubble-drift-6 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(14px, 24px) scale(1.05); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ambient-bubble { animation: none !important; }
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
-::selection {
-  background: rgba(1, 108, 108, 0.35);
-  color: #fff;
 }
 
 .skip-link {
@@ -131,34 +26,30 @@ html {
   top: -100px;
   left: 1rem;
   padding: 0.75rem 1.25rem;
-  background: var(--teal-pri);
-  color: #fff;
+  background: var(--volt);
+  color: var(--volt-ink);
   font-weight: 600;
   text-decoration: none;
-  border-radius: 8px;
+  border-radius: 2px;
   z-index: 10000;
-  transition: top 0.2s ease;
+  transition: top 0.2s var(--ease-out);
 }
 
 .skip-link:focus {
   top: 1rem;
-  outline: 2px solid #fff;
+  outline: 2px solid #eceae3;
   outline-offset: 2px;
 }
 
 .main-content {
   flex: 1;
-  min-height: 0;
+  min-height: calc(100vh - var(--header-h));
+  min-height: calc(100dvh - var(--header-h));
   position: relative;
-  z-index: 1;
 }
 
+/* Sin z-index propio: así los modales (position: fixed) de las páginas quedan por encima del pie */
 app-footer {
   position: relative;
-  z-index: 1;
 }
 
-*:focus-visible {
-  outline: 2px solid var(--color-accent-teal, #016C6C);
-  outline-offset: 2px;
-}

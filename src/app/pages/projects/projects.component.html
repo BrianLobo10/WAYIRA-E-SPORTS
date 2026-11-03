@@ -1,8 +1,9 @@
 <div class="projects-page">
-  <section class="projects-hero">
+  <section class="projects-hero page-hero">
     <div class="container">
       <div class="hero-content">
-        <h1>Nuestros Proyectos</h1>
+        <span class="kicker">Proyectos</span>
+        <h1>Lo que estamos <span>construyendo</span>.</h1>
         <p>Iniciativas y programas que impulsan el crecimiento de los e-Sports en Colombia</p>
       </div>
     </div>
@@ -17,7 +18,7 @@
         }
       </div>
       
-      <app-cards-grid [columns]="2" gap="large" [responsive]="true" class="projects-grid">
+      <app-cards-grid [columns]="2" gap="large" [responsive]="true" class="projects-grid" appReveal revealChildren=".project-card">
         @for (project of projects(); track project.title) {
           <div class="project-card">
             <app-universal-card 

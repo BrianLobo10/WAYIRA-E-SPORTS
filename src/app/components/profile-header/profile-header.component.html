@@ -13,7 +13,7 @@
       <div class="modal-dialog confirm-dialog" (click)="$event.stopPropagation()">
         <h3>¿Cambiar portada?</h3>
         @if (editCoverPreview()) {
-          <div class="cover-preview"><img [src]="editCoverPreview()" alt="Vista previa"></div>
+          <div class="cover-preview"><img referrerpolicy="no-referrer" [src]="editCoverPreview()" alt="Vista previa"></div>
         }
         <div class="dialog-actions">
           <button type="button" class="btn-cancel" (click)="coverCancel.emit()">Cancelar</button>
@@ -28,7 +28,7 @@
       <div class="profile-info aurea-profile-info">
         <div class="profile-avatar profile-avatar-overlap">
           @if (profile().photoURL) {
-            <img
+            <img referrerpolicy="no-referrer"
               [src]="profile().photoURL"
               [alt]="profile().displayName"
               (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
@@ -44,7 +44,7 @@
             @if (rankLabel()) {
               <span class="profile-rank-badge" title="Rango Solo/Duo">
                 @if (rankIconUrl()) {
-                  <img class="profile-rank-icon" [src]="rankIconUrl()" alt="Rango">
+                  <img referrerpolicy="no-referrer" loading="lazy" decoding="async" class="profile-rank-icon" [src]="rankIconUrl()" alt="Rango">
                 }
                 <span class="profile-rank-text">{{ rankLabel() }}</span>
               </span>

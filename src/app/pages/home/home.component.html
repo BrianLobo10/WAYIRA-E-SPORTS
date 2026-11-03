@@ -1,46 +1,37 @@
 <div class="home">
   <!-- Hero -->
-  <section class="hero" aria-labelledby="hero-title">
-    <div class="home-container hero__grid">
-      <div class="hero__copy anim-fade-up">
-        <p class="hero__eyebrow">⚡ Competencia · Comunidad · Nivel Pro</p>
-        <h1 id="hero-title" class="hero__title">
-          <span>COMPITE.</span>
-          <span>DOMINA.</span>
-          <span class="hero__title-accent">WAYIRA.</span>
-        </h1>
-        <p class="hero__sub">
-          Torneos competitivos, comunidad activa y stats de League of Legends desde La Guajira para Colombia.
-        </p>
-        <div class="hero__ctas anim-fade-up anim-d3">
-          @if (!isAuthenticated()) {
-            <a routerLink="/login" class="btn btn-primary">
-              <span class="material-icons" aria-hidden="true">person_add</span>
-              Registrarse / Entrar
-            </a>
+  <section class="hero" aria-labelledby="hero-title" #hero>
+    <div class="home-container hero__inner">
+      <p class="hero__eyebrow" data-hero="eyebrow">Comunidad de e-sports · La Guajira, Colombia</p>
+      <h1 id="hero-title" class="hero__title">
+        <span class="hero__line"><span data-hero="line">Donde los equipos</span></span>
+        <span class="hero__line"><span data-hero="line"><span class="mark" data-hero="mark">se vuelven</span> leyenda.</span></span>
+      </h1>
+      <p class="hero__sub" data-hero="sub">
+        Torneos con bracket en directo, sorteos abiertos para todos y stats de League of Legends. Entra con Google o Discord.
+      </p>
+      <div class="hero__ctas" data-hero="ctas">
+        <a routerLink="/tournaments" class="btn btn-primary">
+          Inscribir a mi equipo
+          <span class="material-icons" aria-hidden="true">arrow_forward</span>
+        </a>
+        @if (!isAuthenticated()) {
+          <a routerLink="/login" class="btn btn-secondary">Entrar</a>
+        } @else {
+          <a routerLink="/" fragment="torneos" class="btn btn-secondary">Ver torneos</a>
+        }
+        <a
+          [href]="twitchUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="btn btn-live"
+          [class.btn-live--off]="!twitchIsLive()">
+          @if (twitchIsLive()) {
+            En vivo en Twitch
+          } @else {
+            Twitch
           }
-          <a routerLink="/" fragment="torneos" class="btn btn-secondary">
-            <span class="material-icons" aria-hidden="true">emoji_events</span>
-            Ver torneos
-          </a>
-          <a
-            [href]="twitchUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="btn btn-live"
-            [class.btn-live--off]="!twitchIsLive()">
-            @if (twitchIsLive()) {
-              Live en Twitch
-            } @else {
-              Twitch
-            }
-          </a>
-        </div>
-      </div>
-      <div class="hero__visual anim-fade-up anim-d2">
-        <div class="hero__logo-wrap" aria-hidden="true">
-          <img src="image.png" alt="" class="hero__logo">
-        </div>
+        </a>
       </div>
     </div>
   </section>
@@ -48,19 +39,34 @@
   <!-- Torneos -->
   <section class="tournaments-sec" id="torneos" aria-labelledby="torneos-title">
     <div class="home-container">
-      <div class="sec-head anim-fade-up">
-        <h2 id="torneos-title" class="sec-head__title">Torneos destacados</h2>
+      <div class="sec-head" appReveal>
+        <div>
+          <p class="sec-head__kicker">01 · Torneos</p>
+          <h2 id="torneos-title" class="sec-head__title">Entra a la <em class="mark">competencia</em>.</h2>
+        </div>
         <a routerLink="/tournaments" class="btn btn-ghost sec-head__link">
           Ver todos
           <span class="material-icons" aria-hidden="true">arrow_forward</span>
         </a>
       </div>
       @if (loadingTournaments()) {
-        <p class="tournaments-sec__loading anim-fade-up">Cargando torneos…</p>
+        <div class="tournaments-sec__grid" aria-busy="true" aria-label="Cargando torneos">
+          @for (s of skeletons; track s) {
+            <div class="t-card t-card--skeleton" aria-hidden="true">
+              <div class="t-card__band"></div>
+              <div class="t-card__body">
+                <span class="sk sk--sm"></span>
+                <span class="sk sk--lg"></span>
+                <span class="sk"></span>
+                <span class="sk sk--md"></span>
+              </div>
+            </div>
+          }
+        </div>
       } @else if (hasTournaments()) {
         <div class="tournaments-sec__grid">
-          @for (t of displayTournaments(); track t.id) {
-            <article class="t-card anim-fade-up" [routerLink]="['/tournaments']">
+          @for (t of displayTournaments(); track t.id; let i = $index) {
+            <a class="t-card" [routerLink]="['/tournaments']" appReveal [revealIndex]="i">
               <div class="t-card__band" [class]="t.bandClass"></div>
               <div class="t-card__body">
                 <div class="t-card__top">
@@ -75,15 +81,22 @@
                   <span class="btn t-card__action" [class]="t.actionClass">{{ t.actionLabel }}</span>
                 </div>
               </div>
-            </article>
+            </a>
           }
         </div>
       } @else {
-        <div class="tournaments-sec__empty anim-fade-up">
-          <span class="material-icons tournaments-sec__empty-icon" aria-hidden="true">emoji_events</span>
-          <p class="tournaments-sec__empty-title">No hay torneos activos ahora</p>
-          <p class="tournaments-sec__empty-text">Cuando publiquemos uno, aparecerá aquí. Mientras tanto puedes revisar el historial o unirte a la comunidad.</p>
-          <a routerLink="/tournaments" class="btn btn-primary">Ir a torneos</a>
+        <div class="tournaments-sec__empty" appReveal>
+          <span class="tournaments-sec__empty-icon" aria-hidden="true">
+            <span class="material-icons">emoji_events</span>
+          </span>
+          <div class="tournaments-sec__empty-copy">
+            <p class="tournaments-sec__empty-title">No hay torneos activos ahora</p>
+            <p class="tournaments-sec__empty-text">Cuando publiquemos uno, aparecerá aquí. Mientras tanto puedes revisar el historial o unirte a la comunidad.</p>
+          </div>
+          <div class="tournaments-sec__empty-actions">
+            <a routerLink="/tournaments" class="btn btn-primary">Ir a torneos</a>
+            <a routerLink="/tournaments/historial" class="btn btn-secondary">Ver historial</a>
+          </div>
         </div>
       }
     </div>
@@ -92,8 +105,13 @@
   <!-- Twitch Live -->
   <section class="twitch-sec" aria-labelledby="twitch-live-title">
     <div class="home-container">
-      <h2 id="twitch-live-title" class="sec-head__title sec-head__title--solo anim-fade-up">Twitch Live</h2>
-      <app-twitch-embed layout="sidebar" class="anim-fade-up anim-d2"></app-twitch-embed>
+      <div class="sec-head" appReveal>
+        <div>
+          <p class="sec-head__kicker">02 · En directo</p>
+          <h2 id="twitch-live-title" class="sec-head__title">Míralo en Twitch</h2>
+        </div>
+      </div>
+      <app-twitch-embed layout="sidebar" appReveal [revealDelay]="0.05"></app-twitch-embed>
     </div>
   </section>
 

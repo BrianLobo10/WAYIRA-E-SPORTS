@@ -4,11 +4,12 @@ import { RouterLink } from '@angular/router';
 import { SectionHeaderComponent } from '../../components/section-header/section-header.component';
 import { UniversalCardComponent } from '../../components/universal-card/universal-card.component';
 import { CardsGridComponent } from '../../components/cards-grid/cards-grid.component';
+import { RevealDirective } from '../../directives/reveal.directive';
 
 @Component({
   selector: 'app-about',
   standalone: true,
-  imports: [CommonModule, SectionHeaderComponent, UniversalCardComponent, CardsGridComponent],
+  imports: [RevealDirective, CommonModule, SectionHeaderComponent, UniversalCardComponent, CardsGridComponent],
   templateUrl: './about.component.html',
   styleUrls: ['./about.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush

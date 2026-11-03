@@ -102,7 +102,7 @@
             @for (post of posts(); track post.id) {
               <div class="post-thumbnail" (click)="openPost(post)">
                 @if (post.images && post.images.length > 0) {
-                  <img [src]="post.images[0]" [alt]="post.content">
+                  <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="post.images[0]" [alt]="post.content">
                 } @else if (post.video) {
                   <div class="video-thumbnail">
                     <video [src]="post.video" muted></video>
@@ -157,7 +157,7 @@
                 <div class="carousel-container">
                   @for (image of selectedPost()!.images!; track $index) {
                     <div class="carousel-slide" [class.active]="$index === getCurrentImageIndex(selectedPost()!.id || '')">
-                      <img [src]="image" [alt]="selectedPost()!.content">
+                      <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="image" [alt]="selectedPost()!.content">
                     </div>
                   }
                 </div>
@@ -198,7 +198,7 @@
           <div class="post-modal-sidebar">
             <div class="post-modal-author">
               @if (selectedPost()!.authorPhoto) {
-                <img 
+                <img referrerpolicy="no-referrer" loading="lazy" decoding="async" 
                   [src]="selectedPost()!.authorPhoto" 
                   [alt]="selectedPost()!.authorName" 
                   class="author-avatar"
@@ -233,7 +233,7 @@
                       <div class="comment-item">
                         <div class="comment-header">
                           @if (comment.authorPhoto) {
-                            <img 
+                            <img referrerpolicy="no-referrer" loading="lazy" decoding="async" 
                               [src]="comment.authorPhoto" 
                               [alt]="comment.authorName" 
                               class="comment-avatar"
@@ -320,14 +320,14 @@
           <div class="edit-photo-section">
             <div class="photo-preview">
               @if (editPhotoPreview()) {
-                <img 
+                <img referrerpolicy="no-referrer" loading="lazy" decoding="async" 
                   [src]="editPhotoPreview()!" 
                   alt="Preview" 
                   class="preview-photo"
                   (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
                   onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png';">
               } @else if (profile()?.photoURL) {
-                <img 
+                <img referrerpolicy="no-referrer" loading="lazy" decoding="async" 
                   [src]="profile()!.photoURL!" 
                   alt="Current photo" 
                   class="preview-photo"
@@ -390,7 +390,7 @@
             @if (foundSummoner()) {
               <div class="summoner-result">
                 <div class="summoner-preview">
-                  <img 
+                  <img referrerpolicy="no-referrer" loading="lazy" decoding="async" 
                     [src]="getProfileIconUrl(foundSummoner()!.profileIconId)" 
                     [alt]="foundSummoner()!.gameName" 
                     class="summoner-icon-preview"
@@ -439,7 +439,7 @@
                 </button>
                 @if (foundLinkSummoner(); as sum) {
                   <div class="found-summoner-link">
-                    <img [src]="getProfileIconUrl(sum.profileIconId)" [alt]="sum.gameName" class="summoner-icon-preview">
+                    <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="getProfileIconUrl(sum.profileIconId)" [alt]="sum.gameName" class="summoner-icon-preview">
                     <span>{{ sum.gameName }}#{{ sum.tagLine }}</span>
                     <button type="button" class="btn-submit" (click)="linkRiotAccount()" [disabled]="linkingRiot()">
                       @if (linkingRiot()) { Vinculando... } @else { Vincular cuenta }
@@ -487,7 +487,7 @@
           @if (currentUserProfile()) {
             <div class="post-author-info">
               @if (currentUserProfile()!.photoURL) {
-                <img [src]="currentUserProfile()!.photoURL" [alt]="currentUserProfile()!.displayName" class="author-avatar-small">
+                <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="currentUserProfile()!.photoURL" [alt]="currentUserProfile()!.displayName" class="author-avatar-small">
               } @else {
                 <span class="author-avatar-placeholder-small">
                   {{ (currentUserProfile()!.displayName && currentUserProfile()!.displayName.charAt(0).toUpperCase()) || 'U' }}
@@ -508,7 +508,7 @@
             <div class="preview-images">
               @for (img of newPostImages(); track $index) {
                 <div class="preview-image-container">
-                  <img [src]="getImagePreview(img)" [alt]="img.name" class="preview-image">
+                  <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="getImagePreview(img)" [alt]="img.name" class="preview-image">
                   <button class="remove-image-btn" (click)="removePostImage($index)" [disabled]="uploadingPost()">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -596,7 +596,7 @@
               @for (user of followersList(); track user.uid) {
                 <a [routerLink]="['/profile', user.uid]" class="user-item" (click)="closeFollowersModal()">
                   @if (user.photoURL) {
-                    <img 
+                    <img referrerpolicy="no-referrer" loading="lazy" decoding="async" 
                       [src]="user.photoURL" 
                       [alt]="user.displayName" 
                       class="user-avatar"
@@ -644,7 +644,7 @@
               @for (user of followingList(); track user.uid) {
                 <a [routerLink]="['/profile', user.uid]" class="user-item" (click)="closeFollowingModal()">
                   @if (user.photoURL) {
-                    <img 
+                    <img referrerpolicy="no-referrer" loading="lazy" decoding="async" 
                       [src]="user.photoURL" 
                       [alt]="user.displayName" 
                       class="user-avatar"

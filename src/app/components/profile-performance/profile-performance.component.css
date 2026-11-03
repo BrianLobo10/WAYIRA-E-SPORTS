@@ -1,6 +1,6 @@
 .profile-performance-card.aurea-card {
   background: var(--surface-1);
-  border-radius: 12px;
+  border-radius: 2px;
   padding: 1.5rem 1.25rem;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border);
@@ -24,7 +24,7 @@
 .section-title {
   font-family: var(--font-display);
   font-size: 1.125rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--white);
   margin: 0;
 }
@@ -52,7 +52,7 @@
 .perf-item {
   background: var(--input-bg);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 2px;
   padding: 1.25rem 1rem;
   text-align: center;
 }
@@ -61,7 +61,7 @@
   display: block;
   font-size: 1.35rem;
   font-weight: 700;
-  color: #fff;
+  color: #eceae3;
 }
 
 .perf-label {
@@ -76,7 +76,7 @@
 .perf-hint {
   display: block;
   font-size: 0.65rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.62);
   margin-top: 0.2rem;
 }
 
@@ -87,9 +87,9 @@
 }
 
 .perf-delta.positive {
-  color: #4ade80;
+  color: #d7ff3f;
 }
 
 .perf-delta.negative {
-  color: #f87171;
+  color: #ff7a5c;
 }

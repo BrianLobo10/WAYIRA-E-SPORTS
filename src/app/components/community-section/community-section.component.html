@@ -1,7 +1,7 @@
 <section class="community" id="community">
   <div class="community__container">
     <div class="community__grid">
-      <div class="community__left anim-fade-up">
+      <div class="community__left" appReveal>
         <p class="community__eyebrow">La Familia WAYIRA</p>
         <h2 class="community__headline">
           <span>MÁS QUE UN EQUIPO.</span>
@@ -22,7 +22,7 @@
         </div>
       </div>
 
-      <div class="community__cards anim-fade-up anim-d2">
+      <div class="community__cards" appReveal revealChildren=".social-row">
         @for (card of socialCards; track card.name) {
           <button type="button" class="social-row" [class]="'social-row--' + card.theme" (click)="card.action()">
             <span class="social-row__icon-box" [class]="'social-row__icon-box--' + card.theme">

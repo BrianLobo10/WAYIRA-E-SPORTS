@@ -22,7 +22,7 @@
               (click)="selectConversation(conv.userId)">
               <div class="conversation-avatar">
                 @if (conv.profile?.photoURL) {
-                  <img [src]="conv.profile!.photoURL" [alt]="conv.profile!.displayName">
+                  <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="conv.profile!.photoURL" [alt]="conv.profile!.displayName">
                 } @else {
                   <div class="avatar-placeholder">
                     @if (conv.profile && conv.profile.displayName) {
@@ -79,7 +79,7 @@
         <div class="chat-header">
           <div class="chat-user-info" (click)="goToUserProfile(selectedConversation()!)" style="cursor: pointer;">
             @if (selectedUserProfile()!.photoURL) {
-              <img [src]="selectedUserProfile()!.photoURL" [alt]="selectedUserProfile()!.displayName" class="chat-avatar">
+              <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="selectedUserProfile()!.photoURL" [alt]="selectedUserProfile()!.displayName" class="chat-avatar">
             } @else {
               <div class="chat-avatar-placeholder">
                 {{ selectedUserProfile()!.displayName.charAt(0).toUpperCase() }}
@@ -189,7 +189,7 @@
       @for (chat of getMinimizedChats(); track chat.userId) {
         <div class="minimized-chat-bubble" (click)="maximizeChat(chat.userId)">
           @if (chat.profile?.photoURL) {
-            <img [src]="chat.profile!.photoURL" [alt]="chat.profile!.displayName">
+            <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="chat.profile!.photoURL" [alt]="chat.profile!.displayName">
           } @else {
             <div class="bubble-placeholder">
               @if (chat.profile && chat.profile.displayName) {

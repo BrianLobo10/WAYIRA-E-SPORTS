@@ -1,14 +1,17 @@
-import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, NgZone, OnInit, OnDestroy, PLATFORM_ID, ViewChild, inject, signal, computed } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { gsap } from 'gsap';
 import { Subscription } from 'rxjs';
-import { Timestamp } from '@angular/fire/firestore';
+import { Timestamp } from '../../utils/timestamp';
 import { TwitchEmbedComponent } from '../../components/twitch-embed/twitch-embed.component';
 import { CommunitySectionComponent } from '../../components/community-section/community-section.component';
-import { FirebaseService, Tournament } from '../../services/firebase.service';
+import type { Tournament } from '../../models';
+import { TournamentService } from '../../services/tournament.service';
+import { AuthService } from '../../services/auth.service';
 import { TwitchLiveService } from '../../services/twitch-live.service';
 import { SOCIAL_LINKS } from '../../config/social.config';
-import { User } from '@angular/fire/auth';
+import { RevealDirective } from '../../directives/reveal.directive';
 
 interface TournamentCard {
   id: string;
@@ -26,20 +29,27 @@ interface TournamentCard {
 
 @Component({
   selector: 'app-home',
-  imports: [RouterLink, CommonModule, TwitchEmbedComponent, CommunitySectionComponent],
+  imports: [RouterLink, CommonModule, TwitchEmbedComponent, CommunitySectionComponent, RevealDirective],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css'
 })
-export class HomeComponent implements OnInit, OnDestroy {
-  private firebaseService = inject(FirebaseService);
+export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('hero', { static: true }) heroRef!: ElementRef<HTMLElement>;
+
+  private tournamentApi = inject(TournamentService);
+  private auth = inject(AuthService);
+  private zone = inject(NgZone);
+  private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+  private heroMotion?: gsap.MatchMedia;
   private twitchLive = inject(TwitchLiveService);
   private subscriptions = new Subscription();
 
   tournaments = signal<Tournament[]>([]);
   loadingTournaments = signal(true);
-  isAuthenticated = signal(false);
+  readonly isAuthenticated = this.auth.isAuthenticated;
 
   readonly twitchUrl = SOCIAL_LINKS.twitch;
+  readonly skeletons = [0, 1, 2];
 
   twitchIsLive = this.twitchLive.isLive;
 
@@ -54,12 +64,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.subscriptions.add(
-      this.firebaseService.currentUser.subscribe((user: User | null) => {
-        this.isAuthenticated.set(!!user);
-      })
-    );
-    this.subscriptions.add(
-      this.firebaseService.getTournaments().subscribe({
+      this.tournamentApi.getTournaments().subscribe({
         next: (list) => {
           this.tournaments.set(list);
           this.loadingTournaments.set(false);
@@ -69,8 +74,27 @@ export class HomeComponent implements OnInit, OnDestroy {
     );
   }
 
+  ngAfterViewInit() {
+    if (!this.isBrowser) return;
+    this.zone.runOutsideAngular(() => {
+      this.heroMotion = gsap.matchMedia();
+      this.heroMotion.add('(prefers-reduced-motion: no-preference)', () => {
+        const q = gsap.utils.selector(this.heroRef.nativeElement);
+        gsap.timeline({ defaults: { ease: 'power3.out', duration: 0.7 } })
+          .from(q('[data-hero="eyebrow"]'), { autoAlpha: 0, y: 10, duration: 0.5 })
+          .from(q('[data-hero="line"]'), { yPercent: 110, duration: 0.7, stagger: 0.07, ease: 'power4.out' }, '<0.05')
+          .from(q('[data-hero="sub"]'), { autoAlpha: 0, y: 12 }, '-=0.45')
+          .from(q('[data-hero="ctas"] > *'), { autoAlpha: 0, y: 10, stagger: 0.05, duration: 0.5 }, '<0.08')
+          // El marcador volt se "pinta" de izquierda a derecha detrás de las palabras clave
+          .fromTo(q('[data-hero="mark"]'), { '--mark-size': '0%' }, { '--mark-size': '100%', duration: 0.6, ease: 'expo.inOut' }, 0.45)
+          .set(q('[data-hero]'), { clearProps: 'transform,opacity,visibility' });
+      });
+    });
+  }
+
   ngOnDestroy() {
     this.subscriptions.unsubscribe();
+    this.heroMotion?.revert();
   }
 
   private mapTournament(t: Tournament): TournamentCard {

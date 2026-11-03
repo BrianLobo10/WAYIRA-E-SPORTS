@@ -1,9 +1,10 @@
-import { Component, HostListener, ElementRef, ViewChild, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, HostListener, ElementRef, ViewChild, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 import { RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { User } from '@angular/fire/auth';
-import { FirebaseService, UserProfile, Tournament } from '@/app/services/firebase.service';
-import { readCachedUserProfile, writeCachedUserProfile } from '@/app/utils/profile-view-cache';
+import type { Tournament } from '@/app/models';
+import { TournamentService } from '@/app/services/tournament.service';
+import { AuthService } from '@/app/services/auth.service';
+import { MessagingService } from '@/app/services/messaging.service';
 import { NotificationsComponent } from '../notifications/notifications.component';
 import { Subscription } from 'rxjs';
 
@@ -16,144 +17,56 @@ import { Subscription } from 'rxjs';
 export class HeaderComponent implements OnInit, OnDestroy {
   @ViewChild('navElement') navElement!: ElementRef;
   
-  private firebaseService: FirebaseService = inject(FirebaseService);
+  private tournamentApi = inject(TournamentService);
   private router: Router = inject(Router);
+  private auth = inject(AuthService);
   private subscriptions = new Subscription();
-  private profileSubscription: Subscription | null = null;
   
   menuOpen = false;
   dropdownOpen = false;
   moreDropdownOpen = false;
   profileDropdownOpen = false;
-  currentUser = signal<UserProfile | null>(null);
-  isAuthenticated = signal(false);
-  isAdmin = signal(false);
+  /** Sesión de Supabase (Google o Discord) y perfil público */
+  isAuthenticated = this.auth.isAuthenticated;
+  currentUser = computed(() => {
+    const p = this.auth.profile();
+    const u = this.auth.user();
+    if (!u) return null;
+    return {
+      uid: u.id,
+      displayName: p?.display_name ?? 'Jugador',
+      photoURL: p?.avatar_url ?? undefined,
+    };
+  });
+  /** Staff: cualquier permiso de gestión (solo para mostrar opciones; la seguridad está en el servidor) */
+  isAdmin = computed(() => this.auth.permissions().length > 0);
   activeTournament = signal<Tournament | null>(null);
   hasAvailableTournaments = signal(false);
-  unreadMessagesCount = signal(0);
+  /** Mensajes sin leer (se actualiza en tiempo real desde la campana de notificaciones) */
+  unreadMessagesCount = inject(MessagingService).unreadMessages;
 
   ngOnInit() {
-    // Cargar perfil inmediatamente si ya hay un usuario autenticado
-    const currentUser = this.firebaseService.getCurrentUser();
-    if (currentUser) {
-      this.isAuthenticated.set(true);
-      this.loadUserProfile(currentUser.uid);
-      // Suscribirse a cambios en tiempo real del perfil
-      this.subscribeToUserProfile(currentUser.uid);
-    }
-    
     this.subscriptions.add(
-      this.firebaseService.currentUser.subscribe((user: User | null) => {
-        this.isAuthenticated.set(!!user);
-        if (user) {
-          this.loadUserProfile(user.uid);
-          this.subscribeToUserProfile(user.uid);
-          this.subscriptions.add(
-            this.firebaseService.getUnreadMessagesCount(user.uid).subscribe({
-              next: (count) => this.unreadMessagesCount.set(count),
-              error: (error) => console.error('Error cargando contador de mensajes no leídos:', error)
-            })
-          );
-        } else {
-          if (this.profileSubscription) {
-            this.profileSubscription.unsubscribe();
-            this.profileSubscription = null;
-          }
-          this.currentUser.set(null);
-          this.isAdmin.set(false);
-          this.unreadMessagesCount.set(0);
-        }
-      })
-    );
-
-    this.subscriptions.add(
-      this.firebaseService.getActiveTournament().subscribe({
+      this.tournamentApi.getActiveTournament().subscribe({
         next: (tournament) => this.activeTournament.set(tournament),
         error: (error) => console.error('Error loading active tournament:', error)
       })
     );
 
     this.subscriptions.add(
-      this.firebaseService.hasAvailableTournaments().subscribe({
+      this.tournamentApi.hasAvailableTournaments().subscribe({
         next: (hasTournaments) => this.hasAvailableTournaments.set(hasTournaments),
         error: () => this.hasAvailableTournaments.set(false)
       })
     );
   }
 
-  subscribeToUserProfile(uid: string) {
-    // Limpiar suscripción anterior si existe
-    if (this.profileSubscription) {
-      this.profileSubscription.unsubscribe();
-      this.profileSubscription = null;
-    }
-    
-    // Crear nueva suscripción
-    this.profileSubscription = this.firebaseService.getUserProfileRealtime(uid).subscribe({
-      next: (profile) => {
-        if (profile) {
-          this.currentUser.set(profile);
-          writeCachedUserProfile(uid, profile);
-          this.isAdmin.set(profile.role === 'admin');
-        } else {
-          this.currentUser.set(null);
-          this.isAdmin.set(false);
-        }
-      },
-      error: (error) => {
-        console.error('Error in real-time profile subscription:', error);
-      }
-    });
-    
-    // Agregar a subscriptions para limpieza automática
-    this.subscriptions.add(this.profileSubscription);
-  }
-
-  /** Al volver a la pestaña, refrescar perfil por si cambiaron el role en Firestore. */
-  @HostListener('document:visibilitychange')
-  onVisibilityChange() {
-    if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-      const user = this.firebaseService.getCurrentUser();
-      if (user) this.loadUserProfile(user.uid);
-    }
-  }
-
   ngOnDestroy() {
     this.subscriptions.unsubscribe();
   }
 
-  async loadUserProfile(uid: string) {
-    const cached = readCachedUserProfile(uid);
-    if (cached) {
-      this.currentUser.set(cached);
-      this.isAdmin.set(cached.role === 'admin');
-    }
-    try {
-      const profile = await this.firebaseService.getUserProfile(uid);
-
-      if (profile) {
-        this.currentUser.set(profile);
-        writeCachedUserProfile(uid, profile);
-        const admin = profile.role === 'admin';
-        this.isAdmin.set(admin);
-        if (!admin) {
-          console.log('Header: No admin. Para ver "Crear Torneo" pon role: "admin" en Firestore → users →', uid);
-        }
-      } else {
-        this.currentUser.set(null);
-        this.isAdmin.set(false);
-      }
-    } catch (error) {
-      console.error('Header: Error loading user profile:', error);
-      if (!cached) {
-        this.currentUser.set(null);
-        this.isAdmin.set(false);
-      }
-    }
-  }
-
   async logout() {
-    await this.firebaseService.logout();
+    await this.auth.signOut();
     this.router.navigate(['/']);
   }
 
@@ -162,18 +75,27 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   toggleMenu() {
-    console.log('toggleMenu called, current state:', this.menuOpen);
     this.menuOpen = !this.menuOpen;
-    console.log('new menu state:', this.menuOpen);
     if (this.menuOpen) {
       this.dropdownOpen = false;
+    }
+    this.syncScrollLock();
+  }
+
+  private syncScrollLock() {
+    if (typeof document === 'undefined') return;
+    document.documentElement.classList.toggle('nav-open', this.menuOpen);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape() {
+    if (this.menuOpen || this.moreDropdownOpen || this.profileDropdownOpen) {
+      this.closeMenu();
     }
   }
 
   toggleDropdown() {
-    console.log('toggleDropdown called, current state:', this.dropdownOpen);
     this.dropdownOpen = !this.dropdownOpen;
-    console.log('new state:', this.dropdownOpen);
   }
 
   closeDropdown() {
@@ -192,6 +114,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.profileDropdownOpen = !this.profileDropdownOpen;
   }
 
+  openProfileDropdown() {
+    this.profileDropdownOpen = true;
+  }
+
   closeProfileDropdown() {
     this.profileDropdownOpen = false;
   }
@@ -201,6 +127,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.dropdownOpen = false;
     this.moreDropdownOpen = false;
     this.profileDropdownOpen = false;
+    this.syncScrollLock();
   }
 
   closeMobileNav() {

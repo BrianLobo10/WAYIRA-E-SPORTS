@@ -1,7 +1,7 @@
 /* Bloque cabecera perfil – estilo Aurea: cuadro con espacio y forma definida */
 .profile-header-wrap.aurea-card {
   background: var(--surface-1);
-  border-radius: 12px;
+  border-radius: 2px;
   overflow: hidden;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border);
@@ -13,7 +13,7 @@
   background-position: top center;
   background-repeat: no-repeat;
   background-color: var(--surface-2);
-  border-radius: 12px 12px 0 0;
+  border-radius: 2px 2px 0 0;
   position: relative;
 }
 
@@ -23,8 +23,8 @@
   right: 0.75rem;
   padding: 0.4rem 0.75rem;
   background: rgba(0, 0, 0, 0.6);
-  border-radius: 8px;
-  color: #fff;
+  border-radius: 2px;
+  color: #eceae3;
   font-size: 0.8125rem;
   cursor: pointer;
 }
@@ -81,8 +81,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--teal-pri), var(--teal-accent));
-  color: #fff;
+  background: var(--volt);
+  color: var(--volt-ink);
   font-size: 2.5rem;
   font-weight: 700;
 }
@@ -103,7 +103,7 @@
 .profile-username {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #fff;
+  color: #eceae3;
   margin: 0;
 }
 
@@ -112,7 +112,7 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.25rem 0.55rem;
-  border-radius: 999px;
+  border-radius: 2px;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.15);
 }
@@ -134,13 +134,13 @@
 .btn-follow,
 .btn-message {
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: 2px;
   font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;
   border: 1px solid rgba(255, 255, 255, 0.3);
   background: transparent;
-  color: #fff;
+  color: #eceae3;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -158,6 +158,7 @@
 
 .btn-follow:hover {
   background: var(--teal-accent);
+  color: var(--volt-ink);
 }
 
 .btn-follow.following {
@@ -177,7 +178,7 @@
 }
 
 .profile-joined {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.68);
   font-size: 0.875rem;
   margin: 0 0 0.5rem 0;
 }
@@ -201,7 +202,7 @@
 }
 
 .stat-sep {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.62);
 }
 
 .profile-bio .bio-text,
@@ -222,7 +223,7 @@
   flex-shrink: 0;
   background: rgba(0, 0, 0, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  border-radius: 2px;
   padding: 1rem 1.25rem;
   min-width: 120px;
   text-align: center;
@@ -240,13 +241,13 @@
   display: block;
   font-size: 1.75rem;
   font-weight: 700;
-  color: #fff;
+  color: #eceae3;
 }
 
 .score-label {
   display: block;
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.68);
   margin-top: 0.15rem;
 }
 
@@ -263,7 +264,7 @@
 
 .modal-dialog.confirm-dialog {
   background: var(--surface-1);
-  border-radius: 12px;
+  border-radius: 2px;
   padding: 1.5rem;
   max-width: 400px;
   width: 90%;
@@ -271,13 +272,13 @@
 
 .confirm-dialog h3 {
   margin: 0 0 1rem 0;
-  color: #fff;
+  color: #eceae3;
   font-size: 1.125rem;
 }
 
 .cover-preview {
   max-height: 120px;
-  border-radius: 8px;
+  border-radius: 2px;
   overflow: hidden;
   margin-bottom: 1rem;
 }
@@ -298,17 +299,17 @@
   padding: 0.5rem 1rem;
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #fff;
-  border-radius: 8px;
+  color: #eceae3;
+  border-radius: 2px;
   cursor: pointer;
 }
 
 .dialog-actions .btn-primary {
   padding: 0.5rem 1rem;
-  background: var(--teal-pri);
+  background: var(--volt);
   border: none;
-  color: #fff;
-  border-radius: 8px;
+  color: var(--volt-ink);
+  border-radius: 2px;
   cursor: pointer;
 }
 

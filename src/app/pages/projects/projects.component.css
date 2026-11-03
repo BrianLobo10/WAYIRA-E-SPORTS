@@ -2,46 +2,10 @@
   min-height: 100vh;
 }
 
-.projects-hero {
-  background: linear-gradient(135deg, #1a2332 0%, #2d3748 100%);
-  padding: 8rem 0 4rem;
-  position: relative;
-  overflow: hidden;
-}
-
-.hero-content {
-  text-align: center;
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 0 2rem;
-}
-
-.hero-content h1 {
-  font-size: 3.5rem;
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-  background: linear-gradient(135deg, #ffffff, #6366f1);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.hero-content p {
-  font-size: 1.25rem;
-  color: rgba(255, 255, 255, 0.8);
-  line-height: 1.8;
-}
-
-
-.projects-content {
-  padding: 4rem 2rem;
-  background: #0f1419;
-}
-
 .container {
-  max-width: 1400px;
+  max-width: var(--container);
   margin: 0 auto;
-  padding: 0 2rem;
+  padding: 0 var(--gutter);
 }
 
 .section-header-row {
@@ -59,57 +23,21 @@
 
 .btn-edit-projects {
   padding: 0.5rem 1rem;
-  border-radius: 8px;
-  border: 1px solid rgba(99, 102, 241, 0.5);
-  background: rgba(99, 102, 241, 0.15);
-  color: #a5b4fc;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.075);
+  color: var(--teal-accent);
   font-size: 0.875rem;
   cursor: pointer;
 }
 
 .btn-edit-projects:hover {
-  background: rgba(99, 102, 241, 0.25);
+  background: rgba(255, 255, 255, 0.125);
 }
 
 app-section-header {
   display: block;
   margin-bottom: 2rem;
-}
-
-.projects-grid {
-  margin-top: 3rem;
-  margin-bottom: 4rem;
-}
-
-.project-card {
-  position: relative;
-}
-
-.project-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 1rem;
-  padding: 0 1rem;
-}
-
-.project-status {
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.project-status.active {
-  background: rgba(99, 102, 241, 0.2);
-  color: #818cf8;
-}
-
-.project-date {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.875rem;
 }
 
 /* Modal edición proyectos */
@@ -125,8 +53,8 @@ app-section-header {
 }
 
 .projects-edit-modal {
-  background: #1a2332;
-  border-radius: 12px;
+  background: var(--surface-2);
+  border-radius: 2px;
   padding: 1.5rem;
   max-width: 900px;
   width: 100%;
@@ -137,12 +65,12 @@ app-section-header {
 
 .projects-edit-modal h3 {
   margin: 0 0 0.5rem 0;
-  color: #fff;
+  color: #eceae3;
 }
 
 .modal-hint {
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.68);
   margin: 0 0 1rem 0;
 }
 
@@ -162,10 +90,10 @@ app-section-header {
 
 .edit-row input {
   padding: 0.5rem;
-  border-radius: 6px;
+  border-radius: 2px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: rgba(0, 0, 0, 0.3);
-  color: #fff;
+  color: #eceae3;
   font-size: 0.875rem;
 }
 
@@ -176,17 +104,17 @@ app-section-header {
 .btn-remove {
   width: 32px;
   height: 32px;
-  border-radius: 6px;
-  border: 1px solid rgba(239, 68, 68, 0.5);
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 90, 54, 0.5);
+  background: rgba(255, 90, 54, 0.15);
+  color: #ff7a5c;
   font-size: 1.25rem;
   line-height: 1;
   cursor: pointer;
 }
 
 .btn-remove:hover {
-  background: rgba(239, 68, 68, 0.3);
+  background: rgba(255, 90, 54, 0.3);
 }
 
 .modal-actions {
@@ -198,10 +126,10 @@ app-section-header {
 
 .modal-actions .btn-primary {
   padding: 0.5rem 1.25rem;
-  border-radius: 8px;
+  border-radius: 2px;
   border: none;
-  background: #6366f1;
-  color: #fff;
+  background: var(--volt);
+  color: var(--volt-ink);
   cursor: pointer;
 }
 
@@ -212,7 +140,7 @@ app-section-header {
 
 .modal-actions .btn-secondary {
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: 2px;
   border: 1px solid rgba(255, 255, 255, 0.3);
   background: transparent;
   color: rgba(255, 255, 255, 0.8);
@@ -221,7 +149,7 @@ app-section-header {
 
 .modal-actions .btn-cancel {
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: 2px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: transparent;
   color: rgba(255, 255, 255, 0.7);
@@ -229,12 +157,6 @@ app-section-header {
 }
 
 @media (max-width: 768px) {
-  .hero-content h1 {
-    font-size: 2.5rem;
-  }
-  .hero-content p {
-    font-size: 1.1rem;
-  }
   .edit-row {
     grid-template-columns: 1fr 1fr 36px;
   }
@@ -248,3 +170,79 @@ app-section-header {
   .edit-row .btn-remove { grid-column: 3; }
 }
 
+
+.projects-content {
+  padding: clamp(40px, 6vw, 72px) 0 clamp(56px, 8vw, 96px);
+}
+
+.projects-grid { display: block; }
+
+.project-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--surface-1);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+  transition: box-shadow 220ms var(--ease-out), transform 220ms var(--ease-wayira);
+}
+
+@media (hover: hover) {
+  .project-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-2); }
+}
+
+.project-card ::ng-deep .universal-card {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  transform: none !important;
+}
+
+.project-card app-universal-card { flex: 1; }
+
+.project-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 28px;
+  border-top: 1px solid var(--border);
+}
+
+.project-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 2px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(236, 234, 227, 0.72);
+}
+
+.project-status.active {
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--teal-accent);
+}
+
+.project-status.active::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.project-date {
+  color: var(--teal-muted);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 480px) {
+  .project-meta { padding: 12px 18px; }
+}

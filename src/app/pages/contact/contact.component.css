@@ -1,53 +1,22 @@
 .contact-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #0f1419 0%, #1a2332 50%, #0f1419 100%);
+  background: linear-gradient(135deg, var(--surface-1) 0%, var(--surface-2) 50%, var(--surface-1) 100%);
   font-family: 'Inter', 'Arial', sans-serif;
   position: relative;
   overflow-x: hidden;
 }
 
-.contact-hero {
-  background: linear-gradient(135deg, #15202a 0%, #1a2332 50%, #15202a 100%);
-  padding: 5rem 0 3.5rem;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-}
-
 .container {
-  max-width: 1400px;
+  max-width: var(--container);
   margin: 0 auto;
-  padding: 0 2rem;
+  padding: 0 var(--gutter);
   position: relative;
   z-index: 2;
 }
 
-.hero-content {
-  position: relative;
-  z-index: 3;
-}
-
-.hero-content h1 {
-  font-size: 4rem;
-  font-weight: 800;
-  color: #ffffff;
-  margin-bottom: 1rem;
-  letter-spacing: -0.02em;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-}
-
-.hero-content p {
-  font-size: 1.5rem;
-  color: #e0e0e0;
-  font-weight: 500;
-  margin: 0;
-  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-}
-
 .contact-container {
   padding: 4rem 0;
-  background: #0f1419;
+  background: var(--surface-1);
   position: relative;
   z-index: 1;
 }
@@ -112,9 +81,9 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: rgba(26, 35, 50, 0.6);
+  background: rgba(34, 34, 31, 0.6);
   padding: 2.5rem;
-  border-radius: 12px;
+  border-radius: 2px;
   border: 1px solid var(--border-card, rgba(255, 255, 255, 0.1));
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
@@ -144,7 +113,7 @@
 .section-title {
   font-size: 2rem;
   font-weight: 700;
-  color: #ffffff;
+  color: #eceae3;
   margin: 0 0 0.75rem 0;
   line-height: 1.2;
   padding: 0;
@@ -160,9 +129,9 @@
 }
 
 .contact-form-section {
-  background: rgba(26, 35, 50, 0.6);
+  background: rgba(34, 34, 31, 0.6);
   padding: 2.5rem;
-  border-radius: 12px;
+  border-radius: 2px;
   border: 1px solid var(--border-card, rgba(255, 255, 255, 0.1));
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
@@ -200,7 +169,7 @@
 }
 
 .form-group label {
-  color: #818cf8;
+  color: var(--white);
   font-weight: 600;
   font-size: 0.95rem;
 }
@@ -209,12 +178,12 @@
 .form-select,
 .form-textarea {
   padding: 0.9rem 1.2rem;
-  border-radius: 10px;
-  border: 2px solid var(--border-accent, rgba(1, 108, 108, 0.35));
+  border-radius: 2px;
+  border: 2px solid var(--border-accent, rgba(255, 255, 255, 0.175));
   background: rgba(0, 0, 0, 0.6);
-  color: #fff;
+  color: #eceae3;
   font-size: 1rem;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   font-family: inherit;
 }
 
@@ -222,20 +191,20 @@
 .form-select:focus,
 .form-textarea:focus {
   outline: none;
-  border-color: var(--color-accent-teal, #016C6C);
-  box-shadow: 0 0 0 3px rgba(1, 108, 108, 0.2);
+  border-color: var(--color-accent-teal, #2e2e2a);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
 }
 
 .form-input[readonly] {
-  background: rgba(99, 102, 241, 0.05);
-  border-color: rgba(99, 102, 241, 0.2);
+  background: rgba(255, 255, 255, 0.025);
+  border-color: rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.7);
   cursor: not-allowed;
 }
 
 .form-input[readonly]:focus {
-  border-color: rgba(99, 102, 241, 0.3);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
 }
 
 .form-textarea {
@@ -260,15 +229,15 @@
 }
 
 .submit-btn {
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-  color: white;
+  background: var(--volt);
+  color: var(--volt-ink);
   border: none;
   padding: 1rem 2rem;
-  border-radius: 10px;
+  border-radius: 2px;
   font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -278,7 +247,7 @@
 
 .submit-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+
 }
 
 .submit-btn:disabled {
@@ -295,7 +264,7 @@
   width: 20px;
   height: 20px;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top: 2px solid #fff;
+  border-top: 2px solid #eceae3;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -308,7 +277,7 @@
 .error-message,
 .success-message {
   padding: 1rem;
-  border-radius: 10px;
+  border-radius: 2px;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -316,15 +285,15 @@
 }
 
 .error-message {
-  background: rgba(248, 113, 113, 0.1);
-  border: 1px solid rgba(248, 113, 113, 0.3);
-  color: #f87171;
+  background: rgba(255, 90, 54, 0.1);
+  border: 1px solid rgba(255, 90, 54, 0.3);
+  color: #ff7a5c;
 }
 
 .success-message {
   background: rgba(74, 222, 128, 0.1);
   border: 1px solid rgba(74, 222, 128, 0.3);
-  color: #4ade80;
+  color: #d7ff3f;
 }
 
 .contact-info-section > .section-title,
@@ -339,35 +308,35 @@
 }
 
 .contact-card {
-  background: rgba(26, 35, 50, 0.6);
+  background: rgba(34, 34, 31, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+  border-radius: 2px;
   padding: 0.75rem 1rem;
   display: flex;
   align-items: center;
   gap: 0.875rem;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   min-height: auto;
 }
 
 .contact-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-  border-color: rgba(99, 102, 241, 0.5);
-  background: rgba(26, 35, 50, 0.8);
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(34, 34, 31, 0.8);
 }
 
 .card-icon {
   font-size: 1.25rem;
-  color: #6366f1;
+  color: var(--text-secondary);
   min-width: 36px;
   width: 36px;
   height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(99, 102, 241, 0.1);
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
   flex-shrink: 0;
 }
 .card-icon svg {
@@ -384,7 +353,7 @@
 }
 
 .card-content h3 {
-  color: #ffffff;
+  color: #eceae3;
   font-size: 0.9375rem;
   font-weight: 600;
   margin: 0;
@@ -401,17 +370,17 @@
 .action-btn {
   padding: 0.4rem 0.75rem;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
+  border-radius: 2px;
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
   background: transparent;
-  color: #fff;
+  color: #eceae3;
   min-height: 28px;
   box-sizing: border-box;
   width: auto;
@@ -419,13 +388,13 @@
 }
 
 .copy-btn {
-  color: #818cf8;
-  border-color: rgba(129, 140, 248, 0.3);
+  color: var(--teal-accent);
+  border-color: rgba(215, 255, 63, 0.18);
 }
 
 .copy-btn:hover {
-  background: rgba(129, 140, 248, 0.1);
-  border-color: #818cf8;
+  background: rgba(215, 255, 63, 0.06);
+  border-color: var(--teal-accent);
 }
 
 .discord-btn {
@@ -466,15 +435,15 @@
 }
 
 .faq-section {
-  background: rgba(26, 35, 50, 0.6);
+  background: rgba(34, 34, 31, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  border-radius: 2px;
   padding: 2rem;
   margin-top: 2rem;
 }
 
 .faq-title {
-  color: #ffffff;
+  color: #eceae3;
   font-size: 1.5rem;
   font-weight: 700;
   margin: 0 0 1.5rem 0;
@@ -482,20 +451,20 @@
 
 .faq-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: 1rem;
   width: 100%;
 }
 
 .faq-item {
   padding: 1.25rem;
-  background: rgba(99, 102, 241, 0.05);
-  border-radius: 8px;
-  border-left: 3px solid #6366f1;
+  background: rgba(255, 255, 255, 0.025);
+  border-radius: 2px;
+  border-left: 3px solid var(--teal-pri);
 }
 
 .faq-item h4 {
-  color: #fff;
+  color: #eceae3;
   font-size: 1.1rem;
   font-weight: 600;
   margin: 0 0 0.5rem 0;
@@ -515,13 +484,6 @@
 }
 
 @media (max-width: 768px) {
-  .hero-content h1 {
-    font-size: 3rem;
-  }
-
-  .hero-content p {
-    font-size: 1.2rem;
-  }
 
   .contact-content {
     padding: 0 1rem;
@@ -544,7 +506,7 @@
     max-width: 250px;
     min-height: 48px !important;
     padding: 0.9rem 1.2rem !important;
-    border-radius: 10px !important;
+    border-radius: 2px !important;
     font-size: 1rem !important;
     font-weight: 600 !important;
     align-items: center !important;
@@ -585,9 +547,6 @@
 }
 
 @media (max-width: 480px) {
-  .hero-content h1 {
-    font-size: 2.5rem;
-  }
 
   .contact-form-section {
     padding: 1.5rem;
@@ -634,7 +593,7 @@
     align-items: center !important;
     justify-content: center !important;
     padding: 0.9rem 1.2rem !important;
-    border-radius: 10px !important;
+    border-radius: 2px !important;
     font-size: 1rem !important;
     font-weight: 600 !important;
     gap: 0.5rem !important;

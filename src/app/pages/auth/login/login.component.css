@@ -1,19 +1,19 @@
-/* Paleta: fondo oscuro, bordes sutiles, acento índigo */
+/* Paleta: fondo oscuro, bordes sutiles, acento teal */
 .login-page {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(160deg, #0a0f12 0%, #0f1419 50%, #0d1218 100%);
+  background: linear-gradient(160deg, var(--bg) 0%, var(--surface-1) 50%, var(--bg) 100%);
   padding: 1.5rem;
 }
 
 .login-card {
   width: 100%;
   max-width: 400px;
-  background: var(--card-bg, rgba(26, 35, 50, 0.6));
+  background: var(--card-bg, rgba(34, 34, 31, 0.6));
   border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
-  border-radius: 12px;
+  border-radius: 2px;
   padding: 2rem;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
 }
@@ -54,7 +54,7 @@
   padding: 0.75rem 1rem;
   background: var(--input-bg, rgba(255, 255, 255, 0.04));
   border: 1px solid var(--border-input, rgba(255, 255, 255, 0.1));
-  border-radius: 8px;
+  border-radius: 2px;
   color: var(--text-primary, #e8e8e8);
   font-size: 0.9375rem;
   transition: border-color 0.2s, background 0.2s;
@@ -68,12 +68,12 @@
 
 .form-input:focus {
   outline: none;
-  border-color: var(--border-input-focus, rgba(1, 108, 108, 0.5));
+  border-color: var(--border-input-focus, rgba(255, 255, 255, 0.25));
   background: var(--input-focus-bg, rgba(255, 255, 255, 0.06));
 }
 
 .form-input:focus-visible {
-  outline: 2px solid rgba(99, 102, 241, 0.5);
+  outline: 2px solid rgba(255, 255, 255, 0.25);
   outline-offset: 2px;
 }
 
@@ -124,24 +124,24 @@
   width: 1rem;
   height: 1rem;
   cursor: pointer;
-  accent-color: var(--accent, #6366f1);
+  accent-color: var(--accent, var(--teal-pri));
 }
 
 .error-message {
   padding: 0.75rem 1rem;
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  border-radius: 8px;
-  color: #fca5a5;
+  background: rgba(255, 90, 54, 0.08);
+  border: 1px solid rgba(255, 90, 54, 0.25);
+  border-radius: 2px;
+  color: #ffb4a3;
   font-size: 0.875rem;
 }
 
 .btn-submit {
   padding: 0.75rem 1.25rem;
-  background: var(--accent, #6366f1);
+  background: var(--volt);
   border: none;
-  border-radius: 8px;
-  color: #fff;
+  border-radius: 2px;
+  color: var(--volt-ink);
   font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
@@ -154,7 +154,7 @@
 }
 
 .btn-submit:hover:not(:disabled) {
-  background: #4f46e5;
+  background: var(--accent-hover);
   transform: translateY(-1px);
 }
 
@@ -203,7 +203,7 @@
   flex: 1;
   min-width: 140px;
   padding: 0.7rem 1rem;
-  border-radius: 8px;
+  border-radius: 2px;
   font-size: 0.9375rem;
   font-weight: 500;
   cursor: pointer;
@@ -246,7 +246,7 @@
 }
 
 .btn-link:hover {
-  color: var(--accent, #818cf8);
+  color: var(--accent, var(--teal-accent));
   text-decoration: underline;
 }
 
@@ -264,7 +264,7 @@
   width: 1.125rem;
   height: 1.125rem;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
+  border-top-color: #eceae3;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
   flex-shrink: 0;
@@ -282,7 +282,7 @@
 }
 
 .login-footer a {
-  color: var(--accent, #818cf8);
+  color: var(--accent, var(--teal-accent));
   text-decoration: none;
   font-weight: 500;
 }
@@ -299,3 +299,117 @@
     font-size: 1.25rem;
   }
 }
+
+
+/* ---- Capa de diseño v3 (autenticación) ---- */
+.login-page {
+  min-height: calc(100vh - var(--header-h));
+  min-height: calc(100dvh - var(--header-h));
+  padding: clamp(24px, 6vw, 72px) var(--gutter);
+  background: transparent;
+}
+
+.login-card {
+  position: relative;
+  max-width: 440px;
+  padding: clamp(24px, 5vw, 40px);
+  background: var(--surface-1);
+  border: none;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+  backdrop-filter: none;
+  overflow: hidden;
+}
+
+.login-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--teal-accent);
+  display: none;
+}
+
+.auth-brand {
+  display: block;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 20px;
+}
+
+.auth-brand img { width: 48px; height: 48px; display: block; }
+
+.login-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.875rem, 4vw, 2.25rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--white);
+  margin: 0 0 8px;
+}
+
+.login-subtitle { color: var(--teal-muted); }
+
+.form-group label { color: rgba(236, 234, 227, 0.88); font-weight: 500; }
+
+.form-input {
+  min-height: 48px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--white);
+  transition: border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out), background-color 160ms var(--ease-out);
+}
+
+.form-input::placeholder { color: rgba(236, 234, 227, 0.5); }
+
+.form-input:focus {
+  border-color: var(--teal-accent);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.form-input:focus-visible { outline: none; }
+
+.btn-social {
+  min-height: 48px;
+  border: none;
+  box-shadow: inset 0 0 0 1px rgba(236, 234, 227, 0.14);
+  background: rgba(236, 234, 227, 0.04);
+  color: var(--white);
+  border-radius: var(--radius-sm);
+  transition: background-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out), transform 160ms var(--ease-out);
+}
+
+.btn-social:hover:not(:disabled) {
+  background: rgba(236, 234, 227, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(236, 234, 227, 0.24);
+}
+
+.btn-social:active:not(:disabled) { transform: scale(0.96); }
+
+.error-message { border-radius: var(--radius-sm); }
+
+.btn-link { min-height: 40px; color: var(--teal-muted); }
+
+.login-footer { color: var(--teal-muted); font-size: 0.9375rem; }
+.login-footer a { color: var(--teal-accent); font-weight: 600; text-underline-offset: 3px; }
+.login-footer a:hover { color: var(--white); text-decoration: underline; }
+
+.checkbox-input { width: 18px; height: 18px; accent-color: var(--teal-hover); }
+
+.btn-submit {
+  min-height: 48px;
+  padding: 0 20px;
+  background: var(--teal-pri);
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 2px rgba(0, 0, 0, 0.4);
+  transition: background-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out), transform 160ms var(--ease-out);
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: none;
+}
+
+.btn-submit:active:not(:disabled) { transform: scale(0.96); }

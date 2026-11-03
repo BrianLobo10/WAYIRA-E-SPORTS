@@ -1,8 +1,9 @@
 <div class="th-page">
-  <div class="th-hero">
+  <div class="th-hero page-hero">
     <div class="container">
       <a routerLink="/tournaments" class="th-back">← Torneos activos</a>
-      <h1>Historial de torneos</h1>
+      <span class="kicker">02 · Torneos · Historial</span>
+      <h1>El <span>historial</span>, temporada a temporada.</h1>
       <p>Torneos finalizados: campeón, subcampeón (redención) y fecha de cierre.</p>
     </div>
   </div>
@@ -17,7 +18,7 @@
     } @else {
       <ul class="th-list">
         @for (t of tournaments(); track t.id) {
-          <li class="th-card th-card--enter" [style.animation-delay.ms]="$index * 45">
+          <li class="th-card th-card--enter" [style.animation-delay.ms]="($index < 8 ? $index : 8) * 30">
             <a [routerLink]="['/tournaments/historial', t.id]" class="th-card-link">
               <span class="th-card-title">{{ t.name }}</span>
               <span class="th-card-meta">Finalizado: {{ formatDate(t) }}</span>

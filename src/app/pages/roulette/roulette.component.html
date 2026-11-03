@@ -1,107 +1,116 @@
-<div class="roulette-page">
-  <section class="roulette-hero">
-    <div class="container">
-      <div class="hero-content">
-        <h1 class="hero-title">Ruleta Wayira</h1>
-        <p class="hero-subtitle">La suerte decide tu destino, campeón</p>
-      </div>
+<div class="sorteos">
+  <header class="sorteos__head">
+    <div class="sorteos__container">
+      <p class="sorteos__kicker">03 · Sorteos</p>
+      <h1 class="sorteos__title">Que decida <span class="mark">la suerte</span>.</h1>
     </div>
-  </section>
-  
-  <section class="roulette-section">
-    <div class="container">
-      <div class="roulette-content">
-        <div class="input-section">
-          <div class="section-header">
-            <h2>Configura tu Ruleta</h2>
-            <p class="section-subtitle">Escriba los nombres que quiere incluir en la ruleta</p>
-          </div>
-          <div class="options-input-container">
-            <textarea 
-              [(ngModel)]="optionsText"
-              (input)="onTextChange()"
-              placeholder="Escriba aqui su lista de participantes"
-              rows="8"
-              class="options-input">
-            </textarea>
-          </div>
-          <div class="options-count">
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {{ options().length }} Participantes
-          </div>
-        </div>
-        <div class="roulette-display">
-          <div class="roulette-wrapper">
-            <canvas #canvas id="canvas" width="550" height="550"></canvas>
-            <div class="roulette-glow"></div>
-            <div class="center-display" *ngIf="isSpinning()">
-              <div class="spinning-text">{{ currentSpinningText() }}</div>
-            </div>
-          </div>
-          <div class="spin-button-container">
-            <button 
-              (click)="spin()" 
-              [disabled]="isSpinning() || options().length < 2"
-              class="spin-button">
-              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="button-icon">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span class="button-text">{{ isSpinning() ? 'GIRANDO...' : 'GIRA LA RULETA!' }}</span>
-            </button>
-          </div>
-        </div>
+  </header>
+
+  <section class="sorteos__container sorteos__layout">
+    <!-- Participantes -->
+    <aside class="panel panel--list" aria-labelledby="lista-titulo">
+      <div class="panel__head">
+        <h2 id="lista-titulo" class="panel__title">Participantes</h2>
+        <span class="count" [class.count--ok]="options().length >= 2">{{ options().length }}</span>
       </div>
-    </div>
-  </section>
-  
-  <div class="winner-section" *ngIf="showWinner()">
-    <div class="winner-display">
-      <div class="winner-header">
-        <svg width="40" height="40" fill="currentColor" viewBox="0 0 24 24" class="winner-crown">
-          <path d="M5 16L3 5l5.5.5L12 4l3.5 1.5L21 5l-2 11H5zm14.3-4.8c-1.2 0-2.2 1-2.2 2.2s1 2.2 2.2 2.2 2.2-1 2.2-2.2-1-2.2-2.2-2.2zm-12.6 0c-1.2 0-2.2 1-2.2 2.2s1 2.2 2.2 2.2 2.2-1 2.2-2.2-1-2.2-2.2-2.2z" />
-        </svg>
-        <h1>¡VICTORIA!</h1>
-        <div class="winner-timer">
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="timer-icon">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span class="timer-text">{{ winnerTimer() }}s</span>
-        </div>
-      </div>
-      
-      <div class="winner-content">
-        <div class="winner-name">{{ winner() }}</div>
-        <div class="winner-subtitle">¡Has ganado, campeón!</div>
-      </div>
-      
-      <div class="winner-actions">
-        <button class="close-button" (click)="closeWinnerModal()">
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="close-icon">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-          <span class="close-text">Cerrar</span>
+      <label class="sr-only" for="lista-nombres">Lista de participantes, uno por línea</label>
+      <textarea
+        id="lista-nombres"
+        class="names"
+        [(ngModel)]="optionsText"
+        (input)="onTextChange()"
+        [disabled]="busy()"
+        rows="10"
+        spellcheck="false"
+        placeholder="Un nombre por línea&#10;Ej:&#10;Brian&#10;Ana&#10;Carlos"></textarea>
+      @if (duplicates() > 0) {
+        <p class="note note--warn">Hay {{ duplicates() }} nombre(s) repetido(s). <button type="button" class="link" (click)="removeDuplicates()" [disabled]="busy()">Quitar repetidos</button></p>
+      } @else if (options().length < 2) {
+        <p class="note">Necesitas al menos 2 participantes.</p>
+      }
+      <div class="list-tools">
+        <button type="button" class="btn btn--ghost" (click)="shuffleList()" [disabled]="busy() || options().length < 2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
+          Mezclar
+        </button>
+        <button type="button" class="btn btn--ghost" (click)="clearList()" [disabled]="busy() || !options().length">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
+          Vaciar
         </button>
       </div>
-      
-      <div class="winner-effects">
-        <div class="sparkle">
-          <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-          </svg>
-        </div>
-        <div class="sparkle">
-          <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-          </svg>
-        </div>
-        <div class="sparkle">
-          <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-          </svg>
-        </div>
+    </aside>
+
+    <!-- Juego -->
+    <div class="panel panel--stage">
+      <div class="tabs" role="tablist" aria-label="Juego de sorteo">
+        @for (g of games; track g.id) {
+          <button type="button" role="tab" class="tab" [class.is-active]="mode() === g.id"
+                  [attr.aria-selected]="mode() === g.id" [disabled]="busy() && mode() !== g.id" (click)="setMode(g.id)">
+            <span class="tab__icon" aria-hidden="true">{{ g.icon }}</span>
+            <span>{{ g.label }}</span>
+          </button>
+        }
       </div>
+      <p class="stage-hint">{{ currentGame().hint }}</p>
+
+      <div class="wheel-area" [class.is-hidden]="mode() !== 'ruleta'">
+        <div class="wheel">
+          <div class="wheel__pointer" aria-hidden="true"></div>
+          <div #rotor class="wheel__rotor">
+            <canvas #canvas class="wheel__canvas" width="550" height="550" role="img" aria-label="Ruleta con los participantes"></canvas>
+          </div>
+          <div class="wheel__hub" aria-hidden="true">
+            @if (isSpinning()) {
+              <span class="wheel__current">{{ currentSpinningText() }}</span>
+            } @else {
+              <span class="wheel__logo">W</span>
+            }
+          </div>
+          @if (options().length === 0) {
+            <p class="wheel__empty">Escribe nombres en la lista</p>
+          }
+        </div>
+        <button type="button" class="game-btn game-btn--xl" (click)="spin()" [disabled]="isSpinning() || options().length < 2">
+          {{ isSpinning() ? 'Girando…' : 'Girar la ruleta' }}
+        </button>
+      </div>
+
+      @if (mode() !== 'ruleta') {
+        <div class="game-stage">
+          @switch (mode()) {
+            @case ('eliminacion') { <app-elimination-game [names]="options()" (runningChange)="gameRunning.set($event)" (finished)="announceWinner($event)" /> }
+            @case ('carrera') { <app-race-game [names]="options()" (runningChange)="gameRunning.set($event)" (finished)="announceWinner($event)" /> }
+            @case ('moneda') { <app-coin-flip [names]="options()" (runningChange)="gameRunning.set($event)" (finished)="announceWinner($event)" /> }
+          }
+        </div>
+      }
     </div>
-  </div>
+  </section>
+
+  <!-- Cartel de ganador: <dialog> nativo, queda por encima de todo y se cierra con Esc -->
+  <dialog #winnerDialog class="win" aria-labelledby="winner-title" (close)="closeWinnerModal()" (click)="onDialogClick($event)">
+    @if (showWinner()) {
+      <div class="win__confetti" aria-hidden="true">
+        @for (c of confetti; track $index) {
+          <i [style.left.%]="c.x" [style.background]="c.color" [style.animation-delay.ms]="c.delay" [style.--rot]="c.rot + 'deg'"></i>
+        }
+      </div>
+      <div class="win__card">
+        <div class="win__trophy" aria-hidden="true">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/>
+          </svg>
+        </div>
+        <p class="win__label">Ganador · {{ currentGame().label }}</p>
+        <h2 id="winner-title" class="win__name"><span class="mark">{{ winner() }}</span></h2>
+        <div class="win__actions">
+          <button type="button" class="game-btn" (click)="playAgain()">{{ mode() === 'ruleta' ? 'Girar otra vez' : 'Jugar otra vez' }}</button>
+          <button type="button" class="btn" (click)="removeWinner()">Quitar de la lista</button>
+        </div>
+        <button type="button" class="win__close" (click)="closeWinnerModal()" aria-label="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    }
+  </dialog>
 </div>

@@ -2,8 +2,10 @@ import { Component, signal, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { FirebaseService, Tournament, UserProfile, Team, BracketMatch, PlayerInfo } from '../../services/firebase.service';
-import { Timestamp } from '@angular/fire/firestore';
+import type { Tournament, UserProfile, Team, BracketMatch, PlayerInfo } from '../../models';
+import { TournamentService, type SbTournament, type TeamRegistration, type TeamStatus } from '../../services/tournament.service';
+import { AuthService } from '../../services/auth.service';
+import { Timestamp } from '../../utils/timestamp';
 import { Subscription } from 'rxjs';
 import { BracketCanvasComponent } from '../../components/bracket-canvas/bracket-canvas.component';
 import {
@@ -21,7 +23,8 @@ import {
   styleUrls: ['./tournaments.component.css']
 })
 export class TournamentsComponent implements OnInit, OnDestroy {
-  private firebaseService = inject(FirebaseService);
+  private api = inject(TournamentService);
+  private auth = inject(AuthService);
   private router = inject(Router);
   private subscriptions = new Subscription();
 
@@ -101,36 +104,28 @@ export class TournamentsComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadTournaments();
-    // Suscribirse a cambios de auth: cuando llegue el usuario, comprobar admin (evita que getCurrentUser() sea null al cargar)
-    this.subscriptions.add(
-      this.firebaseService.currentUser.subscribe((user) => {
-        if (user) {
-          this.checkAdminStatus();
-        } else {
-          this.isAdmin.set(false);
-          this.currentUser.set(null);
-        }
-      })
-    );
-    // Comprobar ya por si auth estaba listo al montar
-    this.checkAdminStatus();
-    // Verificar queryParams después de un tick por si checkAdminStatus es async
-    setTimeout(() => {
+    // Espera a conocer la sesión (Supabase) y luego comprueba permisos
+    void this.checkAdminStatus().then(() => {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('create') === 'true' && this.isAdmin()) {
         this.openCreateModal();
         window.history.replaceState({}, '', window.location.pathname);
       }
-    }, 300);
+    });
   }
 
   async checkAdminStatus() {
-    const user = this.firebaseService.getCurrentUser();
-    if (!user) return;
+    await this.auth.waitForInit();
+    const user = this.api.getCurrentUser();
+    if (!user) {
+      this.isAdmin.set(false);
+      this.currentUser.set(null);
+      return;
+    }
     try {
-      const profile = await this.firebaseService.getUserProfile(user.uid);
+      const profile = await this.api.getUserProfile(user.uid);
       this.currentUser.set(profile);
-      const admin = await this.firebaseService.isAdmin(user.uid);
+      const admin = await this.api.isAdmin(user.uid);
       this.isAdmin.set(admin);
     } catch {
       this.isAdmin.set(false);
@@ -139,7 +134,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
 
   loadTournaments() {
     this.loading.set(true);
-    this.firebaseService.getTournaments().subscribe({
+    this.api.getTournaments().subscribe({
       next: (tournaments) => {
         this.tournaments.set(tournaments);
         this.loading.set(false);
@@ -258,7 +253,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
   }
 
   async createTournament() {
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.api.getCurrentUser();
     if (!user || !this.currentUser()) return;
 
     // Verificar que sea admin
@@ -339,7 +334,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
           }
         }
 
-        await this.firebaseService.updateTournament(tournamentToEdit.id, payload as Partial<Tournament>);
+        await this.api.updateTournament(tournamentToEdit.id, payload as Partial<Tournament>);
 
         this.closeModal();
         this.loadTournaments();
@@ -349,7 +344,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
             : 'Torneo actualizado exitosamente'
         );
       } else {
-        const tournamentId = await this.firebaseService.createTournament({
+        const tournamentId = await this.api.createTournament({
           name: this.tournamentName(),
           description: this.tournamentDescription(),
           game: this.tournamentGame(),
@@ -366,10 +361,10 @@ export class TournamentsComponent implements OnInit, OnDestroy {
         if (importRes?.teams?.length && !importRes.errors.length) {
           const teams: Team[] = importRes.teams.map((draft, index) => ({
             ...draft,
-            id: `team-${tournamentId}-${index}`,
+            id: crypto.randomUUID(),
             registeredAt: Timestamp.now()
           }));
-          await this.firebaseService.updateTournament(tournamentId, {
+          await this.api.updateTournament(tournamentId, {
             teams,
             confirmed: false,
             status: 'upcoming'
@@ -431,41 +426,117 @@ export class TournamentsComponent implements OnInit, OnDestroy {
   }
 
   isUserRegistered(tournament: Tournament): boolean {
-    const user = this.firebaseService.getCurrentUser();
-    if (!user) return false;
-    
-    const teams = tournament.teams || [];
-    return teams.some(team => {
-      // Verificar si es el capitán
-      if (team.captainId === user.uid) return true;
-      
-      // Verificar en players (array de IDs)
-      if (team.players && team.players.some((p: string) => p === user.uid || p === user.email)) return true;
-      
-      // Verificar en playerInfo
-      if (team.playerInfo && team.playerInfo.some((p: any) => {
-        if (typeof p === 'object' && p.email) {
-          return p.email === user.email;
-        }
-        return false;
-      })) return true;
-      
-      return false;
-    });
+    return !!this.myRegistration(tournament);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Inscripciones: estado, aprobación, lista de espera y check-in
+  // ---------------------------------------------------------------------------
+
+  /** Inscripciones del torneo en cualquier estado (solo existen con Supabase). */
+  registrations(t: Tournament): TeamRegistration[] {
+    return (t as SbTournament).registrations ?? [];
+  }
+
+  /** Inscripciones que esperan decisión del organizador. */
+  pendingRegistrations(t: Tournament): TeamRegistration[] {
+    return this.registrations(t).filter((r) => r.status === 'pending' || r.status === 'waitlisted');
+  }
+
+  /** Equipos activos (pendientes o aprobados): ocupan cupo. */
+  activeCount(t: Tournament): number {
+    return this.registrations(t).filter((r) => r.status === 'pending' || r.status === 'approved').length;
+  }
+
+  /** Tu equipo en este torneo (si eres capitán o jugador de un equipo activo). */
+  myRegistration(t: Tournament): TeamRegistration | null {
+    const uid = this.api.getCurrentUser()?.uid;
+    if (!uid) return null;
+    return (
+      this.registrations(t).find(
+        (r) =>
+          ['pending', 'approved', 'waitlisted'].includes(r.status) &&
+          (r.captainId === uid || (r.playerInfo ?? []).some((p) => p.userId === uid))
+      ) ?? null
+    );
+  }
+
+  registrationStatusText(status: TeamStatus): string {
+    return {
+      pending: 'Pendiente de aprobación',
+      approved: 'Aprobado',
+      waitlisted: 'En lista de espera',
+      rejected: 'Rechazado',
+      withdrawn: 'Retirado'
+    }[status];
+  }
+
+  /** El check-in abre X minutos antes del inicio y cierra al empezar. */
+  checkInWindow(t: Tournament): { open: boolean; opensAt: Date | null } {
+    const start = t.startDate?.toDate?.();
+    const minutes = (t as SbTournament).checkInMinutes ?? 0;
+    if (!start || !minutes) return { open: false, opensAt: null };
+    const opensAt = new Date(start.getTime() - minutes * 60_000);
+    const now = Date.now();
+    return { open: now >= opensAt.getTime() && now < start.getTime(), opensAt };
+  }
+
+  busyTeamId = signal<string | null>(null);
+
+  async setRegistrationStatus(reg: TeamRegistration, status: TeamStatus) {
+    if (status === 'rejected' && !confirm(`¿Rechazar la inscripción de «${reg.name}»?`)) return;
+    await this.runTeamAction(reg.id, () => this.api.setTeamStatus(reg.id, status));
+  }
+
+  async withdrawMyTeam(reg: TeamRegistration) {
+    if (!confirm(`¿Retirar a «${reg.name}» del torneo? Perderás el cupo.`)) return;
+    await this.runTeamAction(reg.id, () => this.api.withdrawTeam(reg.id));
+  }
+
+  async checkInMyTeam(reg: TeamRegistration) {
+    await this.runTeamAction(reg.id, () => this.api.checkInTeam(reg.id), '¡Check-in hecho! Tu equipo está confirmado para jugar.');
+  }
+
+  async closeCheckIn(t: Tournament) {
+    if (!t.id || !confirm('¿Cerrar el check-in? Los equipos aprobados que no lo hicieron perderán su cupo.')) return;
+    try {
+      const n = await this.api.closeCheckIn(t.id);
+      this.loadTournaments();
+      alert(n ? `Check-in cerrado. ${n} equipo(s) sin check-in perdieron su cupo.` : 'Check-in cerrado. Todos los equipos aprobados lo hicieron.');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'No se pudo cerrar el check-in.');
+    }
+  }
+
+  private async runTeamAction(teamId: string, action: () => Promise<void>, okMessage?: string) {
+    this.busyTeamId.set(teamId);
+    try {
+      await action();
+      this.loadTournaments();
+      if (okMessage) alert(okMessage);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'No se pudo completar la acción.');
+    } finally {
+      this.busyTeamId.set(null);
+    }
   }
 
   openRegisterModal(tournament: Tournament) {
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.api.getCurrentUser();
     if (!user) {
       alert('Debes iniciar sesión para registrarte');
       this.router.navigate(['/login']);
       return;
     }
     
-    // Verificar si el torneo está lleno
-    const teams = tournament.teams || [];
-    if (teams.length >= tournament.maxTeams) {
-      alert('El torneo está lleno');
+    // Si no quedan cupos, el equipo entra en lista de espera
+    if (this.activeCount(tournament) >= tournament.maxTeams &&
+        !confirm('El torneo está lleno. Tu equipo quedará en lista de espera y entrará si se libera un cupo. ¿Continuar?')) {
+      return;
+    }
+    if (!this.currentUser()?.gameName || !this.currentUser()?.tagLine) {
+      alert('Antes de inscribir un equipo, agrega tu Riot ID en tu perfil (Editar perfil → Vincular cuenta Riot).');
+      this.router.navigate(['/profile']);
       return;
     }
     
@@ -532,6 +603,17 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       role: this.roles[index] || '',
       mainChampion: ''
     }));
+    // El capitán va como primer jugador con su Riot ID del perfil
+    const me = this.currentUser();
+    if (me && emptyPlayers[0]) {
+      emptyPlayers[0] = {
+        ...emptyPlayers[0],
+        userId: me.uid,
+        name: me.displayName || '',
+        gameName: me.gameName || '',
+        tagLine: me.tagLine || ''
+      };
+    }
     this.playersInfo.set(emptyPlayers);
   }
 
@@ -561,12 +643,12 @@ export class TournamentsComponent implements OnInit, OnDestroy {
 
     this.uploadingLogo.set(true);
     try {
-      const user = this.firebaseService.getCurrentUser();
+      const user = this.api.getCurrentUser();
       if (!user) return null;
 
       const timestamp = Date.now();
       const fileName = `teams/${user.uid}/${timestamp}_${logo.name}`;
-      const logoUrl = await this.firebaseService.uploadTeamLogo(fileName, logo);
+      const logoUrl = await this.api.uploadTeamLogo(fileName, logo);
       return logoUrl;
     } catch (error) {
       console.error('Error uploading logo:', error);
@@ -585,7 +667,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     // Verificar que el nombre del equipo no esté duplicado en el torneo
     const tournament = this.selectedTournament();
     if (tournament) {
-      const teams = tournament.teams || [];
+      const teams = this.registrations(tournament).filter(r => ['pending', 'approved', 'waitlisted'].includes(r.status));
       const nameExists = teams.some(team => 
         team.name.toLowerCase().trim() === this.teamName().toLowerCase().trim()
       );
@@ -599,12 +681,12 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     // Subir logo si existe
     let logoUrl: string | null = null;
     if (this.teamLogo()) {
-      const user = this.firebaseService.getCurrentUser();
+      const user = this.api.getCurrentUser();
       if (user) {
         const timestamp = Date.now();
         const fileName = `teams/${user.uid}/${timestamp}_${this.teamLogo()!.name}`;
         try {
-          logoUrl = await this.firebaseService.uploadTeamLogo(fileName, this.teamLogo()!);
+          logoUrl = await this.api.uploadTeamLogo(fileName, this.teamLogo()!);
         } catch (error) {
           alert('Error al subir el logo. Intenta nuevamente.');
           return;
@@ -701,16 +783,13 @@ export class TournamentsComponent implements OnInit, OnDestroy {
   async savePlayerCard(index: number) {
     const playerInfo = this.playersInfo()[index];
     
-    if (!playerInfo.name.trim() || !playerInfo.phone.trim() || !playerInfo.email.trim() || 
-        !playerInfo.gameName.trim() || !playerInfo.tagLine.trim()) {
-      alert('Por favor completa todos los campos requeridos');
+    if (!playerInfo.name.trim() || !playerInfo.gameName.trim() || !playerInfo.tagLine.trim()) {
+      alert('Completa el nombre y el Riot ID (nombre de invocador y tag) del jugador');
       return;
     }
-
-    // Validar formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(playerInfo.email)) {
-      alert('Por favor ingresa un correo electrónico válido');
+    const riotError = this.riotIdError(playerInfo);
+    if (riotError) {
+      alert(riotError);
       return;
     }
 
@@ -727,10 +806,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       this.currentPlayerIndex.set(index + 1);
     } else {
       // Si es la última, verificar que todas estén completas
-      const allComplete = this.playersInfo().every(p => 
-        p.name.trim() && p.phone.trim() && p.email.trim() && 
-        p.gameName.trim() && p.tagLine.trim()
-      );
+      const allComplete = this.playersInfo().every((_, i) => this.isCardComplete(i));
       
       if (!allComplete) {
         alert('Por favor completa todas las cartas de jugadores antes de continuar');
@@ -753,8 +829,16 @@ export class TournamentsComponent implements OnInit, OnDestroy {
   isCardComplete(index: number): boolean {
     const player = this.playersInfo()[index];
     if (!player) return false;
-    return !!(player.name.trim() && player.phone.trim() && player.email.trim() && 
-              player.gameName.trim() && player.tagLine.trim());
+    return !!(player.name.trim() && player.gameName.trim() && player.tagLine.trim()) && !this.riotIdError(player);
+  }
+
+  /** Mismo formato que exige el servidor: nombre de 3 a 16 caracteres y tag de 3 a 5 letras o números. */
+  riotIdError(p: PlayerInfo): string | null {
+    const name = (p.gameName || '').trim();
+    const tag = (p.tagLine || '').trim().replace(/^#/, '');
+    if (name.length < 3 || name.length > 16) return 'El nombre de invocador debe tener entre 3 y 16 caracteres';
+    if (!/^[A-Za-z0-9]{3,5}$/.test(tag)) return 'El tag debe tener de 3 a 5 letras o números (sin #)';
+    return null;
   }
 
   canProceedToNextCard(index: number): boolean {
@@ -774,10 +858,10 @@ export class TournamentsComponent implements OnInit, OnDestroy {
   }
 
   async finalizeTeamRegistration() {
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.api.getCurrentUser();
     const tournament = this.selectedTournament();
 
-    if (!user || !tournament || !this.currentUser()) return;
+    if (!user || !tournament?.id || !this.currentUser()) return;
 
     if (!this.allCardsComplete()) {
       alert(`Necesitas completar la información de los ${this.maxPlayers} jugadores.`);
@@ -786,56 +870,31 @@ export class TournamentsComponent implements OnInit, OnDestroy {
 
     this.registering.set(true);
     try {
-      const team: Team = {
-        id: `team-${Date.now()}`,
-        name: this.teamName(),
-        captainId: user.uid,
-        captainName: this.currentUser()!.displayName,
-        players: this.playersInfo().map(p => p.email), // Using email as a unique identifier for now
-        playerInfo: this.playersInfo(), // Store detailed player info
-        substitutes: [],
-        logoUrl: this.teamLogoPreview() || undefined, // Add logo URL
-        registeredAt: Timestamp.now()
-      };
-
-      await this.firebaseService.registerTeam(tournament.id!, team);
-
-      // Verificar si todos los equipos están completos
-      const updatedTournament = await new Promise<Tournament | null>((resolve) => {
-        this.firebaseService.getTournamentById(tournament.id!).subscribe({
-          next: (t) => resolve(t),
-          error: () => resolve(null)
-        });
-      });
-
-      if (updatedTournament) {
-        const teams = updatedTournament.teams || [];
-        const allTeamsComplete = teams.length === updatedTournament.maxTeams &&
-          teams.every(t => {
-            if (t.playerInfo && t.playerInfo.length > 0) {
-              return t.playerInfo.length >= this.maxPlayers && t.playerInfo.every(p => p.name.trim() && p.email.trim() && p.gameName.trim() && p.tagLine.trim());
-            }
-            return t.players && t.players.length >= this.maxPlayers;
-          });
-
-        // Generar bracket automáticamente cuando todos los equipos estén completos
-        if (allTeamsComplete && !updatedTournament.confirmed && !updatedTournament.bracket) {
-          const bracket = this.firebaseService.generateBracket(
-            updatedTournament.teams,
-            this.getTournamentConfiguredRounds(updatedTournament)
-          );
-          await this.firebaseService.updateTournament(tournament.id!, {
-            bracket: this.sanitizeBracketForFirestore(bracket)
-          });
-        }
-      }
+      // El servidor valida cupos, Riot ID únicos y límites; aquí solo se envían los datos
+      const status = await this.api.registerTeam(
+        tournament.id,
+        this.teamName(),
+        this.teamLogoPreview()?.startsWith('https://') ? this.teamLogoPreview() : null,
+        this.playersInfo().map((p) => ({
+          name: p.name,
+          gameName: p.gameName,
+          tagLine: p.tagLine,
+          role: p.role,
+          mainChampion: p.mainChampion,
+          userId: p.userId
+        }))
+      );
 
       this.closeRegisterModal();
       this.loadTournaments();
-      alert('Equipo registrado exitosamente');
+      alert(
+        status === 'waitlisted'
+          ? 'Equipo inscrito en lista de espera. Entrará automáticamente si se libera un cupo.'
+          : 'Equipo inscrito. Un organizador revisará la inscripción y te avisará cuando esté aprobada.'
+      );
     } catch (error) {
       console.error('Error registering team:', error);
-      alert('Error al registrar el equipo. Por favor intenta nuevamente.');
+      alert(error instanceof Error ? error.message : 'Error al registrar el equipo. Por favor intenta nuevamente.');
     } finally {
       this.registering.set(false);
     }
@@ -1240,14 +1299,14 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     
     try {
       // Generar bracket con el orden de los equipos (en parejas)
-      const generated = this.firebaseService.generateTournamentBrackets(
+      const generated = this.api.generateTournamentBrackets(
         teams,
         this.getTournamentConfiguredRounds(tournament),
         tournament.format || 'single'
       );
       
       // Actualizar el torneo en Firebase
-      await this.firebaseService.updateTournament(tournament.id!, {
+      await this.api.updateTournament(tournament.id!, {
         confirmed: true,
         confirmedAt: Timestamp.now(),
         bracket: this.sanitizeBracketForFirestore(generated.bracket),
@@ -1290,7 +1349,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     }
     
     try {
-      await this.firebaseService.updateTournament(tournament.id!, {
+      await this.api.updateTournament(tournament.id!, {
         status: 'ongoing',
         bracket: this.sanitizeBracketForFirestore(tournament.bracket || []),
         lowerBracket: this.sanitizeBracketForFirestore(tournament.lowerBracket || [])
@@ -1347,7 +1406,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     updatedLowerBracket = propagated.lowerBracket;
 
     try {
-      await this.firebaseService.updateTournament(tournament.id!, {
+      await this.api.updateTournament(tournament.id!, {
         bracket: this.sanitizeBracketForFirestore(updatedBracket),
         lowerBracket: this.sanitizeBracketForFirestore(updatedLowerBracket)
       });
@@ -1355,7 +1414,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       
       // Actualizar el bracket visible
       const updatedTournament = await new Promise<Tournament | null>((resolve) => {
-        this.firebaseService.getTournamentById(tournament.id!).subscribe({
+        this.api.getTournamentById(tournament.id!).subscribe({
           next: (t) => resolve(t),
           error: () => resolve(null)
         });
@@ -1679,7 +1738,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       } else {
         const name = names[i] ?? `Equipo ${i + 1}`;
         out.push({
-          id: `team-${tid}-${i}`,
+          id: crypto.randomUUID(),
           name,
           captainId: `bot-captain-${i}`,
           captainName: `Bot ${name}`,
@@ -1739,7 +1798,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.api.getCurrentUser();
     if (!user) return;
 
     this.creating.set(true);
@@ -1752,7 +1811,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
 
       const configuredRounds = 4;
 
-      const tournamentId = await this.firebaseService.createTournament({
+      const tournamentId = await this.api.createTournament({
         name: `Torneo de Prueba (${teamTotal} equipos) - Wayira E-Sports`,
         description:
           'Torneo de prueba con equipos ficticios: organiza las llaves, confirma el bracket y usa la vista interactiva para ganadores y redención.',
@@ -1768,7 +1827,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       const teamNames = this.practiceBotTeamNames.slice(0, teamTotal);
 
       const teams: Team[] = teamNames.map((name, index) => ({
-        id: `team-${tournamentId}-${index}`,
+        id: crypto.randomUUID(),
         name,
         captainId: `bot-captain-${index}`,
         captainName: `Bot ${name}`,
@@ -1778,7 +1837,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
         registeredAt: Timestamp.now()
       }));
 
-      await this.firebaseService.updateTournament(tournamentId, {
+      await this.api.updateTournament(tournamentId, {
         teams,
         maxTeams: teamTotal,
         configuredRounds,
@@ -1848,7 +1907,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     this.deletingTournamentId.set(tournament.id);
     
     try {
-      await this.firebaseService.deleteTournament(tournament.id);
+      await this.api.deleteTournament(tournament.id);
       this.loadTournaments();
       alert('Torneo eliminado exitosamente');
     } catch (error) {

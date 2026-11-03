@@ -1,37 +1,41 @@
 <header class="header">
   <div class="header__container">
     <div class="header__row">
-      <a routerLink="/" class="brand" (click)="closeMobileNav()">
-        <img src="image.png" alt="WAYIRA" class="brand__logo" width="36" height="36">
+      <a routerLink="/" class="brand" aria-label="WAYIRA E-SPORTS, inicio" (click)="closeMobileNav()">
+        <picture>
+          <source type="image/avif" srcset="brand/logo-72.avif 2x">
+          <source type="image/webp" srcset="brand/logo-72.webp 2x">
+          <img referrerpolicy="no-referrer" src="brand/logo-72.png" alt="" class="brand__logo" width="36" height="36" decoding="async">
+        </picture>
         <span class="brand__wordmark">
-          <span class="brand__main">WAYIRA</span><span class="brand__sub"> E-SPORTS</span>
+          <span class="brand__main">Wayira</span><span class="brand__sub">-e-Sport</span>
         </span>
       </a>
 
-      <nav #navElement class="header-nav" [class.header-nav--open]="menuOpen" aria-label="Principal">
+      <nav #navElement id="main-nav" class="header-nav" [class.header-nav--open]="menuOpen" aria-label="Principal">
         <a
           [routerLink]="isAuthenticated() ? '/feed' : '/'"
           routerLinkActive="is-active"
           [routerLinkActiveOptions]="{ exact: !isAuthenticated() }"
           class="header-nav__link"
           (click)="closeMobileNav()">
-          <span class="material-icons nav-icon" aria-hidden="true">home</span>
+          <span class="nav-num" aria-hidden="true">01</span>
           <span>Inicio</span>
         </a>
-        <a routerLink="/search" routerLinkActive="is-active" class="header-nav__link" (click)="closeMobileNav()">
-          <span class="material-icons nav-icon" aria-hidden="true">search</span>
-          <span>Buscar</span>
-        </a>
         <a routerLink="/tournaments" routerLinkActive="is-active" class="header-nav__link" (click)="closeMobileNav()">
-          <span class="material-icons nav-icon" aria-hidden="true">emoji_events</span>
+          <span class="nav-num" aria-hidden="true">02</span>
           <span>Torneos</span>
         </a>
-        <a routerLink="/roulette" routerLinkActive="is-active" class="header-nav__link" (click)="closeMobileNav()">
-          <span class="material-icons nav-icon" aria-hidden="true">casino</span>
-          <span>Ruleta</span>
+        <a routerLink="/sorteos" routerLinkActive="is-active" class="header-nav__link" (click)="closeMobileNav()">
+          <span class="nav-num" aria-hidden="true">03</span>
+          <span>Sorteos</span>
+        </a>
+        <a routerLink="/search" routerLinkActive="is-active" class="header-nav__link" (click)="closeMobileNav()">
+          <span class="nav-num" aria-hidden="true">04</span>
+          <span>Buscar</span>
         </a>
         <a href="https://www.twitch.tv/wayiraesports" target="_blank" rel="noopener noreferrer" class="header-nav__link" (click)="closeMobileNav()">
-          <span class="material-icons nav-icon" aria-hidden="true">live_tv</span>
+          <span class="nav-num" aria-hidden="true">05</span>
           <span>Live</span>
         </a>
 
@@ -43,8 +47,7 @@
             (click)="toggleMoreDropdown()"
             aria-haspopup="true"
             [attr.aria-expanded]="moreDropdownOpen">
-            <span class="material-icons nav-icon" aria-hidden="true">more_horiz</span>
-            <span>Más</span>
+                        <span>Más</span>
             <span class="material-icons nav-icon nav-icon--chev" aria-hidden="true">expand_more</span>
           </button>
           <div class="dropdown-menu nav-dropdown" [class.active]="moreDropdownOpen">
@@ -83,13 +86,16 @@
           <app-notifications></app-notifications>
         }
         @if (isAuthenticated()) {
-          <div class="header-profile dropdown" (mouseenter)="!menuOpen && toggleProfileDropdown()" (mouseleave)="!menuOpen && closeProfileDropdown()">
-            <button type="button" class="header-profile__btn" (click)="toggleProfileDropdown()" aria-label="Menú de perfil">
+          <div class="header-profile dropdown" (mouseenter)="!menuOpen && openProfileDropdown()" (mouseleave)="!menuOpen && closeProfileDropdown()">
+            <button type="button" class="header-profile__btn" (click)="toggleProfileDropdown()" aria-label="Menú de perfil" aria-haspopup="true" [attr.aria-expanded]="profileDropdownOpen">
               @if (currentUser()?.photoURL) {
-                <img
+                <img referrerpolicy="no-referrer"
                   [src]="currentUser()!.photoURL!"
                   [alt]="currentUser()!.displayName || 'Perfil'"
                   class="header-profile__avatar"
+                  width="36"
+                  height="36"
+                  decoding="async"
                   (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
               } @else {
                 <span class="header-profile__avatar header-profile__avatar--placeholder">
@@ -110,6 +116,12 @@
                   <span class="unread-badge">{{ unreadMessagesCount() > 99 ? '99+' : unreadMessagesCount() }}</span>
                 }
               </a>
+              @if (isAdmin()) {
+                <a routerLink="/staff" class="dropdown-item" (click)="closeProfileDropdown(); closeMobileNav()">
+                  <span class="material-icons" aria-hidden="true">admin_panel_settings</span>
+                  Panel de staff
+                </a>
+              }
               <button type="button" class="dropdown-item logout-item" (click)="logout(); closeProfileDropdown()">
                 <span class="material-icons" aria-hidden="true">logout</span>
                 Cerrar sesión
@@ -119,11 +131,15 @@
         } @else {
           <a routerLink="/login" class="header-actions__login">Entrar</a>
         }
-        <a routerLink="/tournaments" class="btn btn-primary header-actions__cta">
-          <span class="material-icons" aria-hidden="true">sports_esports</span>
-          Jugar ahora
-        </a>
-        <button type="button" class="menu-toggle" (click)="toggleMenu()" [class.is-active]="menuOpen" aria-label="Menú">
+        <a routerLink="/tournaments" class="btn btn-primary header-actions__cta">Inscribir equipo</a>
+        <button
+          type="button"
+          class="menu-toggle"
+          (click)="toggleMenu()"
+          [class.is-active]="menuOpen"
+          aria-controls="main-nav"
+          [attr.aria-expanded]="menuOpen"
+          [attr.aria-label]="menuOpen ? 'Cerrar menú' : 'Abrir menú'">
           <span></span><span></span><span></span>
         </button>
       </div>

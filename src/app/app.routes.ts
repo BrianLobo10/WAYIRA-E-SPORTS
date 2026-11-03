@@ -1,21 +1,8 @@
 import { Routes } from '@angular/router';
 import { HomeComponent } from './pages/home/home.component';
-import { SummonerSearchComponent } from './pages/summoner-search/summoner-search.component';
-import { RouletteComponent } from './pages/roulette/roulette.component';
-import { ContactComponent } from './pages/contact/contact.component';
-import { AboutComponent } from './pages/about/about.component';
-import { ProjectsComponent } from './pages/projects/projects.component';
-import { NewsComponent } from './pages/news/news.component';
-import { LoginComponent } from './pages/auth/login/login.component';
-import { RegisterComponent } from './pages/auth/register/register.component';
-import { BlogComponent } from './pages/blog/blog.component';
-import { FeedComponent } from './pages/feed/feed.component';
-import { ExploreUsersComponent } from './pages/explore-users/explore-users.component';
-import { ProfileComponent } from './pages/profile/profile.component';
-import { MessagesComponent } from './pages/messages/messages.component';
-import { TournamentsComponent } from './pages/tournaments/tournaments.component';
 import { sessionGuard } from './guards/session.guard';
 import { guestGuard } from './guards/guest.guard';
+import { adminGuard } from './guards/admin.guard';
 
 export const routes: Routes = [
   {
@@ -24,37 +11,43 @@ export const routes: Routes = [
   },
   {
     path: 'search',
-    component: SummonerSearchComponent
+    loadComponent: () => import('./pages/summoner-search/summoner-search.component').then(m => m.SummonerSearchComponent)
   },
   {
+    path: 'sorteos',
+    loadComponent: () => import('./pages/roulette/roulette.component').then(m => m.RouletteComponent),
+    title: 'Sorteos · WAYIRA E-SPORTS'
+  },
+  {
+    // Enlaces antiguos a la ruleta siguen funcionando
     path: 'roulette',
-    component: RouletteComponent
+    redirectTo: 'sorteos'
   },
   {
     path: 'contact',
-    component: ContactComponent,
-    canActivate: [sessionGuard]
+    // Cualquiera puede escribir, con o sin cuenta (el servidor limita los envíos)
+    loadComponent: () => import('./pages/contact/contact.component').then(m => m.ContactComponent)
   },
   {
     path: 'about',
-    component: AboutComponent
+    loadComponent: () => import('./pages/about/about.component').then(m => m.AboutComponent)
   },
   {
     path: 'projects',
-    component: ProjectsComponent
+    loadComponent: () => import('./pages/projects/projects.component').then(m => m.ProjectsComponent)
   },
   {
     path: 'news',
-    component: NewsComponent
+    loadComponent: () => import('./pages/news/news.component').then(m => m.NewsComponent)
   },
   {
     path: 'feed',
-    component: FeedComponent,
+    loadComponent: () => import('./pages/feed/feed.component').then(m => m.FeedComponent),
     canActivate: [sessionGuard]
   },
   {
     path: 'explore',
-    component: ExploreUsersComponent,
+    loadComponent: () => import('./pages/explore-users/explore-users.component').then(m => m.ExploreUsersComponent),
     canActivate: [sessionGuard]
   },
   {
@@ -63,38 +56,45 @@ export const routes: Routes = [
     pathMatch: 'full'
   },
   {
+    // Enlaces viejos a publicaciones: ahora todo está en el Feed
     path: 'blog/post/:id',
-    loadComponent: () => import('./pages/blog/post-view/post-view.component').then(m => m.PostViewComponent),
-    canActivate: [sessionGuard]
+    redirectTo: 'feed'
   },
   {
     path: 'login',
-    component: LoginComponent,
+    loadComponent: () => import('./pages/auth/login/login.component').then(m => m.LoginComponent),
     canActivate: [guestGuard]
   },
   {
+    // Entrar y registrarse son lo mismo con Google/Discord: la cuenta se crea al primer ingreso
     path: 'register',
-    component: RegisterComponent,
-    canActivate: [guestGuard]
+    redirectTo: 'login'
   },
   {
     path: 'profile/:id',
-    component: ProfileComponent,
+    loadComponent: () => import('./pages/profile/profile.component').then(m => m.ProfileComponent),
     canActivate: [sessionGuard]
   },
   {
     path: 'profile',
-    component: ProfileComponent,
+    loadComponent: () => import('./pages/profile/profile.component').then(m => m.ProfileComponent),
     canActivate: [sessionGuard]
   },
   {
+    // Panel de staff: buzón de contacto y roles (cualquier permiso de staff; cada sección revisa el suyo)
+    path: 'staff',
+    loadComponent: () => import('./pages/staff/staff.component').then(m => m.StaffComponent),
+    canActivate: [adminGuard],
+    title: 'Panel de staff · WAYIRA E-SPORTS'
+  },
+  {
     path: 'messages',
-    component: MessagesComponent,
+    loadComponent: () => import('./pages/messages/messages.component').then(m => m.MessagesComponent),
     canActivate: [sessionGuard]
   },
   {
     path: 'tournaments',
-    component: TournamentsComponent
+    loadComponent: () => import('./pages/tournaments/tournaments.component').then(m => m.TournamentsComponent)
   },
   {
     path: 'tournaments/:tournamentId/vista-interactiva',

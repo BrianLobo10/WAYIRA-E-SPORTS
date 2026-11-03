@@ -2,18 +2,19 @@ import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SectionHeaderComponent } from '../../components/section-header/section-header.component';
-import { FirebaseService, News, UserProfile } from '../../services/firebase.service';
-import { User } from '@angular/fire/auth';
+import type { News, UserProfile } from '../../models';
+import { ContentService } from '../../services/content.service';
+import { RevealDirective } from '../../directives/reveal.directive';
 
 @Component({
   selector: 'app-news',
   standalone: true,
-  imports: [CommonModule, FormsModule, SectionHeaderComponent],
+  imports: [RevealDirective, CommonModule, FormsModule, SectionHeaderComponent],
   templateUrl: './news.component.html',
   styleUrls: ['./news.component.css']
 })
 export class NewsComponent implements OnInit {
-  private firebaseService = inject(FirebaseService);
+  private content = inject(ContentService);
   
   news = signal<News[]>([]);
   loading = signal(true);
@@ -46,19 +47,10 @@ export class NewsComponent implements OnInit {
 
   async checkAdminStatus() {
     try {
-      const user = this.firebaseService.getCurrentUser();
-      if (user) {
-        const profile = await this.firebaseService.getUserProfile(user.uid);
-        this.currentUser.set(profile);
-        if (profile) {
-          const admin = await this.firebaseService.isAdmin(user.uid);
-          this.isAdmin.set(admin);
-          // Si es admin y ya hay noticias cargadas, recargar con todas
-          if (admin && this.news().length > 0) {
-            this.loadAllNews();
-          }
-        }
-      }
+      // Puede publicar quien tenga el permiso de noticias (Editor, Administrador…)
+      const admin = await this.content.canManageNews();
+      this.isAdmin.set(admin);
+      if (admin) this.loadAllNews();
     } catch (error) {
       console.error('Error checking admin status:', error);
       // Si hay error, simplemente no es admin
@@ -70,7 +62,7 @@ export class NewsComponent implements OnInit {
     this.loading.set(true);
     // Siempre cargar noticias publicadas primero (funciona sin autenticación)
     // Si después se determina que es admin, se puede recargar con todas las noticias
-    this.firebaseService.getNews(50).subscribe({
+    this.content.getNews(50).subscribe({
       next: (newsList) => {
         this.news.set(newsList);
         this.loading.set(false);
@@ -91,7 +83,7 @@ export class NewsComponent implements OnInit {
   }
 
   private loadAllNews() {
-    this.firebaseService.getAllNews(50).subscribe({
+    this.content.getNews(50).subscribe({
       next: (newsList) => {
         this.news.set(newsList);
       },
@@ -154,8 +146,7 @@ export class NewsComponent implements OnInit {
   }
 
   async createNews() {
-    const user = this.firebaseService.getCurrentUser();
-    if (!user || !this.currentUser()) return;
+    if (!this.isAdmin()) return;
 
     if (!this.newsTitle().trim() || !this.newsContent().trim() || !this.newsExcerpt().trim()) {
       alert('Por favor completa todos los campos requeridos');
@@ -168,19 +159,15 @@ export class NewsComponent implements OnInit {
       
       // Si hay un archivo seleccionado, subirlo al storage
       if (this.newsImageFile()) {
-        const file = this.newsImageFile()!;
-        const fileName = `news/${Date.now()}_${file.name}`;
-        imageUrl = await this.firebaseService.uploadImage(file, fileName);
+        imageUrl = await this.content.uploadNewsImage(this.newsImageFile()!);
       }
       
-      await this.firebaseService.createNews({
+      await this.content.createNews({
         title: this.newsTitle(),
         content: this.newsContent(),
         excerpt: this.newsExcerpt(),
         category: this.newsCategory(),
         imageUrl: imageUrl,
-        authorId: user.uid,
-        authorName: this.currentUser()!.displayName || 'Admin',
         published: this.newsPublished()
       });
       
@@ -188,7 +175,7 @@ export class NewsComponent implements OnInit {
       this.loadNews();
     } catch (error) {
       console.error('Error creating news:', error);
-      alert('Error al crear la noticia');
+      alert(error instanceof Error ? error.message : 'Error al crear la noticia');
     } finally {
       this.uploading.set(false);
     }
@@ -210,7 +197,11 @@ export class NewsComponent implements OnInit {
 
     this.uploading.set(true);
     try {
-      await this.firebaseService.updateNews(news.id, {
+      // Si se eligió una imagen nueva, se sube primero
+      if (this.newsImageFile()) {
+        this.newsImageUrl.set(await this.content.uploadNewsImage(this.newsImageFile()!));
+      }
+      await this.content.updateNews(news.id, {
         title: this.newsTitle(),
         content: this.newsContent(),
         excerpt: this.newsExcerpt(),
@@ -223,7 +214,7 @@ export class NewsComponent implements OnInit {
       this.loadNews();
     } catch (error) {
       console.error('Error updating news:', error);
-      alert('Error al actualizar la noticia');
+      alert(error instanceof Error ? error.message : 'Error al actualizar la noticia');
     } finally {
       this.uploading.set(false);
     }
@@ -238,7 +229,7 @@ export class NewsComponent implements OnInit {
     if (!confirm('¿Estás seguro de que quieres eliminar esta noticia?')) return;
 
     try {
-      await this.firebaseService.deleteNews(newsId);
+      await this.content.deleteNews(newsId);
       this.loadNews();
     } catch (error) {
       console.error('Error deleting news:', error);

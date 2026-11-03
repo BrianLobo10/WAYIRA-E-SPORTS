@@ -2,10 +2,10 @@ import { Component, signal, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { FirebaseService, Post, UserProfile } from '../../services/firebase.service';
-import { User } from '@angular/fire/auth';
+import type { Post, UserProfile } from '../../models';
+import { CommunityService } from '../../services/community.service';
+import { AuthService } from '../../services/auth.service';
 import { Subscription } from 'rxjs';
-import { Timestamp } from '@angular/fire/firestore';
 
 @Component({
   selector: 'app-feed',
@@ -15,10 +15,11 @@ import { Timestamp } from '@angular/fire/firestore';
   styleUrls: ['./feed.component.css']
 })
 export class FeedComponent implements OnInit, OnDestroy {
-  private firebaseService = inject(FirebaseService);
-  private userSub?: Subscription;
+  private community = inject(CommunityService);
+  private auth = inject(AuthService);
   private postsSub?: Subscription;
   private suggestedSub?: Subscription;
+  private stopWatching?: () => void;
   private previewUrls: string[] = [];
   private imagePreviewCache = new Map<File, string>();
   private videoPreviewCache = new Map<File, string>();
@@ -41,54 +42,31 @@ export class FeedComponent implements OnInit, OnDestroy {
   newComment = signal('');
   activeTab = signal<'all' | 'following'>('all');
 
-  ngOnInit() {
-    this.userSub = this.firebaseService.currentUser.subscribe((user: User | null) => {
-      if (user) {
-        this.isAuthenticated.set(true);
-        this.loadUserProfile(user);
-        this.loadPosts();
-        this.loadSuggestedUsers(user.uid);
-      } else {
-        this.isAuthenticated.set(false);
-        this.posts.set([]);
-        this.currentUser.set(null);
-        this.suggestedUsers.set([]);
-        this.loading.set(false);
-      }
+  async ngOnInit() {
+    // La ruta ya exige sesión; aquí solo esperamos a que Supabase la tenga lista
+    await this.auth.waitForInit();
+    const user = this.community.getCurrentUser();
+    if (!user) {
+      this.isAuthenticated.set(false);
+      this.loading.set(false);
+      return;
+    }
+    this.isAuthenticated.set(true);
+    void this.loadUserProfile(user.uid);
+    this.loadPosts();
+    this.loadSuggestedUsers(user.uid);
+    // Publicaciones, comentarios y reacciones nuevas aparecen solas
+    this.stopWatching = this.community.watchCommunity(() => {
+      this.loadPosts(false);
+      this.refreshSelectedPost();
     });
   }
 
-  private async loadUserProfile(user: User) {
+  private async loadUserProfile(uid: string) {
     try {
-      const profile = await this.firebaseService.getUserProfile(user.uid);
-      if (profile) {
-        this.currentUser.set({
-          ...profile,
-          photoURL: profile.photoURL || user.photoURL || undefined
-        });
-        return;
-      }
-      this.currentUser.set({
-        uid: user.uid,
-        email: user.email || '',
-        displayName: user.displayName || 'Usuario',
-        photoURL: user.photoURL || undefined,
-        role: 'user',
-        followers: [],
-        following: [],
-        createdAt: Timestamp.now()
-      });
-    } catch {
-      this.currentUser.set({
-        uid: user.uid,
-        email: user.email || '',
-        displayName: user.displayName || 'Usuario',
-        photoURL: user.photoURL || undefined,
-        role: 'user',
-        followers: [],
-        following: [],
-        createdAt: Timestamp.now()
-      });
+      this.currentUser.set(await this.community.getUserProfile(uid));
+    } catch (err) {
+      console.error('No se pudo cargar tu perfil', err);
     }
   }
 
@@ -102,43 +80,44 @@ export class FeedComponent implements OnInit, OnDestroy {
     this.previewUrls.forEach(url => URL.revokeObjectURL(url));
     this.imagePreviewCache.forEach(url => URL.revokeObjectURL(url));
     this.videoPreviewCache.forEach(url => URL.revokeObjectURL(url));
-    this.userSub?.unsubscribe();
+    this.stopWatching?.();
     this.postsSub?.unsubscribe();
     this.suggestedSub?.unsubscribe();
   }
 
-  loadPosts() {
-    const user = this.firebaseService.getCurrentUser();
-    if (!user) {
+  /** Carga las últimas 50 publicaciones. Sin indicador de carga cuando es una actualización en segundo plano. */
+  loadPosts(showLoading = true) {
+    if (!this.community.getCurrentUser()) {
       this.posts.set([]);
       this.loading.set(false);
       return;
     }
-    this.loading.set(true);
-    this.postsSub = this.firebaseService.getPosts(50).subscribe({
+    if (showLoading) this.loading.set(true);
+    this.postsSub?.unsubscribe();
+    this.postsSub = this.community.getPosts(50).subscribe({
       next: (posts) => {
         this.posts.set(posts);
         this.loading.set(false);
       },
-      error: () => {
-        this.posts.set([]);
+      error: (err) => {
+        console.error('No se pudieron cargar las publicaciones', err);
         this.loading.set(false);
       }
     });
   }
 
   loadSuggestedUsers(currentUserId: string) {
-    this.suggestedSub = this.firebaseService.getSuggestedUsers(currentUserId, 6).subscribe({
+    this.suggestedSub = this.community.getSuggestedUsers(currentUserId, 6).subscribe({
       next: (users) => this.suggestedUsers.set(users)
     });
   }
 
   async followUser(targetUserId: string) {
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.community.getCurrentUser();
     if (!user) return;
     try {
-      await this.firebaseService.followUser(user.uid, targetUserId);
-      this.loadUserProfile(user);
+      await this.community.followUser(user.uid, targetUserId);
+      void this.loadUserProfile(user.uid);
       this.suggestedUsers.update(list => list.filter(u => u.uid !== targetUserId));
     } catch (e) {
       console.error(e);
@@ -146,34 +125,24 @@ export class FeedComponent implements OnInit, OnDestroy {
   }
 
   async createPost() {
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.community.getCurrentUser();
     if (!user || !this.newPostContent().trim()) {
       if (!this.newPostContent().trim()) alert('Escribe algo para publicar');
       return;
     }
     this.uploading.set(true);
     try {
-      let authorName = this.currentUser()?.displayName || user.displayName || 'Usuario';
-      let authorPhoto = this.currentUser()?.photoURL || user.photoURL || null;
-      const postId = `post_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
       const images: string[] = [];
       for (const file of this.newPostImages()) {
-        const url = await this.firebaseService.uploadImage(file, `posts/${user.uid}/${postId}/${file.name}`);
-        images.push(url);
+        images.push(await this.community.uploadImage(file, 'post-media'));
       }
-      let video: string | null = null;
-      if (this.newPostVideo()) {
-        video = await this.firebaseService.uploadVideo(this.newPostVideo()!, `posts/${user.uid}/${postId}/${this.newPostVideo()!.name}`);
-      }
-      const postData: any = {
+      const video = this.newPostVideo() ? await this.community.uploadVideo(this.newPostVideo()!) : undefined;
+      await this.community.createPost({
         authorId: user.uid,
-        authorName,
-        authorPhoto,
-        content: this.newPostContent().trim()
-      };
-      if (images.length) postData.images = images;
-      if (video) postData.video = video;
-      await this.firebaseService.createPost(postData);
+        content: this.newPostContent().trim(),
+        images,
+        video
+      });
       this.newPostContent.set('');
       this.cleanupPreviewUrls();
       this.newPostImages.set([]);
@@ -181,7 +150,8 @@ export class FeedComponent implements OnInit, OnDestroy {
       this.showCreateModal.set(false);
       this.loadPosts();
     } catch (err: any) {
-      alert(err?.message || 'Error al publicar');
+      console.error(err);
+      alert('No se pudo publicar. Revisa tu conexión e intenta de nuevo.');
     } finally {
       this.uploading.set(false);
     }
@@ -225,33 +195,46 @@ export class FeedComponent implements OnInit, OnDestroy {
 
   async likePost(post: Post, e?: Event) {
     e?.stopPropagation();
-    const user = this.firebaseService.getCurrentUser();
-    if (!user || this.isLiked(post)) return;
-    await this.firebaseService.likePost(post.id!, user.uid);
+    const user = this.community.getCurrentUser();
+    if (!user || !post.id) return;
+    this.applyReaction(post, user.uid, 'like');
+    await this.community.likePost(post.id, user.uid).catch((err) => console.error(err));
     this.refreshSelectedPost();
-    this.loadPosts();
+    this.loadPosts(false);
   }
   async dislikePost(post: Post, e?: Event) {
     e?.stopPropagation();
-    const user = this.firebaseService.getCurrentUser();
-    if (!user || this.isDisliked(post)) return;
-    await this.firebaseService.dislikePost(post.id!, user.uid);
+    const user = this.community.getCurrentUser();
+    if (!user || !post.id) return;
+    this.applyReaction(post, user.uid, 'dislike');
+    await this.community.dislikePost(post.id, user.uid).catch((err) => console.error(err));
     this.refreshSelectedPost();
-    this.loadPosts();
+    this.loadPosts(false);
   }
+  /** Actualiza el contador al instante, sin esperar al servidor. */
+  private applyReaction(post: Post, uid: string, kind: 'like' | 'dislike') {
+    const had = kind === 'like' ? post.likes.includes(uid) : (post.dislikes ?? []).includes(uid);
+    const likes = post.likes.filter((id) => id !== uid);
+    const dislikes = (post.dislikes ?? []).filter((id) => id !== uid);
+    if (!had) (kind === 'like' ? likes : dislikes).push(uid);
+    const patch = (p: Post) => (p.id === post.id ? { ...p, likes, dislikes } : p);
+    this.posts.update((list) => list.map(patch));
+    this.selectedPost.update((p) => (p ? patch(p) : p));
+  }
+
   isLiked(post: Post): boolean {
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.community.getCurrentUser();
     return !!(user && (post.likes || []).includes(user.uid));
   }
   isDisliked(post: Post): boolean {
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.community.getCurrentUser();
     return !!(user && (post.dislikes || []).includes(user.uid));
   }
 
   openPost(post: Post) {
     this.selectedPost.set(post);
     this.showPostModal.set(true);
-    this.firebaseService.getPostById(post.id!).subscribe({
+    this.community.getPostById(post.id!).subscribe({
       next: (p) => p && this.selectedPost.set(p)
     });
   }
@@ -263,24 +246,24 @@ export class FeedComponent implements OnInit, OnDestroy {
   private refreshSelectedPost() {
     const post = this.selectedPost();
     if (post?.id) {
-      this.firebaseService.getPostById(post.id).subscribe({
+      this.community.getPostById(post.id).subscribe({
         next: (p) => p && this.selectedPost.set(p)
       });
     }
   }
   async addComment() {
     const post = this.selectedPost();
-    const user = this.firebaseService.getCurrentUser();
+    const user = this.community.getCurrentUser();
     if (!user || !post?.id || !this.newComment().trim()) return;
-    await this.firebaseService.addComment(post.id, {
-      authorId: user.uid,
-      authorName: this.currentUser()?.displayName || user.displayName || 'Usuario',
-      authorPhoto: this.currentUser()?.photoURL || user.photoURL || null,
-      content: this.newComment().trim()
-    });
-    this.newComment.set('');
-    this.refreshSelectedPost();
-    this.loadPosts();
+    try {
+      await this.community.addComment(post.id, { authorId: user.uid, content: this.newComment().trim() });
+      this.newComment.set('');
+      this.refreshSelectedPost();
+      this.loadPosts(false);
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo enviar el comentario. Intenta de nuevo.');
+    }
   }
 
   getCurrentImageIndex(postId: string): number {

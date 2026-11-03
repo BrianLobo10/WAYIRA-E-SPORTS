@@ -1,8 +1,9 @@
 <div class="about-page">
-  <section class="about-hero">
+  <section class="about-hero page-hero">
     <div class="container">
       <div class="hero-content">
-        <h1>Sobre Nosotros</h1>
+        <span class="kicker">Sobre nosotros</span>
+        <h1>E-sports con <span>raíz guajira</span>.</h1>
         <p>Conoce más sobre WAYIRA E-SPORTS y nuestra misión de profesionalizar los deportes electrónicos en Colombia</p>
       </div>
     </div>
@@ -10,13 +11,13 @@
 
   <section class="about-content">
     <div class="container">
-      <div class="about-intro">
+      <div class="about-intro" appReveal>
         <h2>Nuestra Historia</h2>
         <p>WAYIRA E-SPORTS S.A.S. nació con la visión de transformar el panorama de los deportes electrónicos en La Guajira y Colombia. Fundada con el propósito de profesionalizar y dar visibilidad al talento local, hemos crecido hasta convertirnos en una organización referente en el ecosistema gaming nacional.</p>
         <p>Desde nuestros inicios, nos hemos enfocado en crear oportunidades reales para jugadores, organizar eventos de calidad y construir una comunidad sólida alrededor de los e-Sports.</p>
       </div>
 
-      <div class="mission-vision">
+      <div class="mission-vision" appReveal revealChildren=".mission-vision-card">
         <div class="mission-vision-card">
           <div class="card-icon">
             <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -39,7 +40,7 @@
       </div>
 
       <app-section-header title="Nuestros Logros"></app-section-header>
-      <app-cards-grid [columns]="4" gap="medium" [responsive]="true" class="achievements-grid">
+      <app-cards-grid [columns]="4" gap="medium" [responsive]="true" class="achievements-grid" appReveal revealChildren="app-universal-card">
         @for (achievement of achievements; track achievement.title) {
           <app-universal-card 
             [icon]="achievement.icon" 
@@ -52,7 +53,7 @@
       </app-cards-grid>
 
       <app-section-header title="Nuestros Servicios"></app-section-header>
-      <app-cards-grid [columns]="3" gap="medium" [responsive]="true" class="services-grid">
+      <app-cards-grid [columns]="3" gap="medium" [responsive]="true" class="services-grid" appReveal revealChildren="app-universal-card">
         @for (service of services; track service.title) {
           <app-universal-card 
             [icon]="service.icon" 
@@ -65,7 +66,7 @@
       </app-cards-grid>
 
       <app-section-header title="Nuestro Equipo"></app-section-header>
-      <app-cards-grid [columns]="3" gap="medium" [responsive]="true" class="team-grid">
+      <app-cards-grid [columns]="3" gap="medium" [responsive]="true" class="team-grid" appReveal revealChildren="app-universal-card">
         @for (member of team; track member.name) {
           <app-universal-card 
             icon="users" 

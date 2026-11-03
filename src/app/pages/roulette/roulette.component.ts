@@ -1,266 +1,299 @@
-import { Component, ElementRef, ViewChild, AfterViewInit, signal } from '@angular/core';
+import { Component, ElementRef, ViewChild, AfterViewInit, OnDestroy, NgZone, computed, inject, signal } from '@angular/core';
+import { EliminationGameComponent } from './games/elimination-game.component';
+import { RaceGameComponent } from './games/race-game.component';
+import { CoinFlipComponent } from './games/coin-flip.component';
+import { randomInt, shuffle } from './games/random';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
+type GameId = 'ruleta' | 'eliminacion' | 'carrera' | 'moneda';
+
+/** Sectores en grises cálidos alternados (estilo editorial); los vecinos se distinguen por luminosidad. */
+const SEGMENT_COLORS = ['#1A1A18', '#33332E', '#22221F', '#3D3D37'];
+/** Colores del confeti del cartel de ganador. */
+const CONFETTI_COLORS = ['#D7FF3F', '#ECEAE3', '#FF5A36', '#A3A19A', '#D7FF3F'];
+
+const SIZE = 550;            // tamaño lógico del lienzo
+const CENTER = SIZE / 2;
+const OUTER_RADIUS = 220;
+const INNER_RADIUS = 80;
+const POINTER_DEG = 270;     // la flecha está arriba (en el lienzo 0° es a la derecha y gira en sentido horario)
+
+/**
+ * Ruleta de sorteos.
+ * - La rueda se dibuja UNA vez y lo que gira es el elemento (transform en GPU), no se redibuja 60 veces por segundo.
+ * - La animación corre fuera de Angular para no lanzar la detección de cambios en cada fotograma.
+ * - El ganador se elige al inicio con crypto.getRandomValues (aleatorio de verdad) y la rueda se detiene en él.
+ */
 @Component({
   selector: 'app-roulette',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, EliminationGameComponent, RaceGameComponent, CoinFlipComponent],
   templateUrl: './roulette.component.html',
   styleUrls: ['./roulette.component.css']
 })
-export class RouletteComponent implements AfterViewInit {
+export class RouletteComponent implements AfterViewInit, OnDestroy {
   @ViewChild('canvas', { static: false }) canvasRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('rotor', { static: false }) rotorRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('winnerDialog', { static: false }) dialogRef!: ElementRef<HTMLDialogElement>;
+
+  private readonly zone = inject(NgZone);
+
+  readonly games: { id: GameId; label: string; icon: string; hint: string }[] = [
+    { id: 'ruleta', label: 'Ruleta', icon: 'A', hint: 'Gira y donde pare la flecha, gana.' },
+    { id: 'eliminacion', label: 'Eliminación', icon: 'B', hint: 'Caen uno por uno; el último en pie gana.' },
+    { id: 'carrera', label: 'Carrera', icon: 'C', hint: 'Cada participante es un carro; el primero en la meta gana.' },
+    { id: 'moneda', label: 'Cara o sello', icon: 'D', hint: 'Duelo entre dos con una moneda.' },
+  ];
+  readonly currentGame = computed(() => this.games.find((g) => g.id === this.mode())!);
+  /** Piezas de confeti (posición, color y retraso fijos para no recalcular en cada render). */
+  readonly confetti = Array.from({ length: 28 }, (_, i) => ({
+    x: Math.round((i / 28) * 100 + (i % 3) * 2),
+    delay: (i % 7) * 60,
+    color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+    rot: (i * 47) % 360,
+  }));
+  readonly mode = signal<GameId>('ruleta');
+  /** Un juego distinto de la ruleta está en marcha. */
+  readonly gameRunning = signal(false);
+  readonly busy = computed(() => this.isSpinning() || this.gameRunning());
+  readonly currentGameLabel = computed(() => this.games.find((g) => g.id === this.mode())?.label.toLowerCase() ?? 'sorteo');
 
   options = signal<string[]>([]);
   optionsText = signal('');
   isSpinning = signal(false);
   winner = signal<string | null>(null);
   showWinner = signal(false);
-  winnerTimer = signal(15);
   currentSpinningText = signal('');
-  private winnerTimerInterval: any = null;
 
-  private startAngle = 0;
-  private arc = 0;
-  private spinTimeout: any = null;
-  private showWinnerTimeout: any = null;
-  private spinAngleStart = 0;
-  private spinTime = 0;
-  private spinTimeTotal = 0;
-  private ctx: CanvasRenderingContext2D | null = null;
+  private rotation = 0;              // grados acumulados
+  private frame = 0;
+  private showWinnerTimeout: ReturnType<typeof setTimeout> | null = null;
 
   ngAfterViewInit() {
     this.updateOptions();
-    this.drawRouletteWheel();
+    this.drawWheel();
+  }
+
+  ngOnDestroy() {
+    cancelAnimationFrame(this.frame);
+    if (this.showWinnerTimeout) clearTimeout(this.showWinnerTimeout);
+  }
+
+  setMode(id: GameId) {
+    if (this.busy()) return;
+    this.closeWinnerModal();
+    this.mode.set(id);
+    // El lienzo sigue en la página aunque esté oculto; se redibuja por si cambió la lista
+    if (id === 'ruleta') setTimeout(() => this.drawWheel());
+  }
+
+  /** Los juegos avisan aquí cuando terminan y se muestra el mismo cartel de ganador. */
+  announceWinner(name: string) {
+    this.winner.set(name);
+    this.showWinner.set(true);
+    const dialog = this.dialogRef?.nativeElement;
+    if (dialog && !dialog.open) dialog.showModal();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Herramientas de la lista
+  // ---------------------------------------------------------------------------
+
+  /** Quita al ganador de la lista (para sacar varios ganadores seguidos). */
+  removeWinner() {
+    const name = this.winner();
+    if (!name) return;
+    const lines = this.optionsText().split('\n');
+    const i = lines.findIndex((l) => l.trim() === name);
+    if (i >= 0) lines.splice(i, 1);
+    this.setList(lines.join('\n'));
+    this.closeWinnerModal();
+  }
+
+  /** Cierra el cartel y, en la ruleta, vuelve a girar. */
+  playAgain() {
+    this.closeWinnerModal();
+    if (this.mode() === 'ruleta') setTimeout(() => this.spin(), 150);
+  }
+
+  shuffleList() {
+    this.setList(shuffle(this.options()).join('\n'));
+  }
+
+  removeDuplicates() {
+    const seen = new Set<string>();
+    const unique = this.options().filter((n) => {
+      const key = n.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    this.setList(unique.join('\n'));
+  }
+
+  clearList() {
+    if (this.options().length && !confirm('¿Borrar toda la lista de participantes?')) return;
+    this.setList('');
+  }
+
+  readonly duplicates = computed(() => {
+    const names = this.options().map((n) => n.toLowerCase());
+    return names.length - new Set(names).size;
+  });
+
+  private setList(text: string) {
+    this.optionsText.set(text);
+    this.onTextChange();
   }
 
   onTextChange() {
     this.updateOptions();
-    this.drawRouletteWheel();
+    this.drawWheel();
   }
 
   updateOptions() {
-    const text = this.optionsText();
-    if (text.trim()) {
-      const newOptions = text.split('\n')
-        .map(option => option.trim())
-        .filter(option => option.length > 0);
-      this.options.set(newOptions);
-      this.arc = Math.PI / (newOptions.length / 2);
-    } else {
-      this.options.set([]);
-    }
+    this.options.set(
+      this.optionsText()
+        .split('\n')
+        .map((o) => o.trim())
+        .filter((o) => o.length > 0)
+    );
   }
 
   spin() {
-    if (this.isSpinning() || this.options().length < 2) return;
-
-    if (this.showWinnerTimeout) {
-      clearTimeout(this.showWinnerTimeout);
-      this.showWinnerTimeout = null;
-    }
-    this.isSpinning.set(true);
-    this.winner.set(null);
-    this.showWinner.set(false);
-
-    this.spinAngleStart = Math.random() * 10 + 10;
-    this.spinTime = 0;
-    this.spinTimeTotal = 8000;
-    this.rotateWheel();
-  }
-
-  private rotateWheel() {
-    this.spinTime += 16;
-    if (this.spinTime >= this.spinTimeTotal) {
-      this.stopRotateWheel();
-      return;
-    }
-    
-    const progress = this.spinTime / this.spinTimeTotal;
-    let spinAngle;
-    
-    if (progress < 0.15) {
-      const phaseProgress = progress / 0.15;
-      spinAngle = this.spinAngleStart * (1 - phaseProgress * 0.1);
-    } else if (progress < 0.4) {
-      spinAngle = this.spinAngleStart * 0.9;
-    } else if (progress < 0.7) {
-      const phaseProgress = (progress - 0.4) / 0.3;
-      const easedProgress = this.easeInOut(phaseProgress, 0, 1, 1);
-      spinAngle = this.spinAngleStart * (0.9 - easedProgress * 0.4);
-    } else {
-      const phaseProgress = (progress - 0.7) / 0.3;
-      const easedProgress = this.easeOut(phaseProgress, 0, 1, 1);
-      spinAngle = this.spinAngleStart * 0.5 * (1 - easedProgress);
-    }
-    
-    spinAngle = Math.max(spinAngle, 0.1);
-    
-    this.startAngle += (spinAngle * Math.PI / 180);
-    
-    this.updateCurrentSpinningText();
-    this.drawRouletteWheel();
-    this.spinTimeout = setTimeout(() => this.rotateWheel(), 16);
-  }
-
-  private updateCurrentSpinningText() {
     const options = this.options();
-    if (options.length === 0) return;
-    
-    const segmentAngle = 360 / options.length;
-    const currentAngle = (this.startAngle * 180 / Math.PI + 90) % 360;
-    const normalizedAngle = (360 - currentAngle) % 360;
-    const currentIndex = Math.floor(normalizedAngle / segmentAngle);
-    const currentText = options[currentIndex] || options[0];
-    
-    this.currentSpinningText.set(currentText);
+    if (this.isSpinning() || options.length < 2) return;
+
+    if (this.showWinnerTimeout) clearTimeout(this.showWinnerTimeout);
+    this.closeWinnerModal();
+    this.isSpinning.set(true);
+
+    const seg = 360 / options.length;
+    const winnerIndex = randomInt(options.length);
+    // Punto aleatorio dentro del sector ganador (sin pegarse a los bordes)
+    const jitter = (randomInt(1000) / 1000 - 0.5) * seg * 0.7;
+    const landing = mod(POINTER_DEG - (winnerIndex + 0.5) * seg + jitter, 360);
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const turns = reduceMotion ? 1 : 7;
+    const duration = reduceMotion ? 1200 : 6000;
+
+    const from = this.rotation;
+    const to = from - mod(from, 360) + turns * 360 + landing;
+    const rotor = this.rotorRef.nativeElement;
+    let lastIndex = -1;
+    let start = 0;
+
+    this.zone.runOutsideAngular(() => {
+      const step = (now: number) => {
+        if (!start) start = now;
+        const t = Math.min(1, (now - start) / duration);
+        this.rotation = from + (to - from) * easeOutQuart(t);
+        rotor.style.transform = `rotate(${this.rotation}deg)`;
+
+        // El texto central solo cambia cuando la flecha pasa a otro nombre
+        const index = Math.floor(mod(POINTER_DEG - this.rotation, 360) / seg) % options.length;
+        if (index !== lastIndex) {
+          lastIndex = index;
+          this.currentSpinningText.set(options[index]);
+        }
+
+        if (t < 1) {
+          this.frame = requestAnimationFrame(step);
+        } else {
+          this.zone.run(() => this.finish(options[winnerIndex]));
+        }
+      };
+      this.frame = requestAnimationFrame(step);
+    });
   }
 
-  private stopRotateWheel() {
-    clearTimeout(this.spinTimeout);
+  private finish(winnerName: string) {
     this.isSpinning.set(false);
-
-    const degrees = this.startAngle * 180 / Math.PI + 90;
-    const arcd = this.arc * 180 / Math.PI;
-    const index = Math.floor((360 - degrees % 360) / arcd);
-    const winnerName = this.options()[index];
-
-    // Esperar 4 segundos antes de mostrar al ganador
+    // Una pausa corta para que se vea dónde paró la flecha, sin hacer esperar
     this.showWinnerTimeout = setTimeout(() => {
       this.showWinnerTimeout = null;
-      this.winner.set(winnerName);
-      this.showWinner.set(true);
-      this.startWinnerTimer();
-    }, 4000);
+      this.announceWinner(winnerName);
+    }, 450);
   }
 
-  private startWinnerTimer() {
-    this.winnerTimer.set(15);
-    this.winnerTimerInterval = setInterval(() => {
-      const currentTimer = this.winnerTimer();
-      if (currentTimer <= 1) {
-        this.closeWinnerModal();
-      } else {
-        this.winnerTimer.set(currentTimer - 1);
-      }
-    }, 1000);
+  /** Clic fuera de la tarjeta (en el fondo oscuro) cierra el cartel. */
+  onDialogClick(event: MouseEvent) {
+    if (event.target === this.dialogRef?.nativeElement) this.closeWinnerModal();
   }
 
   closeWinnerModal() {
+    const dialog = this.dialogRef?.nativeElement;
+    if (dialog?.open) dialog.close();
     this.showWinner.set(false);
     this.winner.set(null);
-    this.winnerTimer.set(15);
-    if (this.winnerTimerInterval) {
-      clearInterval(this.winnerTimerInterval);
-      this.winnerTimerInterval = null;
-    }
   }
 
-  private easeOut(t: number, b: number, c: number, d: number): number {
-    const ts = (t /= d) * t;
-    const tc = ts * t;
-    return b + c * (tc + -3 * ts + 3 * t);
-  }
-
-  private easeInOut(t: number, b: number, c: number, d: number): number {
-    const ts = (t /= d) * t;
-    const tc = ts * t;
-    return b + c * (tc * -2 + 3 * ts);
-  }
-
-  private getColor(item: number, maxitem: number): string {
-    const colors = [
-      '#6366f1',
-      '#4f46e5',
-      '#818cf8',
-      '#a5b4fc',
-      '#9146ff',
-      '#5865f2',
-      '#7c3aed',
-      '#E74C3C',
-      '#F39C12',
-      '#F59E0B',
-      '#3498DB',
-      '#9B59B6',
-      '#E67E22',
-      '#64748b',
-      '#E91E63',
-      '#EC4899',
-      '#06b6d4',
-      '#14b8a6',
-      '#795548',
-      '#FF9800'
-    ];
-    return colors[item % colors.length];
-  }
-
-  private drawRouletteWheel() {
+  /** Dibuja la rueda completa una sola vez (cuando cambia la lista). */
+  private drawWheel() {
     const canvas = this.canvasRef?.nativeElement;
-    if (!canvas) return;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
 
-    const outsideRadius = 220;
-    const textRadius = 150;
-    const insideRadius = 80;
-
-    this.ctx = canvas.getContext('2d');
-    if (!this.ctx) return;
-
-    this.ctx.clearRect(0, 0, 550, 550);
-
-    this.ctx.strokeStyle = "rgba(1, 108, 108, 0.55)";
-    this.ctx.lineWidth = 3;
-    this.ctx.font = 'bold 14px Arial, sans-serif';
+    // Nitidez en pantallas de alta densidad
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (canvas.width !== SIZE * dpr) {
+      canvas.width = SIZE * dpr;
+      canvas.height = SIZE * dpr;
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, SIZE, SIZE);
 
     const options = this.options();
-    if (options.length === 0) return;
+    if (!options.length) return;
+
+    const arc = (2 * Math.PI) / options.length;
+    const fontSize = options.length > 24 ? 11 : options.length > 12 ? 13 : 15;
+    const maxTextWidth = OUTER_RADIUS - INNER_RADIUS - 28;
+    ctx.font = `500 ${fontSize}px Inter, system-ui, sans-serif`;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
 
     for (let i = 0; i < options.length; i++) {
-      const angle = this.startAngle + i * this.arc;
-      this.ctx.fillStyle = this.getColor(i, options.length);
+      const angle = i * arc;
+      // Si la cantidad es impar, el último sector no repite el color del primero
+      const colorIndex = i === options.length - 1 && i % SEGMENT_COLORS.length === 0 ? 1 : i % SEGMENT_COLORS.length;
 
-      this.ctx.beginPath();
-      this.ctx.arc(275, 275, outsideRadius, angle, angle + this.arc, false);
-      this.ctx.arc(275, 275, insideRadius, angle + this.arc, angle, true);
-      this.ctx.stroke();
-      this.ctx.fill();
+      ctx.beginPath();
+      ctx.arc(CENTER, CENTER, OUTER_RADIUS, angle, angle + arc, false);
+      ctx.arc(CENTER, CENTER, INNER_RADIUS, angle + arc, angle, true);
+      ctx.closePath();
+      ctx.fillStyle = SEGMENT_COLORS[colorIndex];
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
 
-      this.ctx.save();
-      this.ctx.translate(275 + Math.cos(angle + this.arc / 2) * textRadius, 
-                        275 + Math.sin(angle + this.arc / 2) * textRadius);
-      
-      const text = options[i];
-      this.ctx.rotate(angle + this.arc / 2 + Math.PI / 2 + Math.PI / 2);
-      
-      this.ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-      this.ctx.shadowBlur = 4;
-      this.ctx.shadowOffsetX = 2;
-      this.ctx.shadowOffsetY = 2;
-      this.ctx.fillStyle = '#FFFFFF';
-      this.ctx.textAlign = 'center';
-      this.ctx.fillText(text, 0, 0);
-      
-      this.ctx.restore();
+      // Texto a lo largo del radio, pegado al borde (como las ruletas de nombres clásicas)
+      ctx.save();
+      ctx.translate(CENTER, CENTER);
+      ctx.rotate(angle + arc / 2);
+      const text = fitText(ctx, options[i], maxTextWidth);
+      ctx.fillStyle = '#ECEAE3';
+      ctx.fillText(text, OUTER_RADIUS - 18, 0);
+      ctx.restore();
     }
-
-    const arrowY = 275 - (outsideRadius + 5);
-    const arrowTipY = 275 - (outsideRadius - 13);
-    
-    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-    this.ctx.shadowBlur = 10;
-    this.ctx.shadowOffsetX = 2;
-    this.ctx.shadowOffsetY = 2;
-    
-    this.ctx.fillStyle = '#6366f1';
-    this.ctx.beginPath();
-    this.ctx.moveTo(275 - 6, arrowY);
-    this.ctx.lineTo(275 + 6, arrowY);
-    this.ctx.lineTo(275 + 6, arrowY + 8);
-    this.ctx.lineTo(275 + 12, arrowY + 8);
-    this.ctx.lineTo(275 + 0, arrowTipY);
-    this.ctx.lineTo(275 - 12, arrowY + 8);
-    this.ctx.lineTo(275 - 6, arrowY + 8);
-    this.ctx.lineTo(275 - 6, arrowY);
-    this.ctx.fill();
   }
+}
+
+function mod(n: number, m: number): number {
+  return ((n % m) + m) % m;
+}
+
+function easeOutQuart(t: number): number {
+  return 1 - Math.pow(1 - t, 4);
+}
+
+/** Recorta nombres largos con "…" para que no se salgan del sector. */
+function fitText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  let t = text;
+  while (t.length > 1 && ctx.measureText(t + '…').width > maxWidth) t = t.slice(0, -1);
+  return t + '…';
 }

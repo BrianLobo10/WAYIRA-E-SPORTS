@@ -1,7 +1,9 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { FirebaseService, UserProfile } from '../../services/firebase.service';
+import type { UserProfile } from '../../models';
+import { ContentService } from '../../services/content.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-contact',
@@ -11,7 +13,8 @@ import { FirebaseService, UserProfile } from '../../services/firebase.service';
   styleUrls: ['./contact.component.css']
 })
 export class ContactComponent implements OnInit {
-  private firebaseService = inject(FirebaseService);
+  private content = inject(ContentService);
+  private auth = inject(AuthService);
 
   name = signal('');
   email = signal('');
@@ -33,27 +36,21 @@ export class ContactComponent implements OnInit {
   contactInfo = {
     email: 'wayirasports@gmail.com',
     phone: '+57 301 745 5742',
-    discord: 'https://discord.gg/HHBMumv8S',
+    discord: 'https://discord.com/invite/WZHESnGACq',
     facebook: 'https://www.facebook.com/share/1TtgfPoLSL/',
     instagram: 'https://www.instagram.com/wayiraesports'
   };
 
-  ngOnInit() {
-    // Cargar datos del usuario autenticado
-    const user = this.firebaseService.getCurrentUser();
+  async ngOnInit() {
+    // Con sesión, se autocompletan nombre y correo (el correo solo lo ve la propia persona)
+    await this.auth.waitForInit();
+    const user = this.auth.user();
     if (user) {
-      this.firebaseService.getUserProfile(user.uid).then(profile => {
-        if (profile) {
-          this.currentUser.set(profile);
-          // Autocompletar nombre y email desde el perfil
-          this.name.set(profile.displayName || '');
-          this.email.set(profile.email || '');
-        }
-      }).catch(error => {
-        console.error('Error al cargar perfil:', error);
-      });
+      this.name.set(this.auth.profile()?.display_name ?? '');
+      this.email.set(user.email ?? '');
     }
   }
+
 
   async onSubmit() {
     if (!this.validateForm()) return;
@@ -63,7 +60,8 @@ export class ContactComponent implements OnInit {
 
     try {
       // Guardar mensaje en Firestore
-      await this.firebaseService.createContactMessage({
+      // Se guarda en el buzón; el staff lo lee en el panel de staff
+      await this.content.sendContactMessage({
         name: this.name(),
         email: this.email(),
         subject: this.subject() || undefined,
@@ -71,17 +69,12 @@ export class ContactComponent implements OnInit {
         contactType: this.contactType()
       });
 
-      // Obtener emails de admins y notificar (aquí podrías integrar un servicio de email)
-      const adminEmails = await this.firebaseService.getAdminEmails();
-      console.log('Mensaje de contacto guardado. Notificar a admins:', adminEmails);
-      // TODO: Integrar servicio de email (EmailJS, SendGrid, etc.) para enviar notificaciones
-
       this.isSubmitting.set(false);
       this.submitSuccess.set(true);
       this.resetForm();
     } catch (error: any) {
       console.error('Error al enviar mensaje:', error);
-      this.submitError.set('Error al enviar el mensaje. Por favor intenta nuevamente.');
+      this.submitError.set(error instanceof Error ? error.message : 'Error al enviar el mensaje. Por favor intenta nuevamente.');
       this.isSubmitting.set(false);
     }
   }
@@ -122,7 +115,7 @@ export class ContactComponent implements OnInit {
       const button = event?.target as HTMLElement;
       const originalText = button.textContent;
       button.textContent = '¡Copiado!';
-      button.style.background = '#4ade80';
+      button.style.background = '#d7ff3f';
       setTimeout(() => {
         button.textContent = originalText;
         button.style.background = '';

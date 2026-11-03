@@ -3,7 +3,7 @@
 }
 
 .blog-hero {
-  background: linear-gradient(135deg, #1a2332 0%, #2d3748 100%);
+  background: linear-gradient(135deg, var(--surface-2) 0%, var(--surface-3) 100%);
   padding: 8rem 0 4rem;
   position: relative;
   overflow: hidden;
@@ -20,10 +20,7 @@
   font-size: 3.5rem;
   font-weight: 700;
   margin-bottom: 1.5rem;
-  background: linear-gradient(135deg, #ffffff, #6366f1);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--white);
 }
 
 .hero-content p {
@@ -35,14 +32,14 @@
 
 .blog-content {
   padding: 2rem 1rem;
-  background: #0f1419;
+  background: var(--surface-1);
   min-height: calc(100vh - 80px);
 }
 
 .container {
   max-width: 1600px;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0 var(--gutter);
 }
 
 .blog-header {
@@ -57,21 +54,21 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
+  background: var(--teal-pri);
   border: none;
   border-radius: 8px;
   color: white;
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  transition: var(--t-ui);
+  box-shadow: 0 4px 12px rgba(1, 136, 136, 0.3);
 }
 
 .btn-create-post:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
-  background: linear-gradient(135deg, #818cf8 0%, #a5b4fc 100%);
+  box-shadow: 0 6px 20px rgba(1, 136, 136, 0.4);
+  background: var(--teal-accent);
 }
 
 .btn-create-post svg {
@@ -87,7 +84,7 @@
 
 .btn-create {
   padding: 0.875rem 1.5rem;
-  background: linear-gradient(135deg, #6366f1, #818cf8);
+  background: var(--teal-pri);
   border: none;
   border-radius: 8px;
   color: #ffffff;
@@ -97,12 +94,12 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .btn-create:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 10px 20px rgba(1, 136, 136, 0.3);
 }
 
 .loading-container,
@@ -130,7 +127,7 @@
   width: 40px;
   height: 40px;
   border: 4px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #6366f1;
+  border-top-color: var(--teal-pri);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   display: inline-block;
@@ -143,7 +140,7 @@
 
 .posts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 450px), 1fr));
   gap: 2rem;
   margin: 0 auto;
   width: 100%;
@@ -151,13 +148,13 @@
 
 @media (max-width: 1400px) {
   .posts-grid {
-    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr));
   }
 }
 
 @media (max-width: 1024px) {
   .posts-grid {
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 350px), 1fr));
   }
 }
 
@@ -174,14 +171,14 @@
   border-radius: 16px;
   overflow: hidden;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   backdrop-filter: blur(10px);
 }
 
 .post-card:hover {
   transform: translateY(-8px);
-  border-color: rgba(99, 102, 241, 0.3);
-  box-shadow: 0 20px 40px rgba(99, 102, 241, 0.1);
+  border-color: rgba(1, 136, 136, 0.3);
+  box-shadow: 0 20px 40px rgba(1, 136, 136, 0.1);
 }
 
 .create-post-card {
@@ -189,13 +186,13 @@
   align-items: center;
   justify-content: center;
   min-height: 200px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(129, 140, 248, 0.05));
-  border: 2px dashed rgba(99, 102, 241, 0.3);
+  background: linear-gradient(135deg, rgba(1, 136, 136, 0.1), rgba(1, 196, 196, 0.05));
+  border: 2px dashed rgba(1, 136, 136, 0.3);
 }
 
 .create-post-card:hover {
-  border-color: rgba(99, 102, 241, 0.5);
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(129, 140, 248, 0.1));
+  border-color: rgba(1, 136, 136, 0.5);
+  background: linear-gradient(135deg, rgba(1, 136, 136, 0.15), rgba(1, 196, 196, 0.1));
 }
 
 .create-post-content {
@@ -208,12 +205,12 @@
 }
 
 .create-post-content svg {
-  color: #818cf8;
-  transition: all 0.3s ease;
+  color: var(--teal-accent);
+  transition: var(--t-ui);
 }
 
 .create-post-card:hover .create-post-content svg {
-  color: #6366f1;
+  color: var(--teal-pri);
   transform: scale(1.1);
 }
 
@@ -287,7 +284,7 @@
   justify-content: center;
   color: white;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   backdrop-filter: blur(4px);
 }
 
@@ -332,7 +329,7 @@
   border: 2px solid rgba(255, 255, 255, 0.5);
   background: rgba(255, 255, 255, 0.3);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   padding: 0;
 }
 
@@ -407,7 +404,7 @@
   border-radius: 6px;
   color: rgba(255, 255, 255, 0.6);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .post-action-btn:hover {
@@ -440,7 +437,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #6366f1, #818cf8);
+  background: var(--teal-pri);
   color: #ffffff;
   font-weight: 600;
   font-size: 0.875rem;
@@ -451,18 +448,18 @@
   text-decoration: none;
   font-weight: 600;
   font-size: 0.875rem;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   cursor: pointer;
 }
 
 .author-name:hover {
-  color: #818cf8;
+  color: var(--teal-accent);
   text-decoration: underline;
 }
 
 .post-date {
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.68);
 }
 
 .post-text {
@@ -487,7 +484,7 @@
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(129, 140, 248, 0.05));
+  background: linear-gradient(135deg, rgba(1, 136, 136, 0.1), rgba(1, 196, 196, 0.05));
 }
 
 .text-content-post {
@@ -531,7 +528,7 @@
   border-radius: 8px;
   color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .stat-btn:hover {
@@ -545,8 +542,8 @@
 }
 
 .stat-btn.disliked svg {
-  fill: #6366f1;
-  stroke: #6366f1;
+  fill: var(--teal-pri);
+  stroke: var(--teal-pri);
 }
 
 /* Modal Styles */
@@ -565,7 +562,7 @@
 }
 
 .modal-content {
-  background: #1a2332;
+  background: var(--surface-2);
   border-radius: 16px;
   max-width: 600px;
   width: 100%;
@@ -598,7 +595,7 @@
   cursor: pointer;
   padding: 0.5rem;
   border-radius: 4px;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .close-btn:hover {
@@ -628,7 +625,7 @@
 }
 
 .author-avatar-placeholder-small {
-  background: linear-gradient(135deg, #6366f1, #818cf8);
+  background: var(--teal-pri);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -658,11 +655,11 @@
 
 .post-textarea:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: var(--teal-pri);
 }
 
 .post-textarea::placeholder {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.62);
 }
 
 .preview-images {
@@ -699,7 +696,7 @@
   justify-content: center;
   color: #ffffff;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .remove-image-btn:hover:not(:disabled) {
@@ -733,7 +730,7 @@
   gap: 0.5rem;
   color: #ffffff;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .remove-video-btn:hover:not(:disabled) {
@@ -756,7 +753,7 @@
   border-radius: 8px;
   color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .file-label:hover {
@@ -785,11 +782,11 @@
 
 .file-tag {
   padding: 0.5rem 1rem;
-  background: rgba(99, 102, 241, 0.2);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: rgba(1, 136, 136, 0.2);
+  border: 1px solid rgba(1, 136, 136, 0.3);
   border-radius: 20px;
   font-size: 0.875rem;
-  color: #818cf8;
+  color: var(--teal-accent);
 }
 
 .modal-footer {
@@ -810,7 +807,7 @@
   font-size: 1rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .btn-cancel:hover:not(:disabled) {
@@ -826,7 +823,7 @@
 .btn-submit {
   flex: 2;
   padding: 0.875rem 1.5rem;
-  background: linear-gradient(135deg, #6366f1, #818cf8);
+  background: var(--teal-pri);
   border: none;
   border-radius: 8px;
   color: #ffffff;
@@ -837,7 +834,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .spinner-small {
@@ -852,7 +849,7 @@
 
 .btn-submit:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 10px 20px rgba(1, 136, 136, 0.3);
 }
 
 .btn-submit:disabled {
@@ -862,7 +859,7 @@
 
 /* Post Modal Styles */
 .post-modal-content {
-  background: #1a2332;
+  background: var(--surface-2);
   border-radius: 16px;
   max-width: 1200px;
   width: 100%;
@@ -896,7 +893,7 @@
 }
 
 .post-modal-image.text-only {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  background: linear-gradient(135deg, var(--surface-1) 0%, var(--surface-2) 100%);
   padding: 3rem;
 }
 
@@ -1018,7 +1015,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #6366f1, #818cf8);
+  background: var(--teal-pri);
   color: #ffffff;
   font-weight: 600;
   font-size: 1rem;
@@ -1028,12 +1025,12 @@
   font-weight: 600;
   color: #ffffff;
   text-decoration: none;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   cursor: pointer;
 }
 
 .author-name-link:hover {
-  color: #818cf8;
+  color: var(--teal-accent);
   text-decoration: underline;
 }
 
@@ -1087,7 +1084,7 @@
 .empty-comments {
   text-align: center;
   padding: 3rem 1rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.68);
   font-size: 0.9375rem;
   line-height: 1.6;
 }
@@ -1126,7 +1123,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #6366f1, #818cf8);
+  background: var(--teal-pri);
   color: #ffffff;
   font-weight: 600;
   font-size: 0.875rem;
@@ -1137,12 +1134,12 @@
   color: #ffffff;
   font-size: 0.875rem;
   text-decoration: none;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   cursor: pointer;
 }
 
 .comment-author-link:hover {
-  color: #818cf8;
+  color: var(--teal-accent);
   text-decoration: underline;
 }
 
@@ -1156,7 +1153,7 @@
   word-wrap: break-word;
   background: rgba(255, 255, 255, 0.03);
   border-radius: 8px;
-  border-left: 2px solid rgba(99, 102, 241, 0.3);
+  border-left: 2px solid rgba(1, 136, 136, 0.3);
 }
 
 .comment-actions {
@@ -1171,10 +1168,10 @@
   gap: 0.375rem;
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.68);
   cursor: pointer;
   font-size: 0.8125rem;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
 }
@@ -1194,7 +1191,7 @@
 
 .reply-count {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.68);
   margin-left: 0.5rem;
 }
 
@@ -1202,7 +1199,7 @@
   margin-top: 1rem;
   margin-left: calc(36px + 0.75rem);
   padding-left: 1rem;
-  border-left: 2px solid rgba(99, 102, 241, 0.2);
+  border-left: 2px solid rgba(1, 136, 136, 0.2);
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -1265,7 +1262,7 @@
   color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   font-size: 0.8125rem;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   flex-shrink: 0;
 }
 
@@ -1296,7 +1293,7 @@
   cursor: pointer;
   padding: 0.5rem;
   border-radius: 4px;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -1317,12 +1314,12 @@
 }
 
 .action-btn.disliked {
-  color: #6366f1;
+  color: var(--teal-pri);
 }
 
 .action-btn.disliked svg {
-  fill: #6366f1;
-  stroke: #6366f1;
+  fill: var(--teal-pri);
+  stroke: var(--teal-pri);
 }
 
 .action-btn span {
@@ -1347,25 +1344,25 @@
 
 .comment-input:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: var(--teal-pri);
 }
 
 .comment-input::placeholder {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.62);
 }
 
 .send-btn {
   padding: 0.75rem 1rem;
-  background: #6366f1;
+  background: var(--teal-pri);
   border: none;
   border-radius: 8px;
   color: #ffffff;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: var(--t-ui);
 }
 
 .send-btn:hover {
-  background: #818cf8;
+  background: var(--teal-accent);
 }
 
 @media (max-width: 768px) {

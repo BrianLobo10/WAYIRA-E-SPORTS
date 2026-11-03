@@ -9,7 +9,8 @@ import {
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { FirebaseService, PlayerInfo, Team, Tournament } from '../../../services/firebase.service';
+import type { PlayerInfo, Team, Tournament } from '../../../models';
+import { TournamentService } from '../../../services/tournament.service';
 
 @Component({
   selector: 'app-tournament-history-detail',
@@ -21,7 +22,7 @@ import { FirebaseService, PlayerInfo, Team, Tournament } from '../../../services
 })
 export class TournamentHistoryDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
-  private firebase = inject(FirebaseService);
+  private firebase = inject(TournamentService);
 
   loading = signal(true);
   tournament = signal<Tournament | null>(null);

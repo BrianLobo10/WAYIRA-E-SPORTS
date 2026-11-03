@@ -1,8 +1,9 @@
 import { Component, signal, inject, OnInit, OnDestroy, HostListener, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { FirebaseService, Notification } from '../../services/firebase.service';
-import { Subscription } from 'rxjs';
+import type { Notification } from '../../models';
+import { MessagingService } from '../../services/messaging.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-notifications',
@@ -13,27 +14,36 @@ import { Subscription } from 'rxjs';
 })
 export class NotificationsComponent implements OnInit, OnDestroy {
   @ViewChild('dropdown') dropdown?: ElementRef;
-  
-  firebaseService = inject(FirebaseService);
-  private notificationsSubscription?: Subscription;
-  private unreadCountSubscription?: Subscription;
+
+  private messaging = inject(MessagingService);
+  private auth = inject(AuthService);
+  private stopWatching?: () => void;
 
   notifications = signal<Notification[]>([]);
-  unreadCount = signal(0);
+  /** Viene del servicio: se actualiza solo con cada notificación nueva (tiempo real). */
+  unreadCount = this.messaging.unreadNotifications;
   showDropdown = signal(false);
   loading = signal(true);
 
-  ngOnInit() {
-    const currentUser = this.firebaseService.getCurrentUser();
-    if (currentUser) {
-      this.loadNotifications(currentUser.uid);
-      this.loadUnreadCount(currentUser.uid);
+  async ngOnInit() {
+    await this.auth.waitForInit();
+    if (!this.auth.user()) {
+      this.loading.set(false);
+      return;
     }
+    void this.loadNotifications();
+    void this.messaging.refreshUnreadNotifications();
+    void this.messaging.refreshUnreadMessages();
+    // La campana y el contador de mensajes se actualizan solos
+    this.stopWatching = this.messaging.watch({
+      onNotification: () => {
+        if (this.showDropdown()) void this.loadNotifications();
+      }
+    });
   }
 
   ngOnDestroy() {
-    this.notificationsSubscription?.unsubscribe();
-    this.unreadCountSubscription?.unsubscribe();
+    this.stopWatching?.();
   }
 
   @HostListener('document:click', ['$event'])
@@ -43,44 +53,32 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     }
   }
 
-  loadNotifications(userId: string) {
-    this.loading.set(true);
-    this.notificationsSubscription = this.firebaseService.getNotifications(userId).subscribe({
-      next: (notifications) => {
-        this.notifications.set(notifications);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.loading.set(false);
-      }
-    });
-  }
-
-  loadUnreadCount(userId: string) {
-    this.unreadCountSubscription = this.firebaseService.getUnreadNotificationsCount(userId).subscribe({
-      next: (count) => {
-        this.unreadCount.set(count);
-      }
-    });
+  async loadNotifications() {
+    try {
+      this.notifications.set(await this.messaging.getNotifications());
+    } catch (err) {
+      console.error('No se pudieron cargar las notificaciones', err);
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   toggleDropdown() {
-    this.showDropdown.set(!this.showDropdown());
+    const open = !this.showDropdown();
+    this.showDropdown.set(open);
+    if (open) void this.loadNotifications();
   }
 
   async markAsRead(notification: Notification) {
     if (notification.id && !notification.read) {
-      await this.firebaseService.markNotificationAsRead(notification.id);
-      const currentUser = this.firebaseService.getCurrentUser();
-      if (currentUser) {
-        this.loadUnreadCount(currentUser.uid);
-      }
+      this.notifications.update((list) => list.map((n) => (n.id === notification.id ? { ...n, read: true } : n)));
+      await this.messaging.markNotificationRead(notification.id);
     }
   }
 
-  async markAllAsRead(userId: string) {
-    await this.firebaseService.markAllNotificationsAsRead(userId);
-    this.loadUnreadCount(userId);
+  async markAllAsRead() {
+    this.notifications.update((list) => list.map((n) => ({ ...n, read: true })));
+    await this.messaging.markAllNotificationsRead();
   }
 
   getNotificationMessage(notification: Notification): string {
@@ -89,6 +87,8 @@ export class NotificationsComponent implements OnInit, OnDestroy {
         return `${notification.fromUserName} reaccionó a tu publicación`;
       case 'comment':
         return `${notification.fromUserName} comentó en tu publicación`;
+      case 'comment_reply':
+        return `${notification.fromUserName} respondió a tu comentario`;
       case 'follow':
         return `${notification.fromUserName} empezó a seguirte`;
       case 'message':
@@ -100,7 +100,8 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
   getNotificationLink(notification: Notification): string[] {
     if (notification.postId) {
-      return ['/blog/post', notification.postId];
+      // Las publicaciones propias se ven en tu perfil
+      return ['/profile'];
     } else if (notification.type === 'follow') {
       return ['/profile', notification.fromUserId];
     } else if (notification.type === 'message') {

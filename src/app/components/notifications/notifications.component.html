@@ -13,7 +13,7 @@
       <div class="notifications-header">
         <h3>Notificaciones</h3>
         @if (unreadCount() > 0) {
-          <button class="mark-all-read" (click)="markAllAsRead(firebaseService.getCurrentUser()!.uid)">
+          <button class="mark-all-read" (click)="markAllAsRead()">
             Marcar todas como leídas
           </button>
         }
@@ -39,7 +39,7 @@
               (click)="markAsRead(notification); showDropdown.set(false)">
               <div class="notification-avatar">
                 @if (notification.fromUserPhoto) {
-                  <img [src]="notification.fromUserPhoto" [alt]="notification.fromUserName">
+                  <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="notification.fromUserPhoto" [alt]="notification.fromUserName">
                 } @else {
                   <div class="avatar-placeholder">
                     {{ notification.fromUserName.charAt(0).toUpperCase() }}

@@ -1,4 +1,5 @@
 import {
+  effect,
   Component,
   signal,
   inject,
@@ -10,12 +11,11 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { AuthService } from '../../services/auth.service';
 import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { User } from '@angular/fire/auth';
 import { environment } from '../../../environments/environment';
-import { FirebaseService } from '../../services/firebase.service';
 import { PotatoChatService, PotatoChatMessage } from '../../services/potato-chat.service';
 
 @Component({
@@ -29,8 +29,8 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   @ViewChild('chatMessages') chatMessages!: ElementRef<HTMLDivElement>;
 
   private http = inject(HttpClient);
-  private firebase = inject(FirebaseService);
   private potatoChat = inject(PotatoChatService);
+  private auth = inject(AuthService);
   private subs = new Subscription();
   private scrollPending = false;
   private uid: string | null = null;
@@ -44,20 +44,22 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
   loadingHistory = signal(false);
   confirmClear = signal(false);
 
-  ngOnInit() {
-    this.subs.add(
-      this.firebase.currentUser.subscribe((user: User | null) => {
-        const prev = this.uid;
-        this.uid = user?.uid ?? null;
-        this.isAuthenticated.set(!!user);
-        if (user && user.uid !== prev) {
-          void this.loadUserHistory(user.uid);
-        } else if (!user) {
-          this.messages.set(this.potatoChat.welcome(true));
-        }
-      })
-    );
+  constructor() {
+    // Cuando cambia la sesión (entrar/salir), se carga el historial de esa cuenta
+    effect(() => {
+      const user = this.auth.user();
+      const prev = this.uid;
+      this.uid = user?.id ?? null;
+      this.isAuthenticated.set(!!user);
+      if (user && user.id !== prev) {
+        void this.loadUserHistory(user.id);
+      } else if (!user) {
+        this.messages.set(this.potatoChat.welcome(true));
+      }
+    });
   }
+
+  ngOnInit() {}
 
   ngOnDestroy() {
     this.subs.unsubscribe();
@@ -134,10 +136,11 @@ export class ChatbotComponent implements OnInit, OnDestroy, AfterViewChecked {
     const history = this.messages().slice(-12).map((m) => ({ sender: m.sender, text: m.text }));
 
     this.http
-      .post<{ response: string }>(`${environment.apiUrl}/chatbot`, {
-        message: text,
-        conversationHistory: history
-      })
+      .post<{ response: string }>(
+        `${environment.supabase.functionsUrl}/potato`,
+        { message: text, conversationHistory: history },
+        { headers: new HttpHeaders({ Authorization: `Bearer ${this.auth.session()?.access_token ?? ''}` }) }
+      )
       .subscribe({
         next: (res) => void this.reply(res.response || 'Ups, no pude responder eso. ¿Intentas otra pregunta? 😊'),
         error: () =>

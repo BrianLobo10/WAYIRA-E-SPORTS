@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { Timestamp } from '@angular/fire/firestore';
-import { BracketMatch, Tournament } from './firebase.service';
+import { Timestamp } from '../utils/timestamp';
+import { BracketMatch, Tournament } from '../models';
 
 function isUpperMatch(m: BracketMatch): boolean {
   return (m.bracketType ?? 'upper') !== 'lower';

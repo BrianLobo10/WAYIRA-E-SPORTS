@@ -500,7 +500,7 @@ async function getChampionRanking(region, championId, type) {
 }
 
 // Estadísticas sociales (dev local — producción usa Firebase Functions)
-const DISCORD_INVITE_CODE_DEFAULT = 'HHBMumv8S';
+const DISCORD_INVITE_CODE_DEFAULT = 'WZHESnGACq';
 const TWITCH_LOGIN = 'wayiraesports';
 
 function parseOptionalInt(value) {

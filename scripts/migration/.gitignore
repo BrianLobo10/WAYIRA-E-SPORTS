@@ -1,0 +1,3 @@
+.env.migration
+migration-data/
+node_modules/

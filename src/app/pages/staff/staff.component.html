@@ -1,0 +1,142 @@
+<div class="staff">
+  <header class="staff__head">
+    <div class="staff__container">
+      <p class="staff__kicker">Solo staff</p>
+      <h1 class="staff__title">Panel de staff</h1>
+      <p class="staff__lead">Mensajes de contacto y roles del equipo. Lo que ves aquí depende de tus permisos.</p>
+    </div>
+  </header>
+
+  <div class="staff__container">
+    <nav class="tabs" role="tablist" aria-label="Secciones del panel">
+      @if (canReadInbox()) {
+        <button type="button" role="tab" class="tab" [class.is-active]="tab() === 'buzon'" [attr.aria-selected]="tab() === 'buzon'" (click)="tab.set('buzon')">
+          Buzón
+          @if (unreadCount() > 0) { <span class="pill">{{ unreadCount() }}</span> }
+        </button>
+      }
+      @if (canAssignRoles()) {
+        <button type="button" role="tab" class="tab" [class.is-active]="tab() === 'roles'" [attr.aria-selected]="tab() === 'roles'" (click)="tab.set('roles')">Roles</button>
+      }
+      <a routerLink="/tournaments" class="tab tab--link">Torneos →</a>
+      <a routerLink="/news" class="tab tab--link">Noticias →</a>
+    </nav>
+
+    @if (tab() === 'buzon' && canReadInbox()) {
+      <section class="card" aria-labelledby="buzon-titulo">
+        <div class="card__head">
+          <h2 id="buzon-titulo" class="card__title">Mensajes de contacto</h2>
+          <div class="seg" role="group" aria-label="Filtro">
+            <button type="button" [class.is-active]="inboxFilter() === 'sin-leer'" (click)="inboxFilter.set('sin-leer')">Sin leer ({{ unreadCount() }})</button>
+            <button type="button" [class.is-active]="inboxFilter() === 'todos'" (click)="inboxFilter.set('todos')">Todos ({{ messages().length }})</button>
+          </div>
+        </div>
+
+        @if (loadingInbox()) {
+          <p class="empty">Cargando…</p>
+        } @else {
+          <ul class="inbox">
+            @for (m of visibleMessages(); track m.id) {
+              <li class="msg" [class.msg--unread]="!m.read" [class.msg--open]="openMessageId() === m.id">
+                <button type="button" class="msg__row" (click)="toggleMessage(m)" [attr.aria-expanded]="openMessageId() === m.id">
+                  <span class="msg__dot" aria-hidden="true"></span>
+                  <span class="msg__who">{{ m.name }}</span>
+                  <span class="msg__subject">{{ m.subject || m.message }}</span>
+                  <span class="msg__date">{{ m.createdAt | date: 'd MMM, h:mm a' }}</span>
+                </button>
+                @if (openMessageId() === m.id) {
+                  <div class="msg__body">
+                    <dl class="msg__meta">
+                      <div><dt>Correo</dt><dd>{{ m.email }}</dd></div>
+                      <div><dt>Tipo</dt><dd>{{ typeLabel(m.contactType) }}</dd></div>
+                      <div><dt>Cuenta</dt><dd>{{ m.senderId ? 'Con sesión iniciada' : 'Visitante sin cuenta' }}</dd></div>
+                    </dl>
+                    <p class="msg__text">{{ m.message }}</p>
+                    <div class="msg__actions">
+                      <a class="btn btn--primary" [href]="replyLink(m)">Responder por correo</a>
+                      <button type="button" class="btn" (click)="setRead(m, !m.read)">{{ m.read ? 'Marcar sin leer' : 'Marcar leído' }}</button>
+                      <button type="button" class="btn btn--danger" (click)="deleteMessage(m)">Eliminar</button>
+                    </div>
+                  </div>
+                }
+              </li>
+            } @empty {
+              <li class="empty">{{ inboxFilter() === 'sin-leer' ? 'No hay mensajes sin leer. 🎉' : 'Aún no hay mensajes.' }}</li>
+            }
+          </ul>
+        }
+      </section>
+    }
+
+    @if (tab() === 'roles' && canAssignRoles()) {
+      <section class="card" aria-labelledby="roles-titulo">
+        <div class="card__head">
+          <h2 id="roles-titulo" class="card__title">Roles del equipo</h2>
+        </div>
+        <label class="field">
+          <span class="field__label">Buscar jugador</span>
+          <input type="search" class="input" [ngModel]="search()" (ngModelChange)="onSearch($event)" placeholder="Escribe un nombre… (vacío = ver solo al staff)" />
+        </label>
+
+        <ul class="roles-help">
+          @for (r of assignable(); track r.key) {
+            <li><strong>{{ r.name }}:</strong> {{ r.description }}</li>
+          }
+        </ul>
+
+        @if (loadingUsers()) {
+          <p class="empty">Buscando…</p>
+        } @else {
+          <ul class="users">
+            @for (u of users(); track u.id) {
+              <li class="user">
+                <a class="user__who" [routerLink]="['/profile', u.id]">
+                  @if (u.avatarUrl) {
+                    <img referrerpolicy="no-referrer" class="user__avatar" [src]="u.avatarUrl" alt="" loading="lazy" />
+                  } @else {
+                    <span class="user__avatar user__avatar--ph">{{ u.displayName.charAt(0).toUpperCase() }}</span>
+                  }
+                  <span class="user__name">{{ u.displayName }} @if (u.id === myId()) { <em>(tú)</em> }</span>
+                </a>
+                <div class="user__roles">
+                  @for (r of u.roles; track r) {
+                    <span class="chip">
+                      {{ roleName(r) }}
+                      @if (r !== 'superadmin') {
+                        <button type="button" class="chip__x" [disabled]="busyUser() === u.id" (click)="removeRole(u, r)" [attr.aria-label]="'Quitar rol ' + roleName(r)">×</button>
+                      }
+                    </span>
+                  } @empty {
+                    <span class="muted">Sin rol</span>
+                  }
+                </div>
+                <div class="user__actions">
+                  @if (availableRoles(u).length) {
+                    <select class="input input--sm" [disabled]="busyUser() === u.id" (change)="addRole(u, $any($event.target).value); $any($event.target).value = ''" aria-label="Añadir rol">
+                      <option value="">Añadir rol…</option>
+                      @for (r of availableRoles(u); track r.key) { <option [value]="r.key">{{ r.name }}</option> }
+                    </select>
+                  }
+                  @if (canViewEmails() && u.id !== myId()) {
+                    <button type="button" class="btn btn--sm" (click)="askEmail(u)">Ver correo</button>
+                  }
+                </div>
+                @if (emailReasonFor() === u.id) {
+                  <div class="user__email">
+                    <input class="input input--sm" [ngModel]="emailReason()" (ngModelChange)="emailReason.set($event)" placeholder="Motivo (queda registrado), ej: responder su mensaje de contacto" maxlength="300" />
+                    <button type="button" class="btn btn--sm btn--primary" (click)="revealEmail(u)">Mostrar</button>
+                  </div>
+                }
+                @if (emailShown()?.userId === u.id) {
+                  <p class="user__email-value">📧 {{ emailShown()!.email }}</p>
+                }
+              </li>
+            } @empty {
+              <li class="empty">{{ search() ? 'Nadie coincide con esa búsqueda.' : 'Aún no hay staff aparte de ti.' }}</li>
+            }
+          </ul>
+        }
+      </section>
+    }
+  </div>
+</div>
