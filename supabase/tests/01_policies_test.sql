@@ -217,7 +217,8 @@ do $$ declare bad text; begin
       'private.has_permission', 'private.is_conversation_member', 'public.count_registered_users',
       'public.get_user_email', 'public.start_conversation', 'public.mark_conversation_read',
       'public.register_team', 'public.withdraw_team', 'public.check_in_team', 'public.close_check_in',
-      'public.draw_giveaway', 'public.my_permissions', 'public.assign_role', 'public.revoke_role');
+      'public.draw_giveaway', 'public.my_permissions', 'public.assign_role', 'public.revoke_role',
+      'public.suspend_user', 'public.lift_suspension', 'public.platform_stats', 'public.admin_list_users', 'public.my_rank');
   assert bad is null, 'ejecutables por usuarios fuera de la lista: ' || coalesce(bad, '');
   select string_agg(p.proname, ', ') into bad
   from pg_proc p join pg_namespace n on n.oid = p.pronamespace

@@ -85,6 +85,7 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
           .from(q('[data-hero="line"]'), { yPercent: 110, duration: 0.7, stagger: 0.07, ease: 'power4.out' }, '<0.05')
           .from(q('[data-hero="sub"]'), { autoAlpha: 0, y: 12 }, '-=0.45')
           .from(q('[data-hero="ctas"] > *'), { autoAlpha: 0, y: 10, stagger: 0.05, duration: 0.5 }, '<0.08')
+          .from(q('[data-hero="eagle"]'), { autoAlpha: 0, scale: 0.92, duration: 1.1, ease: 'expo.out' }, 0.15)
           // El marcador volt se "pinta" de izquierda a derecha detrás de las palabras clave
           .fromTo(q('[data-hero="mark"]'), { '--mark-size': '0%' }, { '--mark-size': '100%', duration: 0.6, ease: 'expo.inOut' }, 0.45)
           .set(q('[data-hero]'), { clearProps: 'transform,opacity,visibility' });

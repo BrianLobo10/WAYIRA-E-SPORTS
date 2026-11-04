@@ -5,11 +5,11 @@
   --radius-lg: 2px;
   --radius-md: 2px;
   --border-soft: rgba(255, 255, 255, 0.14);
-  --line-color: rgba(215, 255, 63, 0.27);
-  --line-glow: rgba(215, 255, 63, 0.15);
-  --bg-1: #121211;
-  --bg-2: #1a1a18;
-  --bg-3: #22221f;
+  --line-color: rgba(var(--volt-rgb), 0.27);
+  --line-glow: rgba(var(--volt-rgb), 0.15);
+  --bg-1: var(--bg);
+  --bg-2: var(--surface-1);
+  --bg-3: var(--surface-2);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -40,7 +40,7 @@
   font-weight: 800;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: #eceae3;
+  color: var(--white);
 }
 
 .bracket-subtitle {
@@ -190,8 +190,8 @@
 }
 
 .match-card.editable .team-slot:hover {
-  background: rgba(215, 255, 63, 0.066);
-  border-color: rgba(215, 255, 63, 0.216);
+  background: rgba(var(--volt-rgb), 0.066);
+  border-color: rgba(var(--volt-rgb), 0.216);
 }
 
 .team-name {
@@ -222,7 +222,7 @@
 }
 
 .remove-btn:hover:not(:disabled) {
-  background: rgba(255, 90, 54, 0.16);
+  background: rgba(var(--ember-rgb), 0.16);
   color: var(--ember-text);
   transform: none;
 }

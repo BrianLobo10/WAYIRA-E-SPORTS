@@ -95,7 +95,7 @@
 .names:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .note { margin: 0.6rem 0 0; font-size: 0.85rem; color: var(--teal-muted); }
-.note--warn { color: #d7ff3f; }
+.note--warn { color: var(--volt); }
 .link {
   border: 0; padding: 0; background: none; color: var(--teal-accent);
   font: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer;

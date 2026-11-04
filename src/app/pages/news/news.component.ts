@@ -5,6 +5,8 @@ import { SectionHeaderComponent } from '../../components/section-header/section-
 import type { News, UserProfile } from '../../models';
 import { ContentService } from '../../services/content.service';
 import { RevealDirective } from '../../directives/reveal.directive';
+import { ToastService } from '../../services/toast.service';
+import { DialogService } from '../../services/dialog.service';
 
 @Component({
   selector: 'app-news',
@@ -14,6 +16,8 @@ import { RevealDirective } from '../../directives/reveal.directive';
   styleUrls: ['./news.component.css']
 })
 export class NewsComponent implements OnInit {
+  private readonly toast = inject(ToastService);
+  private readonly dialog = inject(DialogService);
   private content = inject(ContentService);
   
   news = signal<News[]>([]);
@@ -140,7 +144,7 @@ export class NewsComponent implements OnInit {
         };
         reader.readAsDataURL(file);
       } else {
-        alert('Por favor selecciona un archivo de imagen válido');
+        this.toast.notify('Por favor selecciona un archivo de imagen válido');
       }
     }
   }
@@ -149,7 +153,7 @@ export class NewsComponent implements OnInit {
     if (!this.isAdmin()) return;
 
     if (!this.newsTitle().trim() || !this.newsContent().trim() || !this.newsExcerpt().trim()) {
-      alert('Por favor completa todos los campos requeridos');
+      this.toast.notify('Por favor completa todos los campos requeridos');
       return;
     }
 
@@ -175,7 +179,7 @@ export class NewsComponent implements OnInit {
       this.loadNews();
     } catch (error) {
       console.error('Error creating news:', error);
-      alert(error instanceof Error ? error.message : 'Error al crear la noticia');
+      this.toast.notify(error instanceof Error ? error.message : 'Error al crear la noticia');
     } finally {
       this.uploading.set(false);
     }
@@ -186,12 +190,12 @@ export class NewsComponent implements OnInit {
     if (!news || !news.id) return;
 
     if (!this.isAdmin()) {
-      alert('Solo los administradores pueden editar noticias');
+      this.toast.notify('Solo los administradores pueden editar noticias');
       return;
     }
 
     if (!this.newsTitle().trim() || !this.newsContent().trim() || !this.newsExcerpt().trim()) {
-      alert('Por favor completa todos los campos requeridos');
+      this.toast.notify('Por favor completa todos los campos requeridos');
       return;
     }
 
@@ -214,7 +218,7 @@ export class NewsComponent implements OnInit {
       this.loadNews();
     } catch (error) {
       console.error('Error updating news:', error);
-      alert(error instanceof Error ? error.message : 'Error al actualizar la noticia');
+      this.toast.notify(error instanceof Error ? error.message : 'Error al actualizar la noticia');
     } finally {
       this.uploading.set(false);
     }
@@ -222,18 +226,18 @@ export class NewsComponent implements OnInit {
 
   async deleteNews(newsId: string) {
     if (!this.isAdmin()) {
-      alert('Solo los administradores pueden eliminar noticias');
+      this.toast.notify('Solo los administradores pueden eliminar noticias');
       return;
     }
 
-    if (!confirm('¿Estás seguro de que quieres eliminar esta noticia?')) return;
+    if (!(await this.dialog.confirm({ kicker: 'Acción permanente', title: '¿Eliminar esta noticia?', message: 'Si solo quieres ocultarla, guárdala como borrador.', confirmLabel: 'Eliminar noticia', danger: true }))) return;
 
     try {
       await this.content.deleteNews(newsId);
       this.loadNews();
     } catch (error) {
       console.error('Error deleting news:', error);
-      alert('Error al eliminar la noticia');
+      this.toast.notify('Error al eliminar la noticia');
     }
   }
 

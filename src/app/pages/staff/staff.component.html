@@ -1,4 +1,5 @@
-<div class="staff">
+<div class="staff" [class.staff--embedded]="section">
+  @if (!section) {
   <header class="staff__head">
     <div class="staff__container">
       <p class="staff__kicker">Solo staff</p>
@@ -6,8 +7,15 @@
       <p class="staff__lead">Mensajes de contacto y roles del equipo. Lo que ves aquí depende de tus permisos.</p>
     </div>
   </header>
+  }
 
   <div class="staff__container">
+    @if (section) {
+      <header class="embedded-head">
+        <p class="staff__kicker">{{ section === 'buzon' ? 'Contacto' : 'Equipo' }}</p>
+        <h1 class="staff__title">{{ section === 'buzon' ? 'Buzón' : 'Roles' }}</h1>
+      </header>
+    } @else {
     <nav class="tabs" role="tablist" aria-label="Secciones del panel">
       @if (canReadInbox()) {
         <button type="button" role="tab" class="tab" [class.is-active]="tab() === 'buzon'" [attr.aria-selected]="tab() === 'buzon'" (click)="tab.set('buzon')">
@@ -21,6 +29,7 @@
       <a routerLink="/tournaments" class="tab tab--link">Torneos →</a>
       <a routerLink="/news" class="tab tab--link">Noticias →</a>
     </nav>
+    }
 
     @if (tab() === 'buzon' && canReadInbox()) {
       <section class="card" aria-labelledby="buzon-titulo">

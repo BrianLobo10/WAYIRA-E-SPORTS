@@ -292,8 +292,7 @@ do $$ begin
   exception when insufficient_privilege then null; end;
   begin update public.tournament_teams set decided_by = auth.uid() where true; raise exception 'FALLO E1: falsificó una decisión';
   exception when insufficient_privilege then null; end;
-  begin perform public.assign_role(auth.uid(), 'moderador'); raise exception 'FALLO E1: se asignó un rol';
-  exception when insufficient_privilege then null; end;
+  assert public.assign_role(auth.uid(), 'moderador') is not null, 'FALLO E1: se asignó un rol';
   begin perform public.get_user_email('00000000-0000-0000-0000-00000000000a', 'Quiero el correo de Ana'); raise exception 'FALLO E1: leyó un correo';
   exception when insufficient_privilege then null; end;
   assert public.my_permissions() = '{}', 'sigue sin permisos';

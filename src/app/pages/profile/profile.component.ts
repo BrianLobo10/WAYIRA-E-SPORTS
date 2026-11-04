@@ -12,6 +12,8 @@ import { ProfilePerformanceComponent } from '../../components/profile-performanc
 import { ProfileTopChampionsComponent, type ChampionDisplay } from '../../components/profile-top-champions/profile-top-champions.component';
 import { ProfileActivityTimelineComponent, type ActivityTimelineData } from '../../components/profile-activity-timeline/profile-activity-timeline.component';
 import { readCachedUserProfile, writeCachedUserProfile } from '../../utils/profile-view-cache';
+import { ToastService } from '../../services/toast.service';
+import { DialogService } from '../../services/dialog.service';
 
 @Component({
   selector: 'app-profile',
@@ -29,6 +31,8 @@ import { readCachedUserProfile, writeCachedUserProfile } from '../../utils/profi
   styleUrls: ['./profile.component.css']
 })
 export class ProfileComponent implements OnInit, OnDestroy {
+  private readonly toast = inject(ToastService);
+  private readonly dialog = inject(DialogService);
   // Exponer URL global para usar en el template
   URL = URL;
   private community = inject(CommunityService);
@@ -277,7 +281,12 @@ export class ProfileComponent implements OnInit, OnDestroy {
   async followUser() {
     const currentUser = this.community.getCurrentUser();
     const profile = this.profile();
-    if (!currentUser || !profile || this.isOwnProfile()) return;
+    if (!currentUser) {
+      // Visitante: para seguir hay que entrar primero, y luego vuelve a este perfil
+      this.router.navigate(['/login'], { queryParams: { next: this.router.url } });
+      return;
+    }
+    if (!profile || this.isOwnProfile()) return;
 
     const wasFollowing = this.isFollowing();
     
@@ -312,7 +321,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       }
     } catch (error) {
       console.error('Error al seguir/dejar de seguir:', error);
-      alert('Error al actualizar. Por favor intenta nuevamente.');
+      this.toast.notify('Error al actualizar. Por favor intenta nuevamente.');
       // Revertir el estado si falló
       this.isFollowing.set(wasFollowing);
     }
@@ -853,7 +862,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       this.cancelCoverChange();
     } catch (e) {
       console.error(e);
-      alert('Error al subir la portada.');
+      this.toast.notify('Error al subir la portada.');
     } finally {
       this.uploadingCover.set(false);
     }
@@ -1176,14 +1185,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
       }
     } catch (e) {
       console.error(e);
-      alert('Error al vincular la cuenta.');
+      this.toast.notify('Error al vincular la cuenta.');
     } finally {
       this.linkingRiot.set(false);
     }
   }
 
   async unlinkRiotAccount() {
-    if (!confirm('¿Desvincular cuenta Riot? Las estadísticas dejarán de mostrarse.')) return;
+    if (!(await this.dialog.confirm('¿Desvincular cuenta Riot? Las estadísticas dejarán de mostrarse.'))) return;
     const user = this.community.getCurrentUser();
     const profile = this.profile();
     if (!user || !profile || user.uid !== profile.uid) return;
@@ -1201,14 +1210,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
       this.activityTimelineData = null;
     } catch (e) {
       console.error(e);
-      alert('Error al desvincular.');
+      this.toast.notify('Error al desvincular.');
     }
   }
   
   async loadSummonerIcon() {
     const profile = this.profile();
     if (!profile?.gameName || !profile?.tagLine || !profile?.region) {
-      alert('No tienes un nombre de invocador y tagline configurados en tu perfil. Por favor configúralos primero.');
+      this.toast.notify('No tienes un nombre de invocador y tagline configurados en tu perfil. Por favor configúralos primero.');
       return;
     }
     
@@ -1351,7 +1360,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       this.closeEditModal();
     } catch (error) {
       console.error('Error updating profile:', error);
-      alert('Error al actualizar el perfil. Por favor intenta nuevamente.');
+      this.toast.notify('Error al actualizar el perfil. Por favor intenta nuevamente.');
     } finally {
       this.uploadingPhoto.set(false);
     }
@@ -1360,12 +1369,12 @@ export class ProfileComponent implements OnInit, OnDestroy {
   async createPostFromProfile() {
     const user = this.community.getCurrentUser();
     if (!user) {
-      alert('Debes iniciar sesión para publicar');
+      this.toast.notify('Debes iniciar sesión para publicar');
       return;
     }
     
     if (!this.newPostContent().trim()) {
-      alert('Por favor ingresa contenido para la publicación');
+      this.toast.notify('Por favor ingresa contenido para la publicación');
       return;
     }
 
@@ -1401,7 +1410,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       this.router.navigate(['/blog']);
     } catch (error) {
       console.error('Error creating post:', error);
-      alert('Error al crear la publicación. Por favor intenta nuevamente.');
+      this.toast.notify('Error al crear la publicación. Por favor intenta nuevamente.');
     } finally {
       this.uploadingPost.set(false);
     }

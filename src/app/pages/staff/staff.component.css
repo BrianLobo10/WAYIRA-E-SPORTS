@@ -20,7 +20,7 @@
 .tab--link { margin-left: auto; }
 .tab--link + .tab--link { margin-left: 0; }
 .tab:hover:not(.is-active) { color: var(--white); }
-.pill { min-width: 1.4rem; padding: 0 0.4rem; border-radius: 2px; background: #ff5a36; color: #eceae3; font-size: 0.75rem; line-height: 1.4rem; text-align: center; }
+.pill { min-width: 1.4rem; padding: 0 0.4rem; border-radius: 2px; background: var(--ember); color: var(--white); font-size: 0.75rem; line-height: 1.4rem; text-align: center; }
 
 .card { background: var(--surface-1); border-radius: var(--radius-lg, 2px); box-shadow: var(--shadow-1); padding: 20px; }
 .card__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
@@ -99,10 +99,10 @@
 .user__email-value { margin: 0; font-family: var(--font-mono, monospace); font-size: 0.9rem; color: var(--teal-accent); }
 .chip {
   display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 10px; border-radius: 2px;
-  background: rgba(215, 255, 63, 0.072); color: var(--teal-accent); font-size: 0.8rem; font-weight: 600;
+  background: rgba(var(--volt-rgb), 0.072); color: var(--teal-accent); font-size: 0.8rem; font-weight: 600;
 }
 .chip__x { width: 22px; height: 22px; border: 0; border-radius: 50%; background: transparent; color: inherit; font-size: 1rem; line-height: 1; cursor: pointer; }
-.chip__x:hover:not(:disabled) { background: rgba(215, 255, 63, 0.12); }
+.chip__x:hover:not(:disabled) { background: rgba(var(--volt-rgb), 0.12); }
 .muted { color: var(--teal-muted); font-size: 0.85rem; }
 .empty { padding: 24px 8px; color: var(--teal-muted); text-align: center; list-style: none; }
 
@@ -114,3 +114,9 @@
   .user__actions { justify-content: flex-start; }
   .tab--link { margin-left: 0; }
 }
+
+/* Dentro del marco /staff: sin márgenes propios ni fondo de página */
+.staff--embedded { padding-bottom: 0; background: none; }
+.staff--embedded .staff__container { max-width: none; padding: 0; }
+.embedded-head { margin-bottom: 20px; }
+.embedded-head .staff__title { font-size: clamp(1.75rem, 3vw, 2.25rem) !important; line-height: 1.1 !important; }

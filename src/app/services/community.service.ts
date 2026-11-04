@@ -55,8 +55,10 @@ interface PostRow {
 /** Comentario con su id real de base de datos (los índices de la plantilla se traducen a este id). */
 type DbComment = Comment & { id: string; replies?: DbComment[] };
 
-const PROFILE_COLUMNS =
-  'id, display_name, avatar_url, cover_url, bio, riot_game_name, riot_tag_line, riot_region, riot_puuid, riot_verified, created_at';
+const PUBLIC_PROFILE_COLUMNS =
+  'id, display_name, avatar_url, cover_url, bio, riot_game_name, riot_tag_line, riot_region, riot_verified, created_at';
+/** Con sesión se lee también riot_puuid; los visitantes solo tienen permiso sobre las columnas públicas. */
+const PROFILE_COLUMNS = PUBLIC_PROFILE_COLUMNS + ', riot_puuid';
 
 const POST_COLUMNS = `id, author_id, content, image_urls, video_url, created_at, updated_at,
   author:profiles!posts_author_id_fkey(display_name, avatar_url),
@@ -95,13 +97,13 @@ export class CommunityService {
 
   async getUserProfile(uid: string): Promise<UserProfile | null> {
     const [{ data, error }, followers, following] = await Promise.all([
-      this.sb.from('profiles').select(PROFILE_COLUMNS).eq('id', uid).maybeSingle(),
+      this.sb.from('profiles').select(this.auth.user() ? PROFILE_COLUMNS : PUBLIC_PROFILE_COLUMNS).eq('id', uid).maybeSingle(),
       this.sb.from('follows').select('follower_id').eq('following_id', uid),
       this.sb.from('follows').select('following_id').eq('follower_id', uid),
     ]);
     if (error) throw error;
     if (!data) return null;
-    const row = data as ProfileRow;
+    const row = data as unknown as ProfileRow;
     return {
       uid: row.id,
       email: '',

@@ -145,7 +145,7 @@
   width: 18px;
   height: 18px;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #eceae3;
+  border-top-color: var(--white);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   display: inline-block;
@@ -217,9 +217,9 @@
 }
 
 .status-ongoing {
-  background: rgba(255, 90, 54, 0.14);
+  background: rgba(var(--ember-rgb), 0.14);
   color: var(--ember-text);
-  border: 1px solid rgba(255, 90, 54, 0.3);
+  border: 1px solid rgba(var(--ember-rgb), 0.3);
 }
 
 .status-finished {
@@ -234,7 +234,7 @@
   font-weight: 400;
   letter-spacing: -0.02em;
   line-height: 1.1;
-  color: #eceae3;
+  color: var(--white);
   margin-bottom: 0.75rem;
 }
 
@@ -248,7 +248,7 @@
 .tournament-prize {
   font-family: var(--font-mono);
   font-size: 0.875rem;
-  color: var(--gold, #d7ff3f);
+  color: var(--gold, var(--volt));
   margin-bottom: 1.25rem;
 }
 
@@ -359,18 +359,18 @@
   font-weight: 600;
   cursor: pointer;
   transition: var(--t-ui);
-  background: rgba(255, 90, 54, 0.2);
-  color: #ff5a36;
-  border: 1px solid rgba(255, 90, 54, 0.3);
+  background: rgba(var(--ember-rgb), 0.2);
+  color: var(--ember);
+  border: 1px solid rgba(var(--ember-rgb), 0.3);
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
 .btn-delete-tournament:hover:not(:disabled) {
-  background: rgba(255, 90, 54, 0.3);
+  background: rgba(var(--ember-rgb), 0.3);
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(255, 90, 54, 0.3);
+  box-shadow: 0 10px 20px rgba(var(--ember-rgb), 0.3);
 }
 
 .btn-delete-tournament:disabled {
@@ -386,16 +386,16 @@
   font-weight: 600;
   cursor: pointer;
   transition: var(--t-ui);
-  background: rgba(215, 255, 63, 0.2);
-  color: #d7ff3f;
-  border: 1px solid rgba(215, 255, 63, 0.3);
+  background: rgba(var(--volt-rgb), 0.2);
+  color: var(--volt);
+  border: 1px solid rgba(var(--volt-rgb), 0.3);
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
 .btn-edit-tournament:hover {
-  background: rgba(215, 255, 63, 0.3);
+  background: rgba(var(--volt-rgb), 0.3);
   transform: translateY(-2px);
 }
 
@@ -591,7 +591,7 @@
 .modal-header h3 {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #eceae3;
+  color: var(--white);
   margin: 0;
 }
 
@@ -610,7 +610,7 @@
 
 .close-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: #eceae3;
+  color: var(--white);
 }
 
 .modal-body {
@@ -652,7 +652,7 @@
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 2px;
-  color: #eceae3;
+  color: var(--white);
   font-size: 0.9375rem;
   transition: var(--t-ui);
 }
@@ -707,7 +707,7 @@
 
 .btn-cancel:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.1);
-  color: #eceae3;
+  color: var(--white);
 }
 
 .btn-cancel:disabled {
@@ -764,7 +764,7 @@
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
-  background: rgba(255, 90, 54, 0.9);
+  background: rgba(var(--ember-rgb), 0.9);
   border: none;
   border-radius: 50%;
   width: 28px;
@@ -773,12 +773,12 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #eceae3;
+  color: var(--white);
   transition: var(--t-ui);
 }
 
 .remove-logo-btn:hover {
-  background: #ff5a36;
+  background: var(--ember);
   transform: scale(1.1);
 }
 
@@ -940,7 +940,7 @@
 .card-champion {
   margin: 0.5rem 0.75rem;
   padding: 0.5rem 0.75rem;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(215, 255, 63, 0.12));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(var(--volt-rgb), 0.12));
   border: 2px solid rgba(255, 255, 255, 0.25);
   border-radius: 2px;
   text-align: center;
@@ -1060,7 +1060,7 @@
 .player-card-header h4 {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #eceae3;
+  color: var(--white);
   margin: 0;
 }
 
@@ -1079,7 +1079,7 @@
 
 .close-card-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: #eceae3;
+  color: var(--white);
 }
 
 .player-card-form {
@@ -1112,7 +1112,7 @@
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 2px;
-  color: #eceae3;
+  color: var(--white);
   transition: var(--t-ui);
 }
 
@@ -1214,7 +1214,7 @@
 .round-title {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #eceae3;
+  color: var(--white);
   text-align: center;
   margin-bottom: 1rem;
   padding-bottom: 1rem;
@@ -1265,7 +1265,7 @@
   bottom: 2rem;
   right: 2rem;
   background: rgba(255, 255, 255, 0.4);
-  color: #eceae3;
+  color: var(--white);
   padding: 0.75rem 1.5rem;
   border-radius: 2px;
   font-size: 0.875rem;
@@ -1306,8 +1306,8 @@
 
 .bracket-match.final-match {
   border-width: 3px;
-  border-color: rgba(215, 255, 63, 0.5);
-  background: rgba(215, 255, 63, 0.05);
+  border-color: rgba(var(--volt-rgb), 0.5);
+  background: rgba(var(--volt-rgb), 0.05);
 }
 
 .match-team {
@@ -1332,7 +1332,7 @@
 
 .team-name {
   font-weight: 600;
-  color: #eceae3;
+  color: var(--white);
   font-size: 0.9375rem;
 }
 
@@ -1371,10 +1371,10 @@
   gap: 0.5rem;
   margin-top: 1rem;
   padding: 0.75rem;
-  background: rgba(215, 255, 63, 0.2);
-  border: 1px solid rgba(215, 255, 63, 0.5);
+  background: rgba(var(--volt-rgb), 0.2);
+  border: 1px solid rgba(var(--volt-rgb), 0.5);
   border-radius: 2px;
-  color: #d7ff3f;
+  color: var(--volt);
   font-weight: 700;
   font-size: 1rem;
 }
@@ -1507,7 +1507,7 @@
 }
 
 .teams-list-container h4 {
-  color: #eceae3;
+  color: var(--white);
   font-size: 1.125rem;
   font-weight: 700;
   margin-bottom: 1rem;
@@ -1556,17 +1556,17 @@
 
 .team-name-item {
   flex: 1;
-  color: #eceae3;
+  color: var(--white);
   font-weight: 600;
   font-size: 0.9375rem;
 }
 
 .remove-team-btn {
-  background: rgba(255, 90, 54, 0.2);
-  border: 1px solid rgba(255, 90, 54, 0.3);
+  background: rgba(var(--ember-rgb), 0.2);
+  border: 1px solid rgba(var(--ember-rgb), 0.3);
   border-radius: 2px;
   padding: 0.25rem;
-  color: #ff5a36;
+  color: var(--ember);
   cursor: pointer;
   transition: var(--t-ui);
   display: flex;
@@ -1575,7 +1575,7 @@
 }
 
 .remove-team-btn:hover {
-  background: rgba(255, 90, 54, 0.3);
+  background: rgba(var(--ember-rgb), 0.3);
   transform: scale(1.1);
 }
 
@@ -1590,7 +1590,7 @@
 }
 
 .bracket-canvas-container h4 {
-  color: #eceae3;
+  color: var(--white);
   font-size: 1.125rem;
   font-weight: 700;
   margin-bottom: 1rem;
@@ -1652,7 +1652,7 @@
 
 .bracket-canvas-header h4 {
   margin: 0;
-  color: #eceae3;
+  color: var(--white);
   font-size: 1.125rem;
 }
 
@@ -1676,7 +1676,7 @@
 .bracket-view-toggle .toggle-btn.active {
   background: rgba(255, 255, 255, 0.15);
   border-color: rgba(255, 255, 255, 0.3);
-  color: #eceae3;
+  color: var(--white);
 }
 
 .bracket-canvas-wrapper {
@@ -1704,7 +1704,7 @@
 .btn-auto-bracket:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.125);
   border-color: var(--teal-pri);
-  color: #eceae3;
+  color: var(--white);
 }
 
 .btn-auto-bracket:disabled {
@@ -1802,7 +1802,7 @@
 
 .match-team-slot .slot-team span {
   font-weight: 600;
-  color: #eceae3;
+  color: var(--white);
   text-align: center;
 }
 
@@ -1840,7 +1840,7 @@
 
 .btn-edit-bracket {
   background: rgba(255, 255, 255, 0.1);
-  color: #eceae3;
+  color: var(--white);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -1869,7 +1869,7 @@
   align-items: center;
   gap: 0.75rem;
   width: 100%;
-  color: #eceae3;
+  color: var(--white);
   font-weight: 600;
   font-size: 0.9375rem;
   position: relative;
@@ -1879,12 +1879,12 @@
   position: absolute;
   top: -0.5rem;
   right: -0.5rem;
-  background: rgba(255, 90, 54, 0.9);
+  background: rgba(var(--ember-rgb), 0.9);
   border: none;
   border-radius: 50%;
   width: 24px;
   height: 24px;
-  color: #eceae3;
+  color: var(--white);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1893,7 +1893,7 @@
 }
 
 .remove-slot-btn:hover {
-  background: #ff5a36;
+  background: var(--ember);
   transform: scale(1.1);
 }
 
@@ -1972,7 +1972,7 @@
 /* --- Inscripciones: estado del equipo y revisión del organizador --- */
 .reg-box {
   margin: 0 0 1rem; padding: 0.875rem 1rem; border-radius: var(--radius-md, 2px);
-  background: var(--surface-2, #22221f); box-shadow: inset 0 0 0 1px var(--border);
+  background: var(--surface-2, var(--surface-2)); box-shadow: inset 0 0 0 1px var(--border);
 }
 .reg-box--mine { box-shadow: inset 0 0 0 1px var(--border-strong); }
 .reg-box__head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; cursor: default; }
@@ -1983,7 +1983,7 @@ details.reg-box > summary::-webkit-details-marker { display: none; }
 .reg-box__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
 .reg-pill {
   flex-shrink: 0; padding: 0.2rem 0.6rem; border-radius: 2px; font-size: 0.75rem; font-weight: 700;
-  background: rgba(215, 255, 63, 0.14); color: #d7ff3f;
+  background: rgba(var(--volt-rgb), 0.14); color: var(--volt);
 }
 .reg-pill[data-status='approved'] { background: var(--volt); color: var(--volt-ink); }
 .reg-pill[data-status='waitlisted'] { background: rgba(255, 255, 255, 0.08); color: var(--text-secondary); }

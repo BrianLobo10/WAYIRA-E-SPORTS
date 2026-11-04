@@ -13,58 +13,40 @@
     <div class="container">
       <div class="section-header-row">
         <app-section-header title="Proyectos Activos"></app-section-header>
-        @if (isAdmin()) {
-          <button type="button" class="btn-edit-projects" (click)="openEditModal()">Editar proyectos activos</button>
+        @if (canManage()) {
+          <a routerLink="/staff/proyectos" class="btn-edit-projects">Gestionar en el panel</a>
         }
       </div>
-      
-      <app-cards-grid [columns]="2" gap="large" [responsive]="true" class="projects-grid" appReveal revealChildren=".project-card">
-        @for (project of projects(); track project.title) {
-          <div class="project-card">
-            <app-universal-card 
-              [icon]="project.icon" 
-              [title]="project.title" 
-              [description]="project.description"
-              type="service"
-              size="large">
-            </app-universal-card>
-            <div class="project-meta">
-              <span class="project-status" [class.active]="project.status === 'Activo' || project.status === 'En curso'">
-                {{ project.status }}
-              </span>
-              <span class="project-date">{{ project.date }}</span>
-            </div>
-          </div>
-        }
-      </app-cards-grid>
-    </div>
-  </section>
 
-  @if (showEditModal()) {
-    <div class="modal-overlay" (click)="closeEditModal()">
-      <div class="modal-dialog projects-edit-modal" (click)="$event.stopPropagation()">
-        <h3>Editar proyectos activos</h3>
-        <p class="modal-hint">Solo los administradores pueden editar esta lista. Se guarda en Firestore.</p>
-        <div class="edit-list">
-          @for (p of editList(); track $index; let i = $index) {
-            <div class="edit-row">
-              <input type="text" [ngModel]="p.icon" (ngModelChange)="updateEditProject(i, 'icon', $event)" placeholder="Icono (ej. trophy)" class="edit-icon" />
-              <input type="text" [ngModel]="p.title" (ngModelChange)="updateEditProject(i, 'title', $event)" placeholder="Título" class="edit-title" />
-              <input type="text" [ngModel]="p.description" (ngModelChange)="updateEditProject(i, 'description', $event)" placeholder="Descripción" class="edit-desc" />
-              <input type="text" [ngModel]="p.status" (ngModelChange)="updateEditProject(i, 'status', $event)" placeholder="Estado" class="edit-status" />
-              <input type="text" [ngModel]="p.date" (ngModelChange)="updateEditProject(i, 'date', $event)" placeholder="Año" class="edit-date" />
-              <button type="button" class="btn-remove" (click)="removeProjectRow(i)" title="Quitar">×</button>
+      @if (loading()) {
+        <p class="projects-state" aria-live="polite">Cargando proyectos…</p>
+      } @else if (failed()) {
+        <p class="projects-state">No pudimos cargar los proyectos. Recarga la página en unos segundos.</p>
+      } @else if (projects().length === 0) {
+        <p class="projects-state">Pronto anunciaremos nuevos proyectos. Mientras tanto, mira los <a routerLink="/tournaments">torneos abiertos</a>.</p>
+      } @else {
+        <app-cards-grid [columns]="2" gap="large" [responsive]="true" class="projects-grid" appReveal revealChildren=".project-card">
+          @for (project of projects(); track project.id) {
+            <div class="project-card">
+              @if (project.imageUrls[0]) {
+                <img class="project-image" [src]="project.imageUrls[0]" [alt]="project.title" loading="lazy" />
+              }
+              <app-universal-card
+                [icon]="project.icon"
+                [title]="project.title"
+                [description]="project.description"
+                type="service"
+                size="large">
+              </app-universal-card>
+              <div class="project-meta">
+                <span class="project-status" [class.active]="isLive(project.statusLabel)">{{ project.statusLabel }}</span>
+                @if (project.period) { <span class="project-date">{{ project.period }}</span> }
+                @if (project.linkUrl) { <a class="project-link" [href]="project.linkUrl" target="_blank" rel="noopener noreferrer">Ver más ↗</a> }
+              </div>
             </div>
           }
-        </div>
-        <div class="modal-actions">
-          <button type="button" class="btn-secondary" (click)="addProjectRow()">Añadir proyecto</button>
-          <button type="button" class="btn-secondary" (click)="restoreDefaults()">Restaurar por defecto</button>
-          <button type="button" class="btn-cancel" (click)="closeEditModal()">Cancelar</button>
-          <button type="button" class="btn-primary" (click)="saveProjects()" [disabled]="saving()">{{ saving() ? 'Guardando...' : 'Guardar' }}</button>
-        </div>
-      </div>
+        </app-cards-grid>
+      }
     </div>
-  }
+  </section>
 </div>
-

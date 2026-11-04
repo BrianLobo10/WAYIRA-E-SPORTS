@@ -63,13 +63,13 @@
 }
 
 .thd-pill--gold {
-  background: linear-gradient(135deg, rgba(215, 255, 63, 0.15), rgba(215, 255, 63, 0.08));
-  border-color: rgba(215, 255, 63, 0.35);
+  background: linear-gradient(135deg, rgba(var(--volt-rgb), 0.15), rgba(var(--volt-rgb), 0.08));
+  border-color: rgba(var(--volt-rgb), 0.35);
 }
 
 .thd-pill--rose {
-  background: linear-gradient(135deg, rgba(255, 90, 54, 0.12), rgba(244, 114, 182, 0.08));
-  border-color: rgba(255, 90, 54, 0.3);
+  background: linear-gradient(135deg, rgba(var(--ember-rgb), 0.12), rgba(244, 114, 182, 0.08));
+  border-color: rgba(var(--ember-rgb), 0.3);
 }
 
 .thd-body {

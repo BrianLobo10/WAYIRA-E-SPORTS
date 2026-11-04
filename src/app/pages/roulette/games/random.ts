@@ -28,4 +28,4 @@ export function prefersReducedMotion(): boolean {
 }
 
 /** Colores de los participantes: bien distintos entre sí para reconocer cada carro de un vistazo. */
-export const GAME_COLORS = ['#D7FF3F', '#FF5A36', '#ECEAE3', '#7CB8FF', '#C79BFF', '#FFB13D', '#5EE6B0', '#FF8FB8'];
+export const GAME_COLORS = ['var(--volt)', 'var(--ember)', 'var(--white)', '#7CB8FF', '#C79BFF', '#FFB13D', '#5EE6B0', '#FF8FB8'];

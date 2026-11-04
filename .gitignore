@@ -46,3 +46,7 @@ server/.env
 # Claves sueltas (nunca subir)
 riot.txt
 *.key
+
+
+# Script de limpieza del historial (uso local, no subir)
+limpiar-historial.ps1

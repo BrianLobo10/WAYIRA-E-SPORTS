@@ -100,7 +100,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #d7ff3f;
+  background: var(--volt);
   box-shadow: 0 0 8px rgba(74, 222, 128, 0.5);
 }
 
@@ -178,7 +178,7 @@
 
 .potato__confirm {
   padding: 12px 14px;
-  background: rgba(255, 90, 54, 0.08);
+  background: rgba(var(--ember-rgb), 0.08);
   border-bottom: 1px solid var(--border);
 }
 
@@ -255,7 +255,7 @@
 .potato__bubble--user {
   border-radius: 2px 2px 2px 2px;
   background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(215, 255, 63, 0.15);
+  border-color: rgba(var(--volt-rgb), 0.15);
 }
 
 .potato__bubble--typing {

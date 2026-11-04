@@ -14,6 +14,8 @@ import {
   downloadRegistrationTemplate,
   type RegistrationImportResult
 } from '../../utils/tournament-registration-import';
+import { ToastService } from '../../services/toast.service';
+import { DialogService } from '../../services/dialog.service';
 
 @Component({
   selector: 'app-tournaments',
@@ -23,6 +25,8 @@ import {
   styleUrls: ['./tournaments.component.css']
 })
 export class TournamentsComponent implements OnInit, OnDestroy {
+  private readonly toast = inject(ToastService);
+  private readonly dialog = inject(DialogService);
   private api = inject(TournamentService);
   private auth = inject(AuthService);
   private router = inject(Router);
@@ -145,7 +149,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
 
   openCreateModal() {
     if (!this.isAdmin()) {
-      alert('Solo los administradores pueden crear torneos');
+      this.toast.notify('Solo los administradores pueden crear torneos');
       return;
     }
     this.resetForm();
@@ -258,36 +262,36 @@ export class TournamentsComponent implements OnInit, OnDestroy {
 
     // Verificar que sea admin
     if (!this.isAdmin()) {
-      alert('Solo los administradores pueden crear torneos');
+      this.toast.notify('Solo los administradores pueden crear torneos');
       return;
     }
 
     if (!this.tournamentName().trim() || !this.tournamentDescription().trim() || 
         !this.tournamentStartDate() || !this.tournamentEndDate()) {
-      alert('Por favor completa todos los campos requeridos');
+      this.toast.notify('Por favor completa todos los campos requeridos');
       return;
     }
 
     const bracketCapacity = this.getBracketCapacityForRounds(this.tournamentConfiguredRounds());
     if (this.tournamentMaxTeams() > bracketCapacity) {
-      alert(`La cantidad de equipos no puede superar los ${bracketCapacity} cupos para ${this.tournamentConfiguredRounds()} rondas.`);
+      this.toast.notify(`La cantidad de equipos no puede superar los ${bracketCapacity} cupos para ${this.tournamentConfiguredRounds()} rondas.`);
       return;
     }
 
     const imp = this.registrationImportDraft();
     if (imp?.teams?.length) {
       if (imp.errors.length) {
-        alert(`Importación: ${imp.errors.join(' ')}`);
+        this.toast.notify(`Importación: ${imp.errors.join(' ')}`);
         return;
       }
       if (imp.teams.length > this.tournamentMaxTeams()) {
-        alert(
+        this.toast.notify(
           `El archivo tiene ${imp.teams.length} equipos y el torneo admite como máximo ${this.tournamentMaxTeams()}. Aumenta el cupo o quita filas del Excel.`
         );
         return;
       }
       if (imp.teams.length > bracketCapacity) {
-        alert(`El archivo tiene más equipos (${imp.teams.length}) que el cupo del bracket (${bracketCapacity} con ${this.tournamentConfiguredRounds()} rondas).`);
+        this.toast.notify(`El archivo tiene más equipos (${imp.teams.length}) que el cupo del bracket (${bracketCapacity} con ${this.tournamentConfiguredRounds()} rondas).`);
         return;
       }
     }
@@ -297,12 +301,12 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     const minStartDate = this.getCurrentDateTimeLocal();
 
     if (startDate < minStartDate) {
-      alert('La fecha de inicio debe ser desde la fecha y hora actual en adelante');
+      this.toast.notify('La fecha de inicio debe ser desde la fecha y hora actual en adelante');
       return;
     }
 
     if (endDate <= startDate) {
-      alert('La fecha de finalización debe ser posterior a la fecha de inicio');
+      this.toast.notify('La fecha de finalización debe ser posterior a la fecha de inicio');
       return;
     }
 
@@ -338,7 +342,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
 
         this.closeModal();
         this.loadTournaments();
-        alert(
+        this.toast.notify(
           this.isPracticeTournament(tournamentToEdit) && newMax !== tournamentToEdit.maxTeams
             ? `Torneo actualizado: ${newMax} equipos ficticios. El bracket anterior se anuló; vuelve a organizarlo si hacía falta.`
             : 'Torneo actualizado exitosamente'
@@ -372,16 +376,16 @@ export class TournamentsComponent implements OnInit, OnDestroy {
           const warn = importRes.warnings.length ? `\n\nAvisos: ${importRes.warnings.slice(0, 5).join(' ')}` : '';
           this.closeModal();
           this.loadTournaments();
-          alert(`Torneo creado con ${teams.length} equipo(s) importados desde la hoja.${warn}`);
+          this.toast.notify(`Torneo creado con ${teams.length} equipo(s) importados desde la hoja.${warn}`);
         } else {
           this.closeModal();
           this.loadTournaments();
-          alert('Torneo creado exitosamente');
+          this.toast.notify('Torneo creado exitosamente');
         }
       }
     } catch (error) {
       console.error('Error creating/updating tournament:', error);
-      alert('Error al guardar el torneo. Por favor intenta nuevamente.');
+      this.toast.notify('Error al guardar el torneo. Por favor intenta nuevamente.');
     } finally {
       this.creating.set(false);
     }
@@ -484,12 +488,12 @@ export class TournamentsComponent implements OnInit, OnDestroy {
   busyTeamId = signal<string | null>(null);
 
   async setRegistrationStatus(reg: TeamRegistration, status: TeamStatus) {
-    if (status === 'rejected' && !confirm(`¿Rechazar la inscripción de «${reg.name}»?`)) return;
+    if (status === 'rejected' && !(await this.dialog.confirm(`¿Rechazar la inscripción de «${reg.name}»?`))) return;
     await this.runTeamAction(reg.id, () => this.api.setTeamStatus(reg.id, status));
   }
 
   async withdrawMyTeam(reg: TeamRegistration) {
-    if (!confirm(`¿Retirar a «${reg.name}» del torneo? Perderás el cupo.`)) return;
+    if (!(await this.dialog.confirm(`¿Retirar a «${reg.name}» del torneo? Perderás el cupo.`))) return;
     await this.runTeamAction(reg.id, () => this.api.withdrawTeam(reg.id));
   }
 
@@ -498,13 +502,13 @@ export class TournamentsComponent implements OnInit, OnDestroy {
   }
 
   async closeCheckIn(t: Tournament) {
-    if (!t.id || !confirm('¿Cerrar el check-in? Los equipos aprobados que no lo hicieron perderán su cupo.')) return;
+    if (!t.id || !(await this.dialog.confirm('¿Cerrar el check-in? Los equipos aprobados que no lo hicieron perderán su cupo.'))) return;
     try {
       const n = await this.api.closeCheckIn(t.id);
       this.loadTournaments();
-      alert(n ? `Check-in cerrado. ${n} equipo(s) sin check-in perdieron su cupo.` : 'Check-in cerrado. Todos los equipos aprobados lo hicieron.');
+      this.toast.notify(n ? `Check-in cerrado. ${n} equipo(s) sin check-in perdieron su cupo.` : 'Check-in cerrado. Todos los equipos aprobados lo hicieron.');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'No se pudo cerrar el check-in.');
+      this.toast.notify(err instanceof Error ? err.message : 'No se pudo cerrar el check-in.');
     }
   }
 
@@ -513,36 +517,36 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     try {
       await action();
       this.loadTournaments();
-      if (okMessage) alert(okMessage);
+      if (okMessage) this.toast.notify(okMessage);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'No se pudo completar la acción.');
+      this.toast.notify(err instanceof Error ? err.message : 'No se pudo completar la acción.');
     } finally {
       this.busyTeamId.set(null);
     }
   }
 
-  openRegisterModal(tournament: Tournament) {
+  async openRegisterModal(tournament: Tournament) {
     const user = this.api.getCurrentUser();
     if (!user) {
-      alert('Debes iniciar sesión para registrarte');
+      this.toast.notify('Debes iniciar sesión para registrarte');
       this.router.navigate(['/login']);
       return;
     }
     
     // Si no quedan cupos, el equipo entra en lista de espera
     if (this.activeCount(tournament) >= tournament.maxTeams &&
-        !confirm('El torneo está lleno. Tu equipo quedará en lista de espera y entrará si se libera un cupo. ¿Continuar?')) {
+        !(await this.dialog.confirm('El torneo está lleno. Tu equipo quedará en lista de espera y entrará si se libera un cupo. ¿Continuar?'))) {
       return;
     }
     if (!this.currentUser()?.gameName || !this.currentUser()?.tagLine) {
-      alert('Antes de inscribir un equipo, agrega tu Riot ID en tu perfil (Editar perfil → Vincular cuenta Riot).');
+      this.toast.notify('Antes de inscribir un equipo, agrega tu Riot ID en tu perfil (Editar perfil → Vincular cuenta Riot).');
       this.router.navigate(['/profile']);
       return;
     }
     
     // Verificar si el usuario ya está registrado
     if (this.isUserRegistered(tournament)) {
-      alert('Ya estás registrado en este torneo');
+      this.toast.notify('Ya estás registrado en este torneo');
       return;
     }
     
@@ -622,7 +626,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     if (input.files && input.files[0]) {
       const file = input.files[0];
       if (file.size > 5 * 1024 * 1024) { // 5MB max
-        alert('La imagen debe ser menor a 5MB');
+        this.toast.notify('La imagen debe ser menor a 5MB');
         return;
       }
       
@@ -660,7 +664,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
 
   async createTeamAndGoToPlayers() {
     if (!this.teamName().trim()) {
-      alert('Por favor ingresa un nombre para tu equipo');
+      this.toast.notify('Por favor ingresa un nombre para tu equipo');
       return;
     }
 
@@ -673,7 +677,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       );
       
       if (nameExists) {
-        alert('Ya existe un equipo con ese nombre en este torneo');
+        this.toast.notify('Ya existe un equipo con ese nombre en este torneo');
         return;
       }
     }
@@ -688,7 +692,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
         try {
           logoUrl = await this.api.uploadTeamLogo(fileName, this.teamLogo()!);
         } catch (error) {
-          alert('Error al subir el logo. Intenta nuevamente.');
+          this.toast.notify('Error al subir el logo. Intenta nuevamente.');
           return;
         }
       }
@@ -784,19 +788,19 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     const playerInfo = this.playersInfo()[index];
     
     if (!playerInfo.name.trim() || !playerInfo.gameName.trim() || !playerInfo.tagLine.trim()) {
-      alert('Completa el nombre y el Riot ID (nombre de invocador y tag) del jugador');
+      this.toast.notify('Completa el nombre y el Riot ID (nombre de invocador y tag) del jugador');
       return;
     }
     const riotError = this.riotIdError(playerInfo);
     if (riotError) {
-      alert(riotError);
+      this.toast.notify(riotError);
       return;
     }
 
     // Validar unicidad
     const validation = await this.validatePlayerUnique(playerInfo, index);
     if (!validation.valid) {
-      alert(validation.message);
+      this.toast.notify(validation.message);
       return;
     }
 
@@ -809,7 +813,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       const allComplete = this.playersInfo().every((_, i) => this.isCardComplete(i));
       
       if (!allComplete) {
-        alert('Por favor completa todas las cartas de jugadores antes de continuar');
+        this.toast.notify('Por favor completa todas las cartas de jugadores antes de continuar');
         return;
       }
     }
@@ -864,7 +868,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     if (!user || !tournament?.id || !this.currentUser()) return;
 
     if (!this.allCardsComplete()) {
-      alert(`Necesitas completar la información de los ${this.maxPlayers} jugadores.`);
+      this.toast.notify(`Necesitas completar la información de los ${this.maxPlayers} jugadores.`);
       return;
     }
 
@@ -887,14 +891,14 @@ export class TournamentsComponent implements OnInit, OnDestroy {
 
       this.closeRegisterModal();
       this.loadTournaments();
-      alert(
+      this.toast.notify(
         status === 'waitlisted'
           ? 'Equipo inscrito en lista de espera. Entrará automáticamente si se libera un cupo.'
           : 'Equipo inscrito. Un organizador revisará la inscripción y te avisará cuando esté aprobada.'
       );
     } catch (error) {
       console.error('Error registering team:', error);
-      alert(error instanceof Error ? error.message : 'Error al registrar el equipo. Por favor intenta nuevamente.');
+      this.toast.notify(error instanceof Error ? error.message : 'Error al registrar el equipo. Por favor intenta nuevamente.');
     } finally {
       this.registering.set(false);
     }
@@ -1117,7 +1121,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
   autoGenerateBracket() {
     const tournament = this.selectedTournamentForBracket();
     if (!tournament || !tournament.teams || tournament.teams.length < 2) {
-      alert('Se necesitan al menos 2 equipos registrados para generar el bracket');
+      this.toast.notify('Se necesitan al menos 2 equipos registrados para generar el bracket');
       return;
     }
     const teams = [...tournament.teams].sort(() => Math.random() - 0.5);
@@ -1265,7 +1269,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
   async confirmBracket() {
     const tournament = this.selectedTournamentForBracket();
     if (!tournament || !this.isAdmin()) {
-      alert('Solo los administradores pueden confirmar el bracket');
+      this.toast.notify('Solo los administradores pueden confirmar el bracket');
       return;
     }
     
@@ -1274,7 +1278,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     const registeredTeamCount = (tournament.teams || []).length;
 
     if (uniqueAssignedTeams.size !== registeredTeamCount) {
-      alert('Debes ubicar todos los equipos registrados dentro de la llave antes de confirmarla.');
+      this.toast.notify('Debes ubicar todos los equipos registrados dentro de la llave antes de confirmarla.');
       return;
     }
     
@@ -1287,13 +1291,13 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     
     // Validar que haya al menos 2 equipos (versus mínimo)
     if (teams.length < 2) {
-      alert('Necesitas al menos 2 equipos para crear un bracket');
+      this.toast.notify('Necesitas al menos 2 equipos para crear un bracket');
       return;
     }
     
     // Validar que no haya más equipos de los permitidos
     if (teams.length > tournament.maxTeams) {
-      alert(`No puedes tener más de ${tournament.maxTeams} equipos en el bracket`);
+      this.toast.notify(`No puedes tener más de ${tournament.maxTeams} equipos en el bracket`);
       return;
     }
     
@@ -1335,16 +1339,16 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       if (tournament.id) {
         this.router.navigate(['/tournaments', tournament.id, 'vista-interactiva']);
       } else {
-        alert('Bracket confirmado exitosamente.');
+        this.toast.notify('Bracket confirmado exitosamente.');
       }
     } catch (error) {
       console.error('Error al confirmar bracket:', error);
-      alert('Error al confirmar el bracket. Por favor intenta nuevamente.');
+      this.toast.notify('Error al confirmar el bracket. Por favor intenta nuevamente.');
     }
   }
 
   async startTournament(tournament: Tournament) {
-    if (!confirm('¿Estás seguro de iniciar este torneo? Esto generará el bracket final.')) {
+    if (!(await this.dialog.confirm('¿Estás seguro de iniciar este torneo? Esto generará el bracket final.'))) {
       return;
     }
     
@@ -1355,10 +1359,10 @@ export class TournamentsComponent implements OnInit, OnDestroy {
         lowerBracket: this.sanitizeBracketForFirestore(tournament.lowerBracket || [])
       });
       this.loadTournaments();
-      alert('Torneo iniciado exitosamente');
+      this.toast.notify('Torneo iniciado exitosamente');
     } catch (error) {
       console.error('Error starting tournament:', error);
-      alert('Error al iniciar el torneo');
+      this.toast.notify('Error al iniciar el torneo');
     }
   }
 
@@ -1425,7 +1429,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       }
     } catch (error) {
       console.error('Error updating match:', error);
-      alert('Error al actualizar el resultado');
+      this.toast.notify('Error al actualizar el resultado');
     }
   }
 
@@ -1688,7 +1692,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
 
   openPracticeModal() {
     if (!this.isAdmin()) {
-      alert('Solo los administradores pueden crear torneos');
+      this.toast.notify('Solo los administradores pueden crear torneos');
       return;
     }
     this.showPracticeModal.set(true);
@@ -1764,7 +1768,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
 
     const lower = file.name.toLowerCase();
     if (!lower.endsWith('.csv') && !lower.endsWith('.xlsx') && !lower.endsWith('.xls')) {
-      alert('Usa un archivo .csv, .xlsx o .xls (desde Excel: «Guardar como» → CSV UTF-8 o .xlsx).');
+      this.toast.notify('Usa un archivo .csv, .xlsx o .xls (desde Excel: «Guardar como» → CSV UTF-8 o .xlsx).');
       return;
     }
 
@@ -1772,7 +1776,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       const rows = await readSpreadsheetFile(file);
       const result = parseRegistrationRows(rows);
       if (result.errors.length) {
-        alert(result.errors.join('\n'));
+        this.toast.notify(result.errors.join('\n'));
         this.registrationImportDraft.set(null);
         return;
       }
@@ -1782,19 +1786,19 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       }
     } catch (e: any) {
       console.error(e);
-      alert(`No se pudo leer el archivo: ${e?.message || e}`);
+      this.toast.notify(`No se pudo leer el archivo: ${e?.message || e}`);
       this.registrationImportDraft.set(null);
     }
   }
 
   async createPracticeTournament() {
     if (!this.isAdmin()) {
-      alert('Solo los administradores pueden crear torneos');
+      this.toast.notify('Solo los administradores pueden crear torneos');
       return;
     }
 
     const teamTotal = this.practiceTeamTotal;
-    if (!confirm(`¿Crear un torneo de prueba con ${teamTotal} equipos ficticios? Podrás organizar el bracket y usar la vista interactiva al confirmarlo.`)) {
+    if (!(await this.dialog.confirm(`¿Crear un torneo de prueba con ${teamTotal} equipos ficticios? Podrás organizar el bracket y usar la vista interactiva al confirmarlo.`))) {
       return;
     }
 
@@ -1846,13 +1850,13 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       });
 
       this.loadTournaments();
-      alert(
+      this.toast.notify(
         `Torneo de prueba creado con ${teams.length} equipos. Abre «Organizar Bracket», confirma y luego usa «Vista interactiva» para clasificaciones.`
       );
     } catch (error: any) {
       console.error('Error creating practice tournament:', error);
       const errorMessage = error?.message || error?.toString() || 'Error desconocido';
-      alert(`Error al crear el torneo de prueba: ${errorMessage}`);
+      this.toast.notify(`Error al crear el torneo de prueba: ${errorMessage}`);
     } finally {
       this.creating.set(false);
     }
@@ -1860,7 +1864,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
 
   editTournament(tournament: Tournament) {
     if (!this.isAdmin()) {
-      alert('Solo los administradores pueden editar torneos');
+      this.toast.notify('Solo los administradores pueden editar torneos');
       return;
     }
     
@@ -1891,16 +1895,23 @@ export class TournamentsComponent implements OnInit, OnDestroy {
 
   async deleteTournament(tournament: Tournament) {
     if (!this.isAdmin()) {
-      alert('Solo los administradores pueden eliminar torneos');
+      this.toast.notify('Solo los administradores pueden eliminar torneos');
       return;
     }
     
-    if (!confirm(`¿Estás seguro de eliminar el torneo "${tournament.name}"? Esta acción no se puede deshacer.`)) {
+    if (!(await this.dialog.confirm({
+      kicker: 'Acción permanente',
+      title: `¿Eliminar el torneo «${tournament.name}»?`,
+      message: 'Se borran sus equipos inscritos y su bracket. No se puede deshacer.',
+      confirmLabel: 'Eliminar torneo',
+      danger: true,
+      requireText: 'ELIMINAR',
+    }))) {
       return;
     }
     
     if (!tournament.id) {
-      alert('Error: El torneo no tiene un ID válido');
+      this.toast.notify('Error: El torneo no tiene un ID válido');
       return;
     }
     
@@ -1909,10 +1920,10 @@ export class TournamentsComponent implements OnInit, OnDestroy {
     try {
       await this.api.deleteTournament(tournament.id);
       this.loadTournaments();
-      alert('Torneo eliminado exitosamente');
+      this.toast.notify('Torneo eliminado exitosamente');
     } catch (error) {
       console.error('Error deleting tournament:', error);
-      alert('Error al eliminar el torneo. Por favor intenta nuevamente.');
+      this.toast.notify('Error al eliminar el torneo. Por favor intenta nuevamente.');
     } finally {
       this.deletingTournamentId.set(null);
     }
@@ -1922,7 +1933,7 @@ export class TournamentsComponent implements OnInit, OnDestroy {
   async downloadTournamentExcel() {
     const tournament = this.selectedTournamentForBracket();
     if (!tournament || !tournament.teams) {
-      alert('No hay equipos para exportar');
+      this.toast.notify('No hay equipos para exportar');
       return;
     }
 
@@ -1967,10 +1978,10 @@ export class TournamentsComponent implements OnInit, OnDestroy {
       link.click();
       document.body.removeChild(link);
       
-      alert('Excel descargado exitosamente');
+      this.toast.notify('Excel descargado exitosamente');
     } catch (error) {
       console.error('Error descargando Excel:', error);
-      alert('Error al descargar el Excel. Por favor intenta nuevamente.');
+      this.toast.notify('Error al descargar el Excel. Por favor intenta nuevamente.');
     }
   }
 }

@@ -58,12 +58,12 @@ type ChipState = 'in' | 'hit' | 'out' | 'winner';
     }
     .elim__num { font-size: 0.75rem; color: var(--teal-muted); font-variant-numeric: tabular-nums; min-width: 1.5em; }
     .elim__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-    .elim__chip[data-state='hit'] { background: rgba(255, 90, 54, 0.22); box-shadow: inset 0 0 0 1px rgba(255, 90, 54, 0.6); animation: elim-shake 300ms ease; }
+    .elim__chip[data-state='hit'] { background: rgba(var(--ember-rgb), 0.22); box-shadow: inset 0 0 0 1px rgba(var(--ember-rgb), 0.6); animation: elim-shake 300ms ease; }
     .elim__chip[data-state='out'] { opacity: 0.28; transform: scale(0.94); }
     .elim__chip[data-state='out'] .elim__name { text-decoration: line-through; }
     .elim__chip[data-state='winner'] {
       background: var(--teal-pri); transform: scale(1.04);
-      box-shadow: inset 0 0 0 2px var(--teal-accent), 0 8px 24px -8px rgba(215, 255, 63, 0.33);
+      box-shadow: inset 0 0 0 2px var(--teal-accent), 0 8px 24px -8px rgba(var(--volt-rgb), 0.33);
     }
     @keyframes elim-shake {
       0%, 100% { transform: translateX(0); }

@@ -42,7 +42,7 @@
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-input, rgba(255, 255, 255, 0.1));
   border-radius: 2px;
-  color: #eceae3;
+  color: var(--white);
   font-size: 1rem;
   transition: var(--t-ui);
   width: 100%;
@@ -59,12 +59,12 @@
   background-position: right 1rem center !important;
   background-size: 1rem !important;
   padding-right: 2.5rem !important;
-  color: #eceae3 !important;
+  color: var(--white) !important;
 }
 
 .form-select option {
   background: var(--surface-2) !important;
-  color: #eceae3 !important;
+  color: var(--white) !important;
   padding: 0.5rem !important;
 }
 
@@ -98,8 +98,8 @@
 }
 
 .form-input.error {
-  border-color: rgba(255, 90, 54, 0.5);
-  background: rgba(255, 90, 54, 0.05);
+  border-color: rgba(var(--ember-rgb), 0.5);
+  background: rgba(var(--ember-rgb), 0.05);
 }
 
 .field-error {
@@ -169,8 +169,8 @@
   align-items: center;
   gap: 0.5rem;
   padding: 1rem;
-  background: rgba(255, 90, 54, 0.1);
-  border: 1px solid rgba(255, 90, 54, 0.3);
+  background: rgba(var(--ember-rgb), 0.1);
+  border: 1px solid rgba(var(--ember-rgb), 0.3);
   border-radius: 2px;
   color: #ffb4a3;
   font-size: 0.875rem;
@@ -210,7 +210,7 @@
 }
 
 .register-btn:disabled span:not(.spinner) {
-  color: #eceae3 !important;
+  color: var(--white) !important;
   opacity: 1 !important;
 }
 

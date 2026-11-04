@@ -24,7 +24,7 @@
   padding: 0.4rem 0.75rem;
   background: rgba(0, 0, 0, 0.6);
   border-radius: 2px;
-  color: #eceae3;
+  color: var(--white);
   font-size: 0.8125rem;
   cursor: pointer;
 }
@@ -103,7 +103,7 @@
 .profile-username {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #eceae3;
+  color: var(--white);
   margin: 0;
 }
 
@@ -140,7 +140,7 @@
   cursor: pointer;
   border: 1px solid rgba(255, 255, 255, 0.3);
   background: transparent;
-  color: #eceae3;
+  color: var(--white);
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -241,7 +241,7 @@
   display: block;
   font-size: 1.75rem;
   font-weight: 700;
-  color: #eceae3;
+  color: var(--white);
 }
 
 .score-label {
@@ -272,7 +272,7 @@
 
 .confirm-dialog h3 {
   margin: 0 0 1rem 0;
-  color: #eceae3;
+  color: var(--white);
   font-size: 1.125rem;
 }
 
@@ -299,7 +299,7 @@
   padding: 0.5rem 1rem;
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #eceae3;
+  color: var(--white);
   border-radius: 2px;
   cursor: pointer;
 }

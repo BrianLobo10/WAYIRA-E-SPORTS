@@ -1,0 +1,116 @@
+<header class="view-head">
+  <div>
+    <p class="view-kicker">Centro de control</p>
+    <h1 class="view-title">Apariencia</h1>
+    <p class="view-lead">Elige los colores de la web. Pruébalos en vivo antes de guardar: hasta que pulses «Aplicar», solo los ves tú.</p>
+  </div>
+</header>
+
+<div class="layout">
+  <div>
+    <section class="panel">
+      <div class="panel__head"><h2 class="panel__title">Temas listos</h2></div>
+      <div class="panel__body">
+        <div class="presets">
+          @for (p of presets; track p.name) {
+            <button type="button" class="preset" [class.is-on]="activePreset() === p.name" [attr.aria-pressed]="activePreset() === p.name" (click)="usePreset(p.colors)">
+              <span class="dots" aria-hidden="true">
+                <i [style.background]="p.colors.bg"></i><i [style.background]="p.colors.surface"></i><i [style.background]="p.colors.accent"></i><i [style.background]="p.colors.alert"></i>
+              </span>
+              {{ p.name }}
+            </button>
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__head"><h2 class="panel__title">Colores</h2></div>
+      <div class="panel__body fields">
+        @for (f of fields; track f.key) {
+          <div class="color-row">
+            <label class="swatch" [style.background]="draft()[f.key]">
+              <input type="color" [value]="draft()[f.key].toLowerCase()" (input)="pick(f.key, $any($event.target).value)" [attr.aria-label]="'Elegir color: ' + f.label" />
+            </label>
+            <div>
+              <span class="field__label">{{ f.label }}</span>
+              <span class="field__hint">{{ f.hint }}</span>
+              @if (f.key === 'bg' && !darkOk()) { <span class="field__hint is-warn">Demasiado claro: la web necesita un fondo oscuro.</span> }
+            </div>
+            <input class="input hex" [class.is-bad]="hexBad(f.key)" maxlength="7" spellcheck="false" autocomplete="off"
+                   [value]="hexText()[f.key]" (input)="typeHex(f.key, $any($event.target).value)" [attr.aria-label]="'Código hexadecimal: ' + f.label" />
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__head">
+        <h2 class="panel__title">Legibilidad</h2>
+        <span class="badge" [class.badge--on]="!failing().length" [class.badge--warn]="failing().length">{{ failing().length ? failing().length + ' por revisar' : 'Todo se lee bien' }}</span>
+      </div>
+      <div class="panel__body">
+        <ul class="checks">
+          @for (c of checks(); track c.label) {
+            <li>
+              <span class="material-icons" [class.ok]="c.ok" [class.bad]="!c.ok" aria-hidden="true" style="font-size: 16px">{{ c.ok ? 'check' : 'error_outline' }}</span>
+              <span>{{ c.label }}<span class="sr-only">{{ c.ok ? ': correcto' : ': poco contraste' }}</span></span>
+              <span class="ratio">{{ c.ratio }}:1 · mín. {{ c.min }}</span>
+            </li>
+          }
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <div class="sticky">
+    <section class="panel">
+      <div class="panel__head"><h2 class="panel__title">Vista previa</h2><span class="muted" style="font-size: 12px">así se verá</span></div>
+      <div class="panel__body">
+        <div class="pv" #pv aria-hidden="true">
+          <div class="pv__nav">
+            <span class="pv__brand">Wayira<span>·</span>e-Sport</span>
+            <span class="pv__link is-on">Torneos</span><span class="pv__link">Sorteos</span><span class="pv__link">Live</span>
+          </div>
+          <p class="pv__kicker">Temporada 2026</p>
+          <h3 class="pv__title">Compite en la <em>Copa Wayira</em></h3>
+          <p class="pv__lead">Inscripciones abiertas hasta el viernes. Equipos de cinco, eliminación doble.</p>
+          <div class="pv__btns">
+            <span class="pv__btn pv__btn--primary">Inscribir equipo</span>
+            <span class="pv__btn pv__btn--ghost">Ver bracket</span>
+            <span class="pv__btn pv__btn--danger">Eliminar</span>
+          </div>
+          <div class="pv__cards">
+            <div class="pv__card">
+              <span class="pv__live">EN VIVO</span>
+              <h4>Final de invierno</h4>
+              <p>Lobos vs. Cóndores · Mejor de 5</p>
+              <p class="pv__muted">Hace 5 min</p>
+            </div>
+            <div class="pv__card pv__card--up">
+              <span class="pv__tag">Ranking</span>
+              <h4>Partidas ganadas</h4>
+              <span class="pv__score">24</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="bar">
+      <label class="switch">
+        <input type="checkbox" [checked]="livePreview()" (change)="livePreview.set(!livePreview())" />
+        <span class="switch__track" aria-hidden="true"></span>
+        Probar en toda la web (solo tú)
+      </label>
+      @if (dirty()) { <span class="dirty">Sin guardar</span> }
+    </div>
+    <div class="bar">
+      <button type="button" class="btn btn-quiet btn-sm" (click)="restoreDefault()" [disabled]="saving() || (isDefault() && !dirty())">Restaurar originales</button>
+      <span style="display: flex; gap: 8px">
+        <button type="button" class="btn btn-secondary" (click)="discard()" [disabled]="!dirty() || saving()">Descartar</button>
+        <button type="button" class="btn btn-primary" (click)="save()" [disabled]="!dirty() || saving() || !loaded()">{{ saving() ? 'Aplicando…' : 'Aplicar a la web' }}</button>
+      </span>
+    </div>
+  </div>
+</div>

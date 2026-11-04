@@ -122,6 +122,12 @@
                   Panel de staff
                 </a>
               }
+              @if (isSuperadmin()) {
+                <a routerLink="/control" class="dropdown-item" (click)="closeProfileDropdown(); closeMobileNav()">
+                  <span class="material-icons" aria-hidden="true">shield</span>
+                  Centro de control
+                </a>
+              }
               <button type="button" class="dropdown-item logout-item" (click)="logout(); closeProfileDropdown()">
                 <span class="material-icons" aria-hidden="true">logout</span>
                 Cerrar sesión

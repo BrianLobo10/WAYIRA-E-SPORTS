@@ -32,9 +32,9 @@
 .th-error {
   padding: 14px 16px;
   color: #ffb4a3;
-  background: rgba(255, 90, 54, 0.08);
+  background: rgba(var(--ember-rgb), 0.08);
   border-radius: var(--radius-sm);
-  box-shadow: inset 0 0 0 1px rgba(255, 90, 54, 0.25);
+  box-shadow: inset 0 0 0 1px rgba(var(--ember-rgb), 0.25);
 }
 
 .th-list {

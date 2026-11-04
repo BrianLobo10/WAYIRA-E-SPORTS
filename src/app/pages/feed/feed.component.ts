@@ -6,6 +6,7 @@ import type { Post, UserProfile } from '../../models';
 import { CommunityService } from '../../services/community.service';
 import { AuthService } from '../../services/auth.service';
 import { Subscription } from 'rxjs';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-feed',
@@ -15,6 +16,7 @@ import { Subscription } from 'rxjs';
   styleUrls: ['./feed.component.css']
 })
 export class FeedComponent implements OnInit, OnDestroy {
+  private readonly toast = inject(ToastService);
   private community = inject(CommunityService);
   private auth = inject(AuthService);
   private postsSub?: Subscription;
@@ -127,7 +129,7 @@ export class FeedComponent implements OnInit, OnDestroy {
   async createPost() {
     const user = this.community.getCurrentUser();
     if (!user || !this.newPostContent().trim()) {
-      if (!this.newPostContent().trim()) alert('Escribe algo para publicar');
+      if (!this.newPostContent().trim()) this.toast.notify('Escribe algo para publicar');
       return;
     }
     this.uploading.set(true);
@@ -151,7 +153,7 @@ export class FeedComponent implements OnInit, OnDestroy {
       this.loadPosts();
     } catch (err: any) {
       console.error(err);
-      alert('No se pudo publicar. Revisa tu conexión e intenta de nuevo.');
+      this.toast.notify('No se pudo publicar. Revisa tu conexión e intenta de nuevo.');
     } finally {
       this.uploading.set(false);
     }
@@ -262,7 +264,7 @@ export class FeedComponent implements OnInit, OnDestroy {
       this.loadPosts(false);
     } catch (err) {
       console.error(err);
-      alert('No se pudo enviar el comentario. Intenta de nuevo.');
+      this.toast.notify('No se pudo enviar el comentario. Intenta de nuevo.');
     }
   }
 
@@ -331,6 +333,6 @@ export class FeedComponent implements OnInit, OnDestroy {
   copyInviteLink() {
     const user = this.currentUser();
     const url = user?.uid ? `${window.location.origin}/profile/${user.uid}` : window.location.origin;
-    navigator.clipboard.writeText(url).then(() => alert('Link de tu perfil copiado al portapapeles'));
+    navigator.clipboard.writeText(url).then(() => this.toast.notify('Link de tu perfil copiado al portapapeles'));
   }
 }

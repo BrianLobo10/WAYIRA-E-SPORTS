@@ -45,7 +45,7 @@ const SEGMENTS = 8;
                   <path fill="rgba(236, 234, 227, 0.85)" d="M20 10l6-5h5v5Z"/>
                   <path fill="rgba(236, 234, 227, 0.85)" d="M33 5h5l6 5H33Z"/>
                   <rect x="58" y="13" width="4" height="3" rx="1" fill="#e9f7a8"/>
-                  <rect x="2" y="13" width="3" height="3" rx="1" fill="#ff5a36"/>
+                  <rect x="2" y="13" width="3" height="3" rx="1" style="fill: var(--ember)"/>
                   <g class="wheel"><circle cx="15" cy="21" r="5.5" fill="#121211"/><path d="M15 17v8M11 21h8" stroke="#A3A19A" stroke-width="1.4"/></g>
                   <g class="wheel"><circle cx="50" cy="21" r="5.5" fill="#121211"/><path d="M50 17v8M46 21h8" stroke="#A3A19A" stroke-width="1.4"/></g>
                 </svg>
@@ -95,9 +95,9 @@ const SEGMENTS = 8;
     .race--running .wheel { animation: wheel-spin 0.35s linear infinite; }
     .car__badge {
       position: absolute; top: -6px; left: -6px; z-index: 1; padding: 1px 5px; border-radius: 999px;
-      background: var(--gold, #d7ff3f); color: #121211; font-size: 0.7rem; font-weight: 800;
+      background: var(--gold, var(--volt)); color: var(--volt-ink); font-size: 0.7rem; font-weight: 800;
     }
-    .car--winner svg { filter: drop-shadow(0 0 6px rgba(215, 255, 63, 0.7)); }
+    .car--winner svg { filter: drop-shadow(0 0 6px rgba(var(--volt-rgb), 0.7)); }
     .race__finish {
       position: absolute; top: 0; bottom: 0; right: 6px; width: 12px; pointer-events: none;
       background: repeating-conic-gradient(#eceae3 0 25%, #121211 0 50%) 0 0 / 12px 12px;

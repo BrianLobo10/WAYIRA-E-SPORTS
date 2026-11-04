@@ -1,0 +1,160 @@
+<header class="view-head">
+  <div>
+    <p class="view-kicker">Contenido del sitio</p>
+    <h1 class="view-title">Proyectos</h1>
+    <p class="view-lead">Lo que aparece en <a routerLink="/projects">/projects</a>, en este orden. Los desactivados quedan guardados pero no se muestran.</p>
+  </div>
+  <div class="view-actions">
+    <button type="button" class="btn btn-primary" (click)="openNew()"><span class="material-icons" aria-hidden="true">add</span>Nuevo proyecto</button>
+  </div>
+</header>
+
+<section class="panel">
+  <div class="panel__head">
+    <h2 class="panel__title">{{ items().length }} proyectos · {{ activeCount() }} visibles</h2>
+  </div>
+  @if (loading()) {
+    <div class="panel__body"><div class="skeleton" style="width: 60%"></div><br /><div class="skeleton" style="width: 40%"></div></div>
+  } @else if (items().length === 0) {
+    <div class="empty">
+      <strong>Aún no hay proyectos</strong>
+      La página de proyectos mostrará un estado vacío hasta que crees el primero.
+      <div style="margin-top: 12px"><button type="button" class="btn btn-primary btn-sm" (click)="openNew()">Crear el primero</button></div>
+    </div>
+  } @else {
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>Orden</th><th></th><th>Proyecto</th><th>Estado</th><th>Visible</th><th class="actions"><span class="sr-only">Acciones</span></th></tr>
+        </thead>
+        <tbody>
+          @for (p of items(); track p.id; let i = $index; let first = $first; let last = $last) {
+            <tr [class.is-off]="!p.active">
+              <td>
+                <span class="order">
+                  <button type="button" class="icon-btn" [disabled]="first" (click)="move(i, -1)" [attr.aria-label]="'Subir ' + p.title"><span class="material-icons" aria-hidden="true">keyboard_arrow_up</span></button>
+                  <button type="button" class="icon-btn" [disabled]="last" (click)="move(i, 1)" [attr.aria-label]="'Bajar ' + p.title"><span class="material-icons" aria-hidden="true">keyboard_arrow_down</span></button>
+                </span>
+              </td>
+              <td>
+                @if (p.imageUrls[0]) {
+                  <img class="thumb" [src]="p.imageUrls[0]" alt="" loading="lazy" />
+                } @else {
+                  <span class="thumb"><svg-icon [name]="p.icon" [size]="20"></svg-icon></span>
+                }
+              </td>
+              <td>
+                <span class="cell-title">{{ p.title }}</span>
+                <span class="cell-sub">{{ p.period || '—' }} · editado {{ p.updatedAt | date: 'd MMM y' }}</span>
+              </td>
+              <td><span class="badge">{{ p.statusLabel }}</span></td>
+              <td>
+                <label class="switch">
+                  <input type="checkbox" [checked]="p.active" [disabled]="busy() === p.id" (change)="toggleActive(p)" [attr.aria-label]="(p.active ? 'Ocultar ' : 'Mostrar ') + p.title" />
+                  <span class="switch__track" aria-hidden="true"></span>
+                  {{ p.active ? 'Sí' : 'No' }}
+                </label>
+              </td>
+              <td class="actions">
+                <button type="button" class="btn btn-quiet btn-sm" (click)="openEdit(p)">Editar</button>
+                <button type="button" class="icon-btn is-danger" [disabled]="busy() === p.id" (click)="remove(p)" [attr.aria-label]="'Eliminar ' + p.title"><span class="material-icons" aria-hidden="true">delete</span></button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
+
+<dialog #sheet class="sheet sheet--wide" aria-labelledby="project-sheet-title" (cancel)="saving() && $event.preventDefault()">
+  <div class="sheet__head">
+    <p class="sheet__kicker">{{ editingId() ? 'Editar proyecto' : 'Nuevo proyecto' }}</p>
+    <h2 id="project-sheet-title" class="sheet__title">{{ draft().title || 'Sin título' }}</h2>
+  </div>
+  <form class="sheet__body" (ngSubmit)="save()" id="project-form">
+    <div class="editor">
+      <div class="form-grid">
+        <label class="field span-2">
+          <span class="field__label">Título</span>
+          <input class="input" name="title" maxlength="120" required [ngModel]="draft().title" (ngModelChange)="patch({ title: $event })" (blur)="touched.set(true)" />
+          @if (touched() && titleError()) { <span class="field__hint is-warn">{{ titleError() }}</span> }
+        </label>
+        <label class="field span-2">
+          <span class="field__label">Descripción</span>
+          <textarea class="textarea" name="description" maxlength="600" [ngModel]="draft().description" (ngModelChange)="patch({ description: $event })"></textarea>
+          <span class="field__hint">{{ draft().description.length }}/600</span>
+        </label>
+        <label class="field">
+          <span class="field__label">Estado que se muestra</span>
+          <input class="input" name="status" maxlength="30" list="project-status-presets" [ngModel]="draft().statusLabel" (ngModelChange)="patch({ statusLabel: $event })" />
+          <datalist id="project-status-presets">@for (s of statusPresets; track s) { <option [value]="s"></option> }</datalist>
+        </label>
+        <label class="field">
+          <span class="field__label">Periodo</span>
+          <input class="input" name="period" maxlength="30" [ngModel]="draft().period" (ngModelChange)="patch({ period: $event })" />
+          <span class="field__hint">Ej. 2026 o «Mar–Jun 2026»</span>
+        </label>
+        <label class="field span-2">
+          <span class="field__label">Enlace (opcional)</span>
+          <input class="input" name="link" type="url" inputmode="url" [ngModel]="draft().linkUrl" (ngModelChange)="patch({ linkUrl: $event })" />
+          @if (linkError()) { <span class="field__hint is-warn">{{ linkError() }}</span> } @else { <span class="field__hint">Formato https://…</span> }
+        </label>
+        <div class="field span-2">
+          <span class="field__label" id="icon-label">Icono</span>
+          <div class="icons" role="radiogroup" aria-labelledby="icon-label">
+            @for (ic of icons; track ic) {
+              <button type="button" role="radio" [attr.aria-checked]="draft().icon === ic" [class.is-on]="draft().icon === ic" (click)="patch({ icon: ic })" [attr.aria-label]="ic">
+                <svg-icon [name]="ic" [size]="20"></svg-icon>
+              </button>
+            }
+          </div>
+        </div>
+        <div class="field span-2">
+          <span class="field__label">Imágenes ({{ draft().imageUrls.length }}/6)</span>
+          <div class="imgs">
+            @for (u of draft().imageUrls; track u; let i = $index) {
+              <div class="img">
+                <img [src]="u" alt="" />
+                <button type="button" class="icon-btn" (click)="removeImage(i)" [attr.aria-label]="'Quitar imagen ' + (i + 1)"><span class="material-icons" aria-hidden="true">close</span></button>
+              </div>
+            }
+            @if (draft().imageUrls.length < 6) {
+              <label class="add-img">
+                <input type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple (change)="onFiles($event)" [disabled]="uploading()" />
+                {{ uploading() ? 'Subiendo…' : '+ Añadir' }}
+              </label>
+            }
+          </div>
+          <span class="field__hint">JPG, PNG, WebP o AVIF. Se comprimen solas; máximo 5 MB cada una.</span>
+        </div>
+        <label class="switch span-2">
+          <input type="checkbox" name="active" [checked]="draft().active" (change)="patch({ active: !draft().active })" />
+          <span class="switch__track" aria-hidden="true"></span>
+          Visible en la web
+        </label>
+      </div>
+
+      <aside aria-label="Vista previa">
+        <p class="field__label" style="margin: 0 0 8px">Vista previa</p>
+        <div class="preview">
+          @if (draft().imageUrls[0]) { <img class="preview__img" [src]="draft().imageUrls[0]" alt="" /> }
+          <svg-icon class="preview__icon" [name]="draft().icon" [size]="36"></svg-icon>
+          <h4>{{ draft().title || 'Título del proyecto' }}</h4>
+          <p>{{ draft().description || 'La descripción aparecerá aquí.' }}</p>
+          <div class="preview__meta">
+            <span class="badge" [class.badge--on]="draft().statusLabel === 'Activo' || draft().statusLabel === 'En curso'">{{ draft().statusLabel || 'Activo' }}</span>
+            @if (draft().period) { <span class="badge">{{ draft().period }}</span> }
+          </div>
+        </div>
+        @if (!draft().active) { <p class="field__hint" style="margin-top: 8px">Oculto: no se mostrará hasta activarlo.</p> }
+      </aside>
+    </div>
+  </form>
+  <div class="sheet__foot">
+    <button type="button" class="btn btn-secondary" (click)="closeSheet()" [disabled]="saving()">Cancelar</button>
+    <button type="submit" form="project-form" class="btn btn-primary" [disabled]="saving() || uploading()">
+      {{ saving() ? 'Guardando…' : editingId() ? 'Guardar cambios' : 'Crear proyecto' }}
+    </button>
+  </div>
+</dialog>

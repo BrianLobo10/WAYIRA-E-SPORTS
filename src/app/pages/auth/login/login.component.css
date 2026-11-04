@@ -129,8 +129,8 @@
 
 .error-message {
   padding: 0.75rem 1rem;
-  background: rgba(255, 90, 54, 0.08);
-  border: 1px solid rgba(255, 90, 54, 0.25);
+  background: rgba(var(--ember-rgb), 0.08);
+  border: 1px solid rgba(var(--ember-rgb), 0.25);
   border-radius: 2px;
   color: #ffb4a3;
   font-size: 0.875rem;
@@ -264,7 +264,7 @@
   width: 1.125rem;
   height: 1.125rem;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #eceae3;
+  border-top-color: var(--white);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
   flex-shrink: 0;

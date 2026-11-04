@@ -1,0 +1,201 @@
+<header class="view-head">
+  <div>
+    <p class="view-kicker">Centro de control</p>
+    <h1 class="view-title">Usuarios</h1>
+    <p class="view-lead">Roles, suspensiones y correos. Solo puedes actuar sobre cuentas de rango inferior al tuyo, y todo queda en la auditoría.</p>
+  </div>
+</header>
+
+<div class="toolbar">
+  <label class="grow">
+    <span class="sr-only">Buscar por nombre o ID</span>
+    <input class="input" type="search" placeholder="Buscar por nombre o ID" [ngModel]="search()" (ngModelChange)="onSearch($event)" />
+  </label>
+  <label>
+    <span class="sr-only">Filtrar por rol</span>
+    <select class="select" [ngModel]="roleFilter()" (ngModelChange)="roleFilter.set($event); load()">
+      <option value="">Todos los roles</option>
+      <option value="user">Sin rol</option>
+      @for (r of roles(); track r.key) { <option [value]="r.key">{{ r.name }}</option> }
+    </select>
+  </label>
+</div>
+
+<section class="panel">
+  <div class="panel__head"><h2 class="panel__title">{{ users().length }} {{ users().length === 1 ? 'cuenta' : 'cuentas' }}</h2></div>
+  @if (loading() && !users().length) {
+    <div class="panel__body"><div class="skeleton" style="width: 60%"></div><br /><div class="skeleton" style="width: 45%"></div></div>
+  } @else {
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>Usuario</th><th>Rol</th><th>Acceso</th><th>Alta</th><th>Último ingreso</th><th>Estado</th><th class="actions"><span class="sr-only">Acciones</span></th></tr>
+        </thead>
+        <tbody>
+          @for (u of users(); track u.id) {
+            <tr>
+              <td>
+                <a class="who" [routerLink]="['/profile', u.id]">
+                  @if (u.avatarUrl) { <img class="avatar" [src]="u.avatarUrl" alt="" loading="lazy" referrerpolicy="no-referrer" /> }
+                  @else { <span class="avatar">{{ u.displayName.charAt(0).toUpperCase() }}</span> }
+                  <span><span class="cell-title">{{ u.displayName }}</span>@if (u.id === myId()) { <span class="cell-sub">tú</span> }</span>
+                </a>
+              </td>
+              <td>
+                <span class="chips">
+                  @for (r of u.roles; track r) { <span class="badge" [class.badge--on]="r === 'superadmin'">{{ roleName(r) }}</span> }
+                  @empty { <span class="muted">Usuario</span> }
+                </span>
+              </td>
+              <td class="muted">{{ providerLabel(u.provider) }}</td>
+              <td class="muted">{{ u.createdAt | date: 'd MMM y' }}</td>
+              <td class="muted">{{ u.lastSignInAt ? (u.lastSignInAt | date: 'd MMM, HH:mm') : '—' }}</td>
+              <td>
+                @if (u.suspended) {
+                  <span class="badge badge--danger">{{ u.suspendedUntil ? 'Hasta ' + (u.suspendedUntil | date: 'd MMM, HH:mm') : 'Suspendida' }}</span>
+                } @else {
+                  <span class="muted">Activa</span>
+                }
+              </td>
+              <td class="actions">
+                @if (manageable(u)) {
+                  @if (canRoles()) { <button type="button" class="btn btn-quiet btn-sm" (click)="open('role', u)">Rol</button> }
+                  @if (canSuspend()) {
+                    @if (u.suspended) { <button type="button" class="btn btn-quiet btn-sm" (click)="lift(u)">Reactivar</button> }
+                    @else { <button type="button" class="btn btn-quiet btn-sm" (click)="open('suspend', u)">Suspender</button> }
+                  }
+                }
+                <button type="button" class="icon-btn" (click)="open('history', u)" [attr.aria-label]="'Historial de suspensiones de ' + u.displayName" title="Historial de suspensiones"><span class="material-icons" aria-hidden="true">history</span></button>
+                @if (canEmail() && u.id !== myId()) {
+                  <button type="button" class="icon-btn" (click)="open('email', u)" [attr.aria-label]="'Ver correo de ' + u.displayName" title="Ver correo (queda registrado)"><span class="material-icons" aria-hidden="true">mail</span></button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="7" class="empty">{{ search() || roleFilter() ? 'Nadie coincide con ese filtro.' : 'Aún no hay usuarios.' }}</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
+
+<dialog #sheet class="sheet" aria-labelledby="user-sheet-title" (cancel)="busy() && $event.preventDefault()">
+  @if (target(); as u) {
+    @switch (mode()) {
+      @case ('role') {
+        <div class="sheet__head">
+          <p class="sheet__kicker">Cambio de rol</p>
+          <h2 id="user-sheet-title" class="sheet__title">{{ u.displayName }}</h2>
+        </div>
+        <div class="sheet__body">
+          <label class="field">
+            <span class="field__label">Nuevo rol</span>
+            <select class="select" [ngModel]="newRole()" (ngModelChange)="newRole.set($event)">
+              <option value="user">Usuario (sin rol de staff)</option>
+              @for (r of grantable(); track r.key) { <option [value]="r.key">{{ r.name }}</option> }
+            </select>
+          </label>
+          <div class="change" aria-live="polite">
+            <div class="change__side"><span class="change__label">Antes</span><span class="change__role">{{ roleName(currentRole()) }}</span></div>
+            <span class="material-icons change__arrow" aria-hidden="true">arrow_forward</span>
+            <div class="change__side"><span class="change__label">Después</span><span class="change__role">{{ roleName(newRole()) }}</span></div>
+          </div>
+          @if (permDiff().gain.length || permDiff().lose.length) {
+            <ul class="perm-list" aria-label="Cambios de permisos">
+              @for (p of permDiff().gain; track p) { <li class="perm-gain" data-sign="+">{{ p }}</li> }
+              @for (p of permDiff().lose; track p) { <li class="perm-lose" data-sign="−">{{ p }}</li> }
+            </ul>
+          } @else if (newRole() === currentRole()) {
+            <p class="field__hint">Elige un rol distinto al actual.</p>
+          }
+          <label class="field">
+            <span class="field__label">Motivo</span>
+            <textarea class="textarea" maxlength="300" placeholder="Por qué cambia el rol. Queda en la auditoría." [ngModel]="reason()" (ngModelChange)="reason.set($event)" (blur)="touched.set(true)"></textarea>
+            @if (touched() && !reasonOk()) { <span class="field__hint is-warn">Escribe al menos {{ reasonMin() }} caracteres.</span> }
+          </label>
+        </div>
+        <div class="sheet__foot">
+          <button type="button" class="btn btn-secondary" (click)="close()" [disabled]="busy()">Cancelar</button>
+          <button type="button" class="btn btn-primary" (click)="confirmRole()" [disabled]="busy() || newRole() === currentRole()">
+            {{ busy() ? 'Guardando…' : 'Cambiar a ' + roleName(newRole()) }}
+          </button>
+        </div>
+      }
+      @case ('suspend') {
+        <div class="sheet__head">
+          <p class="sheet__kicker is-danger">Suspender cuenta</p>
+          <h2 id="user-sheet-title" class="sheet__title">{{ u.displayName }}</h2>
+        </div>
+        <div class="sheet__body">
+          <p class="field__hint" style="font-size: 14px">Mientras dure no podrá publicar, comentar, reaccionar, enviar mensajes ni inscribirse. Puede seguir leyendo.</p>
+          <div class="field">
+            <span class="field__label" id="dur-label">Duración</span>
+            <div class="durations" role="radiogroup" aria-labelledby="dur-label">
+              @for (d of durations; track d.hours) {
+                <button type="button" role="radio" class="btn btn-sm" [class.btn-primary]="hours() === d.hours" [class.btn-quiet]="hours() !== d.hours" [attr.aria-checked]="hours() === d.hours" (click)="hours.set(d.hours)">{{ d.label }}</button>
+              }
+            </div>
+          </div>
+          <label class="field">
+            <span class="field__label">Motivo</span>
+            <textarea class="textarea" maxlength="300" placeholder="Qué pasó. Queda en la auditoría y en su historial." [ngModel]="reason()" (ngModelChange)="reason.set($event)" (blur)="touched.set(true)"></textarea>
+            @if (touched() && !reasonOk()) { <span class="field__hint is-warn">Escribe al menos {{ reasonMin() }} caracteres.</span> }
+          </label>
+        </div>
+        <div class="sheet__foot">
+          <button type="button" class="btn btn-secondary" (click)="close()" [disabled]="busy()">Cancelar</button>
+          <button type="button" class="btn btn-danger" (click)="confirmSuspend()" [disabled]="busy()">{{ busy() ? 'Suspendiendo…' : 'Suspender cuenta' }}</button>
+        </div>
+      }
+      @case ('email') {
+        <div class="sheet__head">
+          <p class="sheet__kicker">Dato privado</p>
+          <h2 id="user-sheet-title" class="sheet__title">Correo de {{ u.displayName }}</h2>
+        </div>
+        <div class="sheet__body">
+          @if (email(); as e) {
+            <p class="email-value">{{ e }}</p>
+            <p class="field__hint">La consulta quedó registrada con tu motivo.</p>
+          } @else {
+            <p class="field__hint" style="font-size: 14px">Cada consulta queda registrada con tu nombre y el motivo. Límite: 5 por hora.</p>
+            <label class="field">
+              <span class="field__label">Motivo</span>
+              <input class="input" maxlength="300" placeholder="Ej. responder su mensaje de soporte" [ngModel]="reason()" (ngModelChange)="reason.set($event)" (blur)="touched.set(true)" (keydown.enter)="revealEmail()" />
+              @if (touched() && !reasonOk()) { <span class="field__hint is-warn">Escribe al menos {{ reasonMin() }} caracteres.</span> }
+            </label>
+          }
+        </div>
+        <div class="sheet__foot">
+          <button type="button" class="btn btn-secondary" (click)="close()" [disabled]="busy()">{{ email() ? 'Cerrar' : 'Cancelar' }}</button>
+          @if (email()) {
+            <button type="button" class="btn btn-primary" (click)="copyEmail()">Copiar correo</button>
+          } @else {
+            <button type="button" class="btn btn-primary" (click)="revealEmail()" [disabled]="busy()">{{ busy() ? 'Consultando…' : 'Mostrar correo' }}</button>
+          }
+        </div>
+      }
+      @case ('history') {
+        <div class="sheet__head">
+          <p class="sheet__kicker">Historial de suspensiones</p>
+          <h2 id="user-sheet-title" class="sheet__title">{{ u.displayName }}</h2>
+        </div>
+        <div class="sheet__body">
+          <ul class="history">
+            @for (h of history(); track h.id) {
+              <li>
+                <strong>{{ h.createdAt | date: 'd MMM y, HH:mm' }}</strong> ·
+                {{ h.until ? 'hasta ' + (h.until | date: 'd MMM, HH:mm') : 'indefinida' }}
+                @if (h.liftedAt) { · <span class="muted">levantada {{ h.liftedAt | date: 'd MMM, HH:mm' }}</span> }
+                <span class="cell-sub">{{ h.reason }}</span>
+              </li>
+            } @empty {
+              <li class="muted">Nunca ha sido suspendida.</li>
+            }
+          </ul>
+        </div>
+        <div class="sheet__foot"><button type="button" class="btn btn-secondary" (click)="close()">Cerrar</button></div>
+      }
+    }
+  }
+</dialog>

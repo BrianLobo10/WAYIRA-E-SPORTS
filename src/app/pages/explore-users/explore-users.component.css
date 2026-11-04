@@ -120,7 +120,7 @@
 .user-name {
   font-size: 1rem;
   font-weight: 600;
-  color: var(--text-primary, #eceae3);
+  color: var(--text-primary, var(--white));
   margin: 0 0 0.15rem 0;
 }
 

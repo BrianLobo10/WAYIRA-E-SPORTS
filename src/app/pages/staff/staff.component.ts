@@ -1,9 +1,11 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { ContentService, type ContactRow, type RoleInfo, type StaffUser } from '../../services/content.service';
+import { ToastService } from '../../services/toast.service';
+import { DialogService } from '../../services/dialog.service';
 
 type Tab = 'buzon' | 'roles';
 
@@ -19,8 +21,12 @@ type Tab = 'buzon' | 'roles';
   styleUrl: './staff.component.css',
 })
 export class StaffComponent implements OnInit {
+  private readonly toast = inject(ToastService);
+  private readonly dialog = inject(DialogService);
   private readonly auth = inject(AuthService);
   private readonly content = inject(ContentService);
+  /** Dentro de /staff/buzon o /staff/roles se muestra solo esa sección, sin cabecera ni pestañas */
+  readonly section = inject(ActivatedRoute).snapshot.data['section'] as Tab | undefined;
 
   readonly canReadInbox = computed(() => this.auth.hasPermission('contact.read'));
   readonly canAssignRoles = computed(() => this.auth.hasPermission('roles.assign'));
@@ -53,9 +59,10 @@ export class StaffComponent implements OnInit {
 
   async ngOnInit() {
     await this.auth.waitForInit();
-    if (!this.canReadInbox() && this.canAssignRoles()) this.tab.set('roles');
-    if (this.canReadInbox()) void this.loadInbox();
-    if (this.canAssignRoles()) {
+    if (this.section) this.tab.set(this.section);
+    else if (!this.canReadInbox() && this.canAssignRoles()) this.tab.set('roles');
+    if (this.canReadInbox() && this.tab() === 'buzon') void this.loadInbox();
+    if (this.canAssignRoles() && this.tab() === 'roles') {
       void this.content.getRoles().then((r) => this.roles.set(r));
       void this.loadUsers();
     }
@@ -70,7 +77,7 @@ export class StaffComponent implements OnInit {
     try {
       this.messages.set(await this.content.getContactMessages());
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'No se pudo cargar el buzón.');
+      this.toast.notify(err instanceof Error ? err.message : 'No se pudo cargar el buzón.');
     } finally {
       this.loadingInbox.set(false);
     }
@@ -88,17 +95,17 @@ export class StaffComponent implements OnInit {
       await this.content.setContactRead(m.id, read);
     } catch (err) {
       this.messages.update((list) => list.map((x) => (x.id === m.id ? { ...x, read: !read } : x)));
-      alert(err instanceof Error ? err.message : 'No se pudo actualizar el mensaje.');
+      this.toast.notify(err instanceof Error ? err.message : 'No se pudo actualizar el mensaje.');
     }
   }
 
   async deleteMessage(m: ContactRow) {
-    if (!confirm(`¿Eliminar el mensaje de ${m.name}?`)) return;
+    if (!(await this.dialog.confirm(`¿Eliminar el mensaje de ${m.name}?`))) return;
     try {
       await this.content.deleteContactMessage(m.id);
       this.messages.update((list) => list.filter((x) => x.id !== m.id));
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'No se pudo eliminar el mensaje.');
+      this.toast.notify(err instanceof Error ? err.message : 'No se pudo eliminar el mensaje.');
     }
   }
 
@@ -126,7 +133,7 @@ export class StaffComponent implements OnInit {
     try {
       this.users.set(await this.content.searchUsers(this.search()));
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'No se pudieron cargar los usuarios.');
+      this.toast.notify(err instanceof Error ? err.message : 'No se pudieron cargar los usuarios.');
     } finally {
       this.loadingUsers.set(false);
     }
@@ -142,11 +149,18 @@ export class StaffComponent implements OnInit {
 
   async addRole(u: StaffUser, role: string) {
     if (!role) return;
+    const ok = await this.dialog.confirm({
+      kicker: 'Cambio de rol',
+      title: `¿Dar el rol ${this.roleName(role)} a ${u.displayName}?`,
+      message: this.roles().find((r) => r.key === role)?.description ?? '',
+      confirmLabel: `Dar rol ${this.roleName(role)}`,
+    });
+    if (!ok) return;
     await this.runUserAction(u, () => this.content.assignRole(u.id, role), (roles) => [...roles, role]);
   }
 
   async removeRole(u: StaffUser, role: string) {
-    if (!confirm(`¿Quitar el rol ${this.roleName(role)} a ${u.displayName}?`)) return;
+    if (!(await this.dialog.confirm(`¿Quitar el rol ${this.roleName(role)} a ${u.displayName}?`))) return;
     await this.runUserAction(u, () => this.content.revokeRole(u.id, role), (roles) => roles.filter((r) => r !== role));
   }
 
@@ -157,7 +171,7 @@ export class StaffComponent implements OnInit {
       this.users.update((list) => list.map((x) => (x.id === u.id ? { ...x, roles: update(x.roles) } : x)));
       if (u.id === this.myId()) void this.auth.refreshProfile();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'No se pudo cambiar el rol.');
+      this.toast.notify(err instanceof Error ? err.message : 'No se pudo cambiar el rol.');
     } finally {
       this.busyUser.set(null);
     }
@@ -172,7 +186,7 @@ export class StaffComponent implements OnInit {
   async revealEmail(u: StaffUser) {
     const reason = this.emailReason().trim();
     if (reason.length < 10) {
-      alert('Escribe el motivo (mínimo 10 caracteres). Queda registrado.');
+      this.toast.notify('Escribe el motivo (mínimo 10 caracteres). Queda registrado.');
       return;
     }
     try {
@@ -180,7 +194,7 @@ export class StaffComponent implements OnInit {
       this.emailShown.set({ userId: u.id, email });
       this.emailReasonFor.set(null);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'No se pudo consultar el correo.');
+      this.toast.notify(err instanceof Error ? err.message : 'No se pudo consultar el correo.');
     }
   }
 }

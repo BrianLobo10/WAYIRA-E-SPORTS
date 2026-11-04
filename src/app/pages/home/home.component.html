@@ -1,7 +1,8 @@
 <div class="home">
   <!-- Hero -->
   <section class="hero" aria-labelledby="hero-title" #hero>
-    <div class="home-container hero__inner">
+    <div class="home-container hero__grid">
+    <div class="hero__inner">
       <p class="hero__eyebrow" data-hero="eyebrow">Comunidad de e-sports · La Guajira, Colombia</p>
       <h1 id="hero-title" class="hero__title">
         <span class="hero__line"><span data-hero="line">Donde los equipos</span></span>
@@ -33,6 +34,18 @@
           }
         </a>
       </div>
+    </div>
+    <div class="hero__visual" aria-hidden="true" data-hero="eagle">
+      <span class="hero__halo"></span>
+      <span class="hero__ring"></span>
+      <span class="hero__ring hero__ring--dashed"></span>
+      <picture class="hero__eagle">
+        <source type="image/avif" srcset="brand/logo-256.avif 256w, brand/logo-400.avif 400w, brand/logo-500.avif 500w" sizes="(max-width: 960px) 220px, 380px">
+        <source type="image/webp" srcset="brand/logo-256.webp 256w, brand/logo-400.webp 400w, brand/logo-500.webp 500w" sizes="(max-width: 960px) 220px, 380px">
+        <img src="brand/logo-400.webp" alt="" width="380" height="380" fetchpriority="high" decoding="async">
+      </picture>
+      <span class="hero__floor"></span>
+    </div>
     </div>
   </section>
 

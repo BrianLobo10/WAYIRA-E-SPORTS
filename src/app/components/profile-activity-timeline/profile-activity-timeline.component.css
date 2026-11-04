@@ -81,7 +81,7 @@
 }
 
 .month-bar.has-activity {
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.275), rgba(215, 255, 63, 0.57));
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.275), rgba(var(--volt-rgb), 0.57));
 }
 
 .month-count {
@@ -137,10 +137,10 @@
 
 .act-empty { background: rgba(255, 255, 255, 0.08); }
 .act-0 { background: rgba(255, 255, 255, 0.08); }
-.act-1 { background: rgba(215, 255, 63, 0.35); }
-.act-2 { background: rgba(215, 255, 63, 0.55); }
-.act-3 { background: rgba(215, 255, 63, 0.75); }
-.act-4 { background: rgba(215, 255, 63, 0.95); }
+.act-1 { background: rgba(var(--volt-rgb), 0.35); }
+.act-2 { background: rgba(var(--volt-rgb), 0.55); }
+.act-3 { background: rgba(var(--volt-rgb), 0.75); }
+.act-4 { background: rgba(var(--volt-rgb), 0.95); }
 
 .activity-footer {
   display: flex;

@@ -76,7 +76,27 @@ export class AuthService {
     await this.applySession(null);
   }
 
-  async refreshProfile(): Promise<void> {
+  private loadedAt = 0;
+  private inFlight: Promise<void> | null = null;
+
+  /**
+   * Perfil y permisos recientes sin repetir viajes a la base: si se cargaron hace menos de
+   * `maxAgeMs`, se reutilizan; si ya hay una carga en curso, se espera esa misma.
+   * (La seguridad no depende de esto: la base revisa cada acción.)
+   */
+  async ensureFresh(maxAgeMs = 60_000): Promise<void> {
+    if (!this.session()) return;
+    if (Date.now() - this.loadedAt < maxAgeMs) return;
+    await this.refreshProfile();
+  }
+
+  refreshProfile(): Promise<void> {
+    if (this.inFlight) return this.inFlight;
+    this.inFlight = this.loadProfile().finally(() => (this.inFlight = null));
+    return this.inFlight;
+  }
+
+  private async loadProfile(): Promise<void> {
     const id = this.session()?.user.id;
     if (!id) return;
     const [{ data: profile }, { data: perms }] = await Promise.all([
@@ -86,6 +106,7 @@ export class AuthService {
     if (this.session()?.user.id !== id) return; // cambió la sesión mientras cargaba
     this.profile.set((profile as Profile | null) ?? null);
     this.permissions.set(Array.isArray(perms) ? (perms as string[]) : []);
+    this.loadedAt = Date.now();
   }
 
   private async applySession(session: Session | null): Promise<void> {
@@ -93,6 +114,7 @@ export class AuthService {
     if (!session) {
       this.profile.set(null);
       this.permissions.set([]);
+      this.loadedAt = 0;
       return;
     }
     try {

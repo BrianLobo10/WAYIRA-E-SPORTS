@@ -6,6 +6,8 @@ import type { Message, UserProfile } from '../../models';
 import { CommunityService } from '../../services/community.service';
 import { MessagingService, type ConversationSummary } from '../../services/messaging.service';
 import { AuthService } from '../../services/auth.service';
+import { ToastService } from '../../services/toast.service';
+import { DialogService } from '../../services/dialog.service';
 
 @Component({
   selector: 'app-messages',
@@ -15,6 +17,8 @@ import { AuthService } from '../../services/auth.service';
   styleUrls: ['./messages.component.css']
 })
 export class MessagesComponent implements OnInit, OnDestroy {
+  private readonly toast = inject(ToastService);
+  private readonly dialog = inject(DialogService);
   private community = inject(CommunityService);
   private messaging = inject(MessagingService);
   private auth = inject(AuthService);
@@ -169,7 +173,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
         this.conversations.update((convs) => [{ id: convId!, userId, profile, lastMessage: null, unread: 0 }, ...convs]);
       }
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'No se pudo abrir la conversación.');
+      this.toast.notify(error instanceof Error ? error.message : 'No se pudo abrir la conversación.');
       return;
     }
 
@@ -221,7 +225,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
     } catch (error) {
       this.messages.update((m) => m.filter((x) => x.id !== optimistic.id));
       this.newMessage.set(content);
-      alert(error instanceof Error ? error.message : 'No se pudo enviar el mensaje.');
+      this.toast.notify(error instanceof Error ? error.message : 'No se pudo enviar el mensaje.');
     } finally {
       this.sending.set(false);
     }
@@ -332,7 +336,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
   }
 
   async deleteConversation(userId: string) {
-    if (!confirm('¿Eliminar esta conversación? Se borrará para los dos.')) {
+    if (!(await this.dialog.confirm('¿Eliminar esta conversación? Se borrará para los dos.'))) {
       return;
     }
     const convId = this.convIds.get(userId);
@@ -348,7 +352,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
       this.conversations.update((list) => list.filter((c) => c.userId !== userId));
       this.closeConversationMenu(userId);
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'No se pudo eliminar la conversación.');
+      this.toast.notify(error instanceof Error ? error.message : 'No se pudo eliminar la conversación.');
     }
   }
 

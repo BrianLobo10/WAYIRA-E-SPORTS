@@ -16,7 +16,9 @@ create table auth.users (
   id uuid primary key,
   email text,
   raw_user_meta_data jsonb,
-  raw_app_meta_data jsonb
+  raw_app_meta_data jsonb,
+  created_at timestamptz default now(),
+  last_sign_in_at timestamptz
 );
 
 create or replace function auth.uid() returns uuid language sql stable as $$

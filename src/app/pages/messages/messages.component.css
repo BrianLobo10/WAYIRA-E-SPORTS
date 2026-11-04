@@ -31,7 +31,7 @@
 
 .sidebar-header h2 {
   margin: 0;
-  color: #eceae3;
+  color: var(--white);
   font-size: 1.25rem;
   font-weight: 600;
 }
@@ -120,7 +120,7 @@
 
 .conversation-menu-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: #eceae3;
+  color: var(--white);
 }
 
 .conversation-menu-dropdown {
@@ -157,11 +157,11 @@
 }
 
 .menu-item.delete {
-  color: #ff5a36;
+  color: var(--ember);
 }
 
 .menu-item.delete:hover {
-  background: rgba(255, 90, 54, 0.1);
+  background: rgba(var(--ember-rgb), 0.1);
 }
 
 .conversation-avatar {
@@ -190,8 +190,8 @@
   position: absolute;
   top: -4px;
   right: -4px;
-  background: #ff5a36;
-  color: #eceae3;
+  background: var(--ember);
+  color: var(--white);
   border-radius: 50%;
   width: 20px;
   height: 20px;
@@ -217,7 +217,7 @@
 
 .conversation-name {
   font-weight: 600;
-  color: #eceae3;
+  color: var(--white);
   font-size: 0.8125rem;
 }
 
@@ -286,7 +286,7 @@
 
 .chat-username {
   font-weight: 600;
-  color: #eceae3;
+  color: var(--white);
   font-size: 0.9375rem;
 }
 
@@ -302,7 +302,7 @@
 
 .minimize-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: #eceae3;
+  color: var(--white);
 }
 
 .chat-messages {
@@ -366,7 +366,7 @@
 .message.received .message-content {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.075) 0%, rgba(255, 255, 255, 0.075) 100%);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #eceae3;
+  color: var(--white);
   border-bottom-left-radius: 2px;
   box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
 }
@@ -410,7 +410,7 @@
 
 .emoji-button:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: #eceae3;
+  color: var(--white);
 }
 
 .chat-input {
@@ -419,7 +419,7 @@
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 2px;
-  color: #eceae3;
+  color: var(--white);
   font-size: 0.875rem;
 }
 
@@ -496,7 +496,7 @@
 
 .emoji-tab:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: #eceae3;
+  color: var(--white);
 }
 
 .emoji-tab.active {
@@ -615,9 +615,9 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #ff5a36;
+  background: var(--ember);
   border: 2px solid var(--surface-2);
-  color: #eceae3;
+  color: var(--white);
   cursor: pointer;
   display: flex;
   align-items: center;

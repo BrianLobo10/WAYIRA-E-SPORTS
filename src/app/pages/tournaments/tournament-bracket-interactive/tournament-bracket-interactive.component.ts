@@ -16,6 +16,7 @@ import { Subscription, debounceTime, Subject } from 'rxjs';
 import type { BracketMatch, Tournament } from '../../../models';
 import { TournamentService } from '../../../services/tournament.service';
 import { TournamentBracketEngineService } from '../../../services/tournament-bracket-engine.service';
+import { ToastService } from '../../../services/toast.service';
 
 /** Partido ubicado en el lienzo (en píxeles). */
 export interface BracketVisualNode {
@@ -60,6 +61,7 @@ const HISTORY_LIMIT = 60;
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TournamentBracketInteractiveComponent implements OnInit, OnDestroy {
+  private readonly toast = inject(ToastService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private firebase = inject(TournamentService);
@@ -224,7 +226,7 @@ export class TournamentBracketInteractiveComponent implements OnInit, OnDestroy 
       await this.firebase.updateTournament(t.id, { grandFinalBestOf: mode });
       this.tournament.set({ ...t, grandFinalBestOf: mode });
     } catch {
-      alert('No se pudo guardar el formato de final');
+      this.toast.notify('No se pudo guardar el formato de final');
     }
   }
 
@@ -236,7 +238,7 @@ export class TournamentBracketInteractiveComponent implements OnInit, OnDestroy 
       await this.firebase.updateTournament(t.id, { redemptionFinalBestOf: mode });
       this.tournament.set({ ...t, redemptionFinalBestOf: mode });
     } catch {
-      alert('No se pudo guardar el formato de final de redención');
+      this.toast.notify('No se pudo guardar el formato de final de redención');
     }
   }
 

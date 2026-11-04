@@ -115,7 +115,7 @@ export class ContactComponent implements OnInit {
       const button = event?.target as HTMLElement;
       const originalText = button.textContent;
       button.textContent = '¡Copiado!';
-      button.style.background = '#d7ff3f';
+      button.style.background = 'var(--volt)';
       setTimeout(() => {
         button.textContent = originalText;
         button.style.background = '';

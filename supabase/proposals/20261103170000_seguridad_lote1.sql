@@ -1,4 +1,4 @@
--- PROPUESTA (no aplicada en Supabase). Revisión de seguridad del 3 nov 2026.
+-- APLICADA en Supabase el 3 nov 2026 (secciones 1 y 2). La sección 3 está pendiente de aplicar.
 -- 1) Límite de envíos por usuario en publicaciones, comentarios, mensajes, reacciones y seguimientos.
 -- 2) Perfiles públicos en modo lectura para visitantes (decisión aprobada): solo columnas públicas.
 -- Se prueba en local con supabase/proposals/20261103170000_seguridad_lote1_test.sql antes de aplicarla.
@@ -69,3 +69,8 @@ drop policy if exists "post_reactions: lectura pública" on public.post_reaction
 create policy "post_reactions: lectura pública" on public.post_reactions for select to anon using (true);
 drop policy if exists "follows: lectura pública" on public.follows;
 create policy "follows: lectura pública" on public.follows for select to anon using (true);
+
+-- 3. (complemento) Reacciones de comentarios visibles en el perfil público
+grant select on public.comment_reactions to anon;
+drop policy if exists "comment_reactions: lectura pública" on public.comment_reactions;
+create policy "comment_reactions: lectura pública" on public.comment_reactions for select to anon using (true);

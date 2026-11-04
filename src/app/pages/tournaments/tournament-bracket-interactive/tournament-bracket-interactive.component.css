@@ -7,8 +7,8 @@
   right: 0;
   bottom: 0;
   z-index: 50;
-  background: var(--bg, #121211);
-  color: var(--white, #eceae3);
+  background: var(--bg, var(--bg));
+  color: var(--white, var(--white));
   font-family: var(--font-body, 'Inter', system-ui, sans-serif);
 }
 
@@ -38,7 +38,7 @@
   align-items: center;
   gap: 0.75rem 1.25rem;
   padding: 0.75rem 1.25rem;
-  background: var(--surface-1, #1a1a18);
+  background: var(--surface-1, var(--surface-1));
   border-bottom: 1px solid var(--border);
 }
 .tbi-heading { flex: 1 1 260px; min-width: 0; }
@@ -61,7 +61,7 @@
   background: rgba(255, 255, 255, 0.09);
   color: var(--teal-accent);
 }
-.tbi-badge--done { background: rgba(215, 255, 63, 0.16); color: #d7ff3f; }
+.tbi-badge--done { background: rgba(var(--volt-rgb), 0.16); color: var(--volt); }
 .tbi-badge--muted { background: rgba(236, 234, 227, 0.08); color: var(--teal-muted); }
 .tbi-link { font-size: 0.8rem; color: var(--teal-muted); }
 .tbi-link:hover { color: var(--white); }
@@ -114,8 +114,8 @@
   color: var(--teal-muted);
   border-bottom: 1px solid var(--border);
 }
-.tbi-banner { color: var(--white); background: rgba(215, 255, 63, 0.08); }
-.tbi-banner strong { color: #d7ff3f; }
+.tbi-banner { color: var(--white); background: rgba(var(--volt-rgb), 0.08); }
+.tbi-banner strong { color: var(--volt); }
 .tbi-banner__hint { margin-left: 0.5rem; color: var(--teal-muted); }
 .tbi-last { color: var(--white); }
 .tbi-kbd {
@@ -148,7 +148,7 @@
   stroke-width: 2;
   stroke-linejoin: round;
 }
-.tbi-path--lower { stroke: rgba(215, 255, 63, 0.28); }
+.tbi-path--lower { stroke: rgba(var(--volt-rgb), 0.28); }
 .tbi-path--done { stroke: var(--teal-accent); }
 .tbi-path--lower.tbi-path--done { stroke: #c4ea2c; }
 
@@ -179,7 +179,7 @@
 .tbi-match {
   position: absolute;
   border-radius: var(--radius-md, 2px);
-  background: var(--surface-2, #22221f);
+  background: var(--surface-2, var(--surface-2));
   box-shadow: inset 0 0 0 1px var(--border);
   overflow: hidden;
 }
@@ -251,7 +251,7 @@
   height: 22px;
   border: 0;
   border-radius: 2px;
-  background: var(--surface-3, #2a2a26);
+  background: var(--surface-3, var(--surface-3));
   color: var(--teal-muted);
   font-size: 0.8rem;
   cursor: pointer;
@@ -267,8 +267,8 @@
   right: 8px;
   padding: 0 6px;
   border-radius: 2px;
-  background: #d7ff3f;
-  color: #121211;
+  background: var(--volt);
+  color: var(--volt-ink);
   font-size: 0.65rem;
   font-weight: 800;
   line-height: 18px;

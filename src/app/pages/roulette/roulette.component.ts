@@ -5,13 +5,17 @@ import { CoinFlipComponent } from './games/coin-flip.component';
 import { randomInt, shuffle } from './games/random';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DialogService } from '../../services/dialog.service';
 
 type GameId = 'ruleta' | 'eliminacion' | 'carrera' | 'moneda';
 
 /** Sectores en grises cálidos alternados (estilo editorial); los vecinos se distinguen por luminosidad. */
-const SEGMENT_COLORS = ['#1A1A18', '#33332E', '#22221F', '#3D3D37'];
+/** Sectores de la ruleta: se leen de los colores del tema al dibujar (el canvas no entiende var()) */
+const SEGMENT_TOKENS: [string, string][] = [['--surface-1', '#1A1A18'], ['--teal-500', '#33332E'], ['--surface-2', '#22221F'], ['--surface-3', '#2A2A26']];
+const themeColor = (name: string, fallback: string) =>
+  getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 /** Colores del confeti del cartel de ganador. */
-const CONFETTI_COLORS = ['#D7FF3F', '#ECEAE3', '#FF5A36', '#A3A19A', '#D7FF3F'];
+const CONFETTI_COLORS = ['var(--volt)', 'var(--white)', 'var(--ember)', 'var(--text-secondary)', 'var(--volt)'];
 
 const SIZE = 550;            // tamaño lógico del lienzo
 const CENTER = SIZE / 2;
@@ -33,6 +37,7 @@ const POINTER_DEG = 270;     // la flecha está arriba (en el lienzo 0° es a la
   styleUrls: ['./roulette.component.css']
 })
 export class RouletteComponent implements AfterViewInit, OnDestroy {
+  private readonly dialog = inject(DialogService);
   @ViewChild('canvas', { static: false }) canvasRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('rotor', { static: false }) rotorRef!: ElementRef<HTMLDivElement>;
   @ViewChild('winnerDialog', { static: false }) dialogRef!: ElementRef<HTMLDialogElement>;
@@ -132,8 +137,8 @@ export class RouletteComponent implements AfterViewInit, OnDestroy {
     this.setList(unique.join('\n'));
   }
 
-  clearList() {
-    if (this.options().length && !confirm('¿Borrar toda la lista de participantes?')) return;
+  async clearList() {
+    if (this.options().length && !(await this.dialog.confirm('¿Borrar toda la lista de participantes?'))) return;
     this.setList('');
   }
 
@@ -255,16 +260,18 @@ export class RouletteComponent implements AfterViewInit, OnDestroy {
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
 
+    const segmentColors = SEGMENT_TOKENS.map(([n, f]) => themeColor(n, f));
+    const textColor = themeColor('--white', '#ECEAE3');
     for (let i = 0; i < options.length; i++) {
       const angle = i * arc;
       // Si la cantidad es impar, el último sector no repite el color del primero
-      const colorIndex = i === options.length - 1 && i % SEGMENT_COLORS.length === 0 ? 1 : i % SEGMENT_COLORS.length;
+      const colorIndex = i === options.length - 1 && i % segmentColors.length === 0 ? 1 : i % segmentColors.length;
 
       ctx.beginPath();
       ctx.arc(CENTER, CENTER, OUTER_RADIUS, angle, angle + arc, false);
       ctx.arc(CENTER, CENTER, INNER_RADIUS, angle + arc, angle, true);
       ctx.closePath();
-      ctx.fillStyle = SEGMENT_COLORS[colorIndex];
+      ctx.fillStyle = segmentColors[colorIndex];
       ctx.fill();
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
       ctx.lineWidth = 1;
@@ -275,7 +282,7 @@ export class RouletteComponent implements AfterViewInit, OnDestroy {
       ctx.translate(CENTER, CENTER);
       ctx.rotate(angle + arc / 2);
       const text = fitText(ctx, options[i], maxTextWidth);
-      ctx.fillStyle = '#ECEAE3';
+      ctx.fillStyle = textColor;
       ctx.fillText(text, OUTER_RADIUS - 18, 0);
       ctx.restore();
     }

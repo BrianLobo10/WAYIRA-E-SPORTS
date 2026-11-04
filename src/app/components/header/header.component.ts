@@ -40,6 +40,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   });
   /** Staff: cualquier permiso de gestión (solo para mostrar opciones; la seguridad está en el servidor) */
   isAdmin = computed(() => this.auth.permissions().length > 0);
+  isSuperadmin = computed(() => this.auth.hasPermission('platform.stats'));
   activeTournament = signal<Tournament | null>(null);
   hasAvailableTournaments = signal(false);
   /** Mensajes sin leer (se actualiza en tiempo real desde la campana de notificaciones) */

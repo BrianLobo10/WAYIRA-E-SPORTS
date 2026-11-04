@@ -240,14 +240,17 @@ export class ContentService {
     }));
   }
 
-  async assignRole(userId: string, role: string): Promise<void> {
-    const { error } = await this.sb.rpc('assign_role', { target: userId, p_role: role });
+  /** La base devuelve null si se hizo, o el motivo del rechazo (que queda en la auditoría). */
+  async assignRole(userId: string, role: string, reason?: string): Promise<void> {
+    const { data, error } = await this.sb.rpc('assign_role', { target: userId, p_role: role, p_reason: reason ?? null });
     if (error) throw new Error(friendly(error));
+    if (data) throw new Error(String(data));
   }
 
-  async revokeRole(userId: string, role: string): Promise<void> {
-    const { error } = await this.sb.rpc('revoke_role', { target: userId, p_role: role });
+  async revokeRole(userId: string, role: string, reason?: string): Promise<void> {
+    const { data, error } = await this.sb.rpc('revoke_role', { target: userId, p_role: role, p_reason: reason ?? null });
     if (error) throw new Error(friendly(error));
+    if (data) throw new Error(String(data));
   }
 
   /** Solo superadmin. Queda registrado con el motivo; límite de 5 por hora y 20 por día. */
@@ -263,7 +266,7 @@ export class ContentService {
 }
 
 /** Mensajes de la base de datos en español; los técnicos se cambian por uno genérico. */
-function friendly(error: { message?: string; code?: string }): string {
+export function friendly(error: { message?: string; code?: string }): string {
   const msg = error.message ?? '';
   if (/^[A-ZÁÉÍÓÚÑ¿¡]/.test(msg) && !/violates|permission|syntax|column|relation|function|row-level/i.test(msg)) return msg;
   if (error.code === '42501' || /row-level|permission/i.test(msg)) return 'No tienes permiso para hacer esto.';
@@ -272,7 +275,7 @@ function friendly(error: { message?: string; code?: string }): string {
 }
 
 /** Reduce la imagen y la pasa a WebP (si no gana nada, sube la original). */
-async function recompress(file: File, maxSide: number): Promise<Blob> {
+export async function recompress(file: File, maxSide: number): Promise<Blob> {
   if (!file.type.startsWith('image/') || file.type === 'image/gif') return file;
   try {
     const bitmap = await createImageBitmap(file);

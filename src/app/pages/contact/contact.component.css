@@ -113,7 +113,7 @@
 .section-title {
   font-size: 2rem;
   font-weight: 700;
-  color: #eceae3;
+  color: var(--white);
   margin: 0 0 0.75rem 0;
   line-height: 1.2;
   padding: 0;
@@ -181,7 +181,7 @@
   border-radius: 2px;
   border: 2px solid var(--border-accent, rgba(255, 255, 255, 0.175));
   background: rgba(0, 0, 0, 0.6);
-  color: #eceae3;
+  color: var(--white);
   font-size: 1rem;
   transition: var(--t-ui);
   font-family: inherit;
@@ -264,7 +264,7 @@
   width: 20px;
   height: 20px;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top: 2px solid #eceae3;
+  border-top: 2px solid var(--white);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -285,15 +285,15 @@
 }
 
 .error-message {
-  background: rgba(255, 90, 54, 0.1);
-  border: 1px solid rgba(255, 90, 54, 0.3);
-  color: #ff7a5c;
+  background: rgba(var(--ember-rgb), 0.1);
+  border: 1px solid rgba(var(--ember-rgb), 0.3);
+  color: var(--ember-text);
 }
 
 .success-message {
   background: rgba(74, 222, 128, 0.1);
   border: 1px solid rgba(74, 222, 128, 0.3);
-  color: #d7ff3f;
+  color: var(--volt);
 }
 
 .contact-info-section > .section-title,
@@ -353,7 +353,7 @@
 }
 
 .card-content h3 {
-  color: #eceae3;
+  color: var(--white);
   font-size: 0.9375rem;
   font-weight: 600;
   margin: 0;
@@ -380,7 +380,7 @@
   justify-content: center;
   gap: 0.35rem;
   background: transparent;
-  color: #eceae3;
+  color: var(--white);
   min-height: 28px;
   box-sizing: border-box;
   width: auto;
@@ -389,11 +389,11 @@
 
 .copy-btn {
   color: var(--teal-accent);
-  border-color: rgba(215, 255, 63, 0.18);
+  border-color: rgba(var(--volt-rgb), 0.18);
 }
 
 .copy-btn:hover {
-  background: rgba(215, 255, 63, 0.06);
+  background: rgba(var(--volt-rgb), 0.06);
   border-color: var(--teal-accent);
 }
 
@@ -443,7 +443,7 @@
 }
 
 .faq-title {
-  color: #eceae3;
+  color: var(--white);
   font-size: 1.5rem;
   font-weight: 700;
   margin: 0 0 1.5rem 0;
@@ -464,7 +464,7 @@
 }
 
 .faq-item h4 {
-  color: #eceae3;
+  color: var(--white);
   font-size: 1.1rem;
   font-weight: 600;
   margin: 0 0 0.5rem 0;

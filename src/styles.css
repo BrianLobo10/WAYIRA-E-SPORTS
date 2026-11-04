@@ -12,6 +12,9 @@
   --border-strong: rgba(255, 255, 255, 0.24);
   --volt: #D7FF3F;
   --volt-ink: #121211;
+  /* Canales RGB para transparencias: rgba(var(--volt-rgb), .2). El tema del Superadmin los reescribe */
+  --volt-rgb: 215, 255, 63;
+  --ember-rgb: 255, 90, 54;
   --ember: #FF5A36;
   --ember-text: #FF7A5C;
   --teal-pri: #2E2E2A;
@@ -50,7 +53,7 @@
   --text-muted: #85837C;
   --accent: var(--volt);
   --accent-hover: #E4FF75;
-  --accent-muted: rgba(215, 255, 63, 0.12);
+  --accent-muted: rgba(var(--volt-rgb), 0.12);
   --input-bg: var(--surface-1);
   --border-input: rgba(255, 255, 255, 0.16);
 
@@ -77,6 +80,8 @@
   --font-display: 'Newsreader', Georgia, 'Times New Roman', serif;
   --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  /* Rajdhani: marcadores, cifras y estadísticas competitivas */
+  --font-score: 'Rajdhani', 'Arial Narrow', var(--font-body);
   --font-family: var(--font-body);
 
   --ease-wayira: cubic-bezier(0.16, 1, 0.3, 1);
@@ -518,3 +523,13 @@ h1, h2, h3 { font-optical-sizing: auto; }
 
 /* Etiquetas en mono: estados, fechas, marcadores */
 .tabular-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* Cifras competitivas en Rajdhani (marcadores, KDA, LP, contadores de torneo y estadísticas) */
+.score, .score-value, .team-score, .tbi-score, .perf-value, .player-kda, .thd-team-wins,
+.stat-number, .stat-value, .reg-count, .matches-count, .month-count, .stat-tile__value,
+.t-card__slots, .tabular-score {
+  font-family: var(--font-score) !important;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}

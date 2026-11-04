@@ -29,6 +29,7 @@
   color: var(--teal-accent);
   font-size: 0.875rem;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .btn-edit-projects:hover {
@@ -65,7 +66,7 @@ app-section-header {
 
 .projects-edit-modal h3 {
   margin: 0 0 0.5rem 0;
-  color: #eceae3;
+  color: var(--white);
 }
 
 .modal-hint {
@@ -93,7 +94,7 @@ app-section-header {
   border-radius: 2px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: rgba(0, 0, 0, 0.3);
-  color: #eceae3;
+  color: var(--white);
   font-size: 0.875rem;
 }
 
@@ -105,16 +106,16 @@ app-section-header {
   width: 32px;
   height: 32px;
   border-radius: 2px;
-  border: 1px solid rgba(255, 90, 54, 0.5);
-  background: rgba(255, 90, 54, 0.15);
-  color: #ff7a5c;
+  border: 1px solid rgba(var(--ember-rgb), 0.5);
+  background: rgba(var(--ember-rgb), 0.15);
+  color: var(--ember-text);
   font-size: 1.25rem;
   line-height: 1;
   cursor: pointer;
 }
 
 .btn-remove:hover {
-  background: rgba(255, 90, 54, 0.3);
+  background: rgba(var(--ember-rgb), 0.3);
 }
 
 .modal-actions {
@@ -246,3 +247,10 @@ app-section-header {
 @media (max-width: 480px) {
   .project-meta { padding: 12px 18px; }
 }
+
+/* Proyectos desde la tabla: imagen, enlace y estados de carga */
+.project-image { display: block; width: 100%; aspect-ratio: 16 / 7; object-fit: cover; border-radius: 2px; margin-bottom: 12px; background: var(--surface-2); }
+.project-link { margin-left: auto; color: var(--volt); font-size: 0.875rem; text-decoration: none; }
+.project-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.projects-state { padding: 48px 0; color: var(--text-secondary); font-size: 1rem; }
+.projects-state a { color: var(--volt); }
