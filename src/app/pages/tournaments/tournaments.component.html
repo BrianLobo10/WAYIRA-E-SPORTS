@@ -14,9 +14,11 @@
       <div class="clasificaciones-intro">
         <h2 class="section-title">Clasificaciones y bracket</h2>
         <p class="clasificaciones-text">
-          Cuando un torneo tenga el bracket confirmado, usa <strong>Vista interactiva</strong> para ver el cuadro completo (upper y redención) con líneas alineadas.
-          Desde aquí también puedes <strong>organizar llaves</strong> antes de confirmar.
+          Sigue cada torneo llave por llave. Cuando el bracket esté listo, pulsa <strong>Vista interactiva</strong> para ver el cuadro completo.
         </p>
+        @if (isAdmin()) {
+          <p class="clasificaciones-text admin-note">Solo admins: puedes organizar las llaves antes de confirmar el bracket.</p>
+        }
       </div>
       <div class="tournaments-header">
         <h2 class="section-title section-title-sub">Torneos disponibles</h2>
@@ -51,7 +53,9 @@
       } @else if (tournaments().length === 0) {
         <div class="empty-state">
           <p>No hay torneos abiertos ahora. El próximo se anuncia aquí y en Discord.</p>
-          <p class="empty-hint">Los administradores pueden crear un torneo real con «Crear Torneo» o uno de prueba con «Torneo de Prueba».</p>
+          @if (isAdmin()) {
+            <p class="empty-hint">Crea uno con «Crear Torneo» o prueba el flujo con «Torneo de Prueba».</p>
+          }
         </div>
       } @else {
         <div class="tournaments-grid">

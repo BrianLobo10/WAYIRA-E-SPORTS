@@ -2010,3 +2010,4 @@ details.reg-box > summary::-webkit-details-marker { display: none; }
 .reg-btn--primary:hover:not(:disabled) { background: var(--accent-hover); }
 .reg-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .reg-btn:focus-visible { outline: 2px solid var(--teal-accent); outline-offset: 2px; }
+.admin-note { font-size: 13px; opacity: .75; margin-top: 6px; }
