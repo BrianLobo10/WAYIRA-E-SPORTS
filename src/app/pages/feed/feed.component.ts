@@ -1,17 +1,19 @@
 import { Component, signal, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type { Post, UserProfile } from '../../models';
 import { CommunityService } from '../../services/community.service';
 import { AuthService } from '../../services/auth.service';
 import { Subscription } from 'rxjs';
 import { ToastService } from '../../services/toast.service';
+import { PostCardComponent } from '../../components/social/post-card.component';
+import { PostDetailComponent } from '../../components/social/post-detail.component';
+import { PostEditorComponent } from '../../components/social/post-editor.component';
 
 @Component({
   selector: 'app-feed',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, RouterLink, PostCardComponent, PostDetailComponent, PostEditorComponent],
   templateUrl: './feed.component.html',
   styleUrls: ['./feed.component.css']
 })
@@ -22,26 +24,19 @@ export class FeedComponent implements OnInit, OnDestroy {
   private postsSub?: Subscription;
   private suggestedSub?: Subscription;
   private stopWatching?: () => void;
-  private previewUrls: string[] = [];
-  private imagePreviewCache = new Map<File, string>();
-  private videoPreviewCache = new Map<File, string>();
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private urlSub?: Subscription;
 
   posts = signal<Post[]>([]);
   currentUser = signal<UserProfile | null>(null);
   suggestedUsers = signal<UserProfile[]>([]);
   loading = signal(true);
   isAuthenticated = signal(false);
-  postImageIndices = signal<Map<string, number>>(new Map());
-
+  savedIds = signal<Set<string>>(new Set());
   showCreateModal = signal(false);
-  newPostContent = signal('');
-  newPostImages = signal<File[]>([]);
-  newPostVideo = signal<File | null>(null);
-  uploading = signal(false);
-
   selectedPost = signal<Post | null>(null);
-  showPostModal = signal(false);
-  newComment = signal('');
+  userId = signal<string | null>(null);
   activeTab = signal<'all' | 'following'>('all');
 
   async ngOnInit() {
@@ -54,7 +49,10 @@ export class FeedComponent implements OnInit, OnDestroy {
       return;
     }
     this.isAuthenticated.set(true);
+    this.userId.set(user.uid);
     void this.loadUserProfile(user.uid);
+    this.community.getSavedPostIds().then((s) => this.savedIds.set(s)).catch(() => { /* sin guardados */ });
+    this.urlSub = this.route.queryParamMap.subscribe((q) => this.openFromUrl(q.get('post')));
     this.loadPosts();
     this.loadSuggestedUsers(user.uid);
     // Publicaciones, comentarios y reacciones nuevas aparecen solas
@@ -79,9 +77,8 @@ export class FeedComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.previewUrls.forEach(url => URL.revokeObjectURL(url));
-    this.imagePreviewCache.forEach(url => URL.revokeObjectURL(url));
-    this.videoPreviewCache.forEach(url => URL.revokeObjectURL(url));
+    this.urlSub?.unsubscribe();
+    if (this.selectedPost()) document.body.style.overflow = '';
     this.stopWatching?.();
     this.postsSub?.unsubscribe();
     this.suggestedSub?.unsubscribe();
@@ -126,185 +123,59 @@ export class FeedComponent implements OnInit, OnDestroy {
     }
   }
 
-  async createPost() {
-    const user = this.community.getCurrentUser();
-    if (!user || !this.newPostContent().trim()) {
-      if (!this.newPostContent().trim()) this.toast.notify('Escribe algo para publicar');
-      return;
-    }
-    this.uploading.set(true);
-    try {
-      const images: string[] = [];
-      for (const file of this.newPostImages()) {
-        images.push(await this.community.uploadImage(file, 'post-media'));
-      }
-      const video = this.newPostVideo() ? await this.community.uploadVideo(this.newPostVideo()!) : undefined;
-      await this.community.createPost({
-        authorId: user.uid,
-        content: this.newPostContent().trim(),
-        images,
-        video
-      });
-      this.newPostContent.set('');
-      this.cleanupPreviewUrls();
-      this.newPostImages.set([]);
-      this.newPostVideo.set(null);
-      this.showCreateModal.set(false);
-      this.loadPosts();
-    } catch (err: any) {
-      console.error(err);
-      this.toast.notify('No se pudo publicar. Revisa tu conexión e intenta de nuevo.');
-    } finally {
-      this.uploading.set(false);
-    }
-  }
-
-  private cleanupPreviewUrls() {
-    this.imagePreviewCache.forEach(url => URL.revokeObjectURL(url));
-    this.imagePreviewCache.clear();
-    this.videoPreviewCache.forEach(url => URL.revokeObjectURL(url));
-    this.videoPreviewCache.clear();
-  }
-
-  onImageSelect(e: Event) {
-    const input = e.target as HTMLInputElement;
-    if (input.files) this.newPostImages.set([...this.newPostImages(), ...Array.from(input.files)]);
-  }
-  onVideoSelect(e: Event) {
-    const input = e.target as HTMLInputElement;
-    if (input.files?.[0]) this.newPostVideo.set(input.files[0]);
-  }
-  removeImage(i: number) {
-    this.newPostImages.update(imgs => imgs.filter((_, idx) => idx !== i));
-  }
-  removeVideo() {
-    this.newPostVideo.set(null);
-  }
-  getImagePreview(file: File): string {
-    if (this.imagePreviewCache.has(file)) return this.imagePreviewCache.get(file)!;
-    const url = URL.createObjectURL(file);
-    this.previewUrls.push(url);
-    this.imagePreviewCache.set(file, url);
-    return url;
-  }
-  getVideoPreview(file: File): string {
-    if (this.videoPreviewCache.has(file)) return this.videoPreviewCache.get(file)!;
-    const url = URL.createObjectURL(file);
-    this.previewUrls.push(url);
-    this.videoPreviewCache.set(file, url);
-    return url;
-  }
-
-  async likePost(post: Post, e?: Event) {
-    e?.stopPropagation();
-    const user = this.community.getCurrentUser();
-    if (!user || !post.id) return;
-    this.applyReaction(post, user.uid, 'like');
-    await this.community.likePost(post.id, user.uid).catch((err) => console.error(err));
-    this.refreshSelectedPost();
-    this.loadPosts(false);
-  }
-  async dislikePost(post: Post, e?: Event) {
-    e?.stopPropagation();
-    const user = this.community.getCurrentUser();
-    if (!user || !post.id) return;
-    this.applyReaction(post, user.uid, 'dislike');
-    await this.community.dislikePost(post.id, user.uid).catch((err) => console.error(err));
-    this.refreshSelectedPost();
-    this.loadPosts(false);
-  }
-  /** Actualiza el contador al instante, sin esperar al servidor. */
-  private applyReaction(post: Post, uid: string, kind: 'like' | 'dislike') {
-    const had = kind === 'like' ? post.likes.includes(uid) : (post.dislikes ?? []).includes(uid);
-    const likes = post.likes.filter((id) => id !== uid);
-    const dislikes = (post.dislikes ?? []).filter((id) => id !== uid);
-    if (!had) (kind === 'like' ? likes : dislikes).push(uid);
-    const patch = (p: Post) => (p.id === post.id ? { ...p, likes, dislikes } : p);
-    this.posts.update((list) => list.map(patch));
-    this.selectedPost.update((p) => (p ? patch(p) : p));
-  }
-
-  isLiked(post: Post): boolean {
-    const user = this.community.getCurrentUser();
-    return !!(user && (post.likes || []).includes(user.uid));
-  }
-  isDisliked(post: Post): boolean {
-    const user = this.community.getCurrentUser();
-    return !!(user && (post.dislikes || []).includes(user.uid));
-  }
-
+  /** Abre una publicación y deja su enlace en la barra (?post=id) para poder compartirla */
   openPost(post: Post) {
+    if (!post.id) return;
     this.selectedPost.set(post);
-    this.showPostModal.set(true);
-    this.community.getPostById(post.id!).subscribe({
-      next: (p) => p && this.selectedPost.set(p)
+    void this.router.navigate([], { queryParams: { post: post.id }, queryParamsHandling: 'merge', replaceUrl: !!this.route.snapshot.queryParamMap.get('post') });
+    this.refreshSelectedPost();
+  }
+
+  closePostModal() {
+    this.selectedPost.set(null);
+    void this.router.navigate([], { queryParams: { post: null }, queryParamsHandling: 'merge' });
+  }
+
+  private openFromUrl(id: string | null) {
+    if (!id) { this.selectedPost.set(null); return; }
+    if (this.selectedPost()?.id === id) return;
+    const local = this.posts().find((p) => p.id === id);
+    if (local) this.selectedPost.set(local);
+    this.community.getPostById(id).subscribe({
+      next: (p) => {
+        if (p) this.selectedPost.set(p);
+        else if (!local) { this.toast.error('Esa publicación ya no existe', 'Puede que su autor la haya eliminado.'); this.closePostModal(); }
+      },
     });
   }
-  closePostModal() {
-    this.showPostModal.set(false);
-    this.selectedPost.set(null);
-    this.newComment.set('');
-  }
+
   private refreshSelectedPost() {
-    const post = this.selectedPost();
-    if (post?.id) {
-      this.community.getPostById(post.id).subscribe({
-        next: (p) => p && this.selectedPost.set(p)
-      });
-    }
-  }
-  async addComment() {
-    const post = this.selectedPost();
-    const user = this.community.getCurrentUser();
-    if (!user || !post?.id || !this.newComment().trim()) return;
-    try {
-      await this.community.addComment(post.id, { authorId: user.uid, content: this.newComment().trim() });
-      this.newComment.set('');
-      this.refreshSelectedPost();
-      this.loadPosts(false);
-    } catch (err) {
-      console.error(err);
-      this.toast.notify('No se pudo enviar el comentario. Intenta de nuevo.');
-    }
+    const id = this.selectedPost()?.id;
+    if (!id) return;
+    this.community.getPostById(id).subscribe({ next: (p) => p && this.selectedPost()?.id === id && this.selectedPost.set(p) });
   }
 
-  getCurrentImageIndex(postId: string): number {
-    return this.postImageIndices().get(postId) ?? 0;
+  /** Tras editar, comentar o reaccionar: recarga en segundo plano */
+  onChanged() {
+    this.loadPosts(false);
+    this.refreshSelectedPost();
   }
 
-  getCurrentPostImageUrl(post: Post): string | null {
-    const imgs = post.images;
-    if (!imgs?.length) return null;
-    const idx = this.getCurrentImageIndex(post.id || '');
-    return imgs[idx] ?? imgs[0] ?? null;
-  }
-  nextImage(post: Post, e: Event) {
-    e.stopPropagation();
-    const idx = this.getCurrentImageIndex(post.id!);
-    const next = (idx + 1) % (post.images?.length || 1);
-    this.postImageIndices.update(m => new Map(m).set(post.id!, next));
-  }
-  prevImage(post: Post, e: Event) {
-    e.stopPropagation();
-    const len = post.images?.length || 1;
-    const idx = this.getCurrentImageIndex(post.id!);
-    const next = (idx - 1 + len) % len;
-    this.postImageIndices.update(m => new Map(m).set(post.id!, next));
-  }
-  goToImage(post: Post, index: number, e: Event) {
-    e.stopPropagation();
-    this.postImageIndices.update(m => new Map(m).set(post.id!, index));
+  onDeleted(id: string) {
+    this.posts.update((l) => l.filter((p) => p.id !== id));
+    this.savedIds.update((s) => { const n = new Set(s); n.delete(id); return n; });
+    if (this.selectedPost()?.id === id) this.closePostModal();
   }
 
-  formatDate(ts: any): string {
-    if (!ts?.toDate) return '';
-    const d = ts.toDate();
-    const now = new Date();
-    const diff = now.getTime() - d.getTime();
-    if (diff < 60000) return 'Ahora';
-    if (diff < 3600000) return Math.floor(diff / 60000) + ' min';
-    if (diff < 86400000) return Math.floor(diff / 3600000) + ' h';
-    return d.toLocaleDateString();
+  isSaved(id: string | undefined) { return !!id && this.savedIds().has(id); }
+  setSavedLocal(id: string | undefined, saved: boolean) {
+    if (!id) return;
+    this.savedIds.update((s) => { const n = new Set(s); saved ? n.add(id) : n.delete(id); return n; });
+  }
+
+  onCreated() {
+    this.showCreateModal.set(false);
+    this.loadPosts(false);
   }
 
   /** Posts a mostrar según la pestaña: "Para ti" = todos, "Sigues" = solo de usuarios que sigues */

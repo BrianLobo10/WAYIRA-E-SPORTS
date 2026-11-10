@@ -3,7 +3,7 @@ import { Timestamp } from '../utils/timestamp';
 import { Observable, from } from 'rxjs';
 import { SupabaseService } from './supabase.service';
 import { AuthService } from './auth.service';
-import type { UserProfile, Post, Comment } from '../models';
+import type { UserProfile, Post, Comment, ReactionKind } from '../models';
 
 /**
  * Perfiles, seguidores, publicaciones y comentarios sobre Supabase.
@@ -12,7 +12,7 @@ import type { UserProfile, Post, Comment } from '../models';
  * La seguridad la aplica la base de datos (RLS): aquí no se decide quién puede qué.
  */
 
-type Reaction = { user_id: string; kind: 'like' | 'dislike' };
+type Reaction = { user_id: string; kind: ReactionKind };
 type AuthorRow = { display_name: string; avatar_url: string | null } | null;
 
 interface ProfileRow {
@@ -32,6 +32,8 @@ interface ProfileRow {
 interface CommentRow {
   id: string;
   parent_id: string | null;
+  reply_to_id: string | null;
+  updated_at: string | null;
   author_id: string;
   content: string;
   created_at: string;
@@ -63,7 +65,7 @@ const PROFILE_COLUMNS = PUBLIC_PROFILE_COLUMNS + ', riot_puuid';
 const POST_COLUMNS = `id, author_id, content, image_urls, video_url, created_at, updated_at,
   author:profiles!posts_author_id_fkey(display_name, avatar_url),
   post_reactions(user_id, kind),
-  comments!comments_post_id_fkey(id, parent_id, author_id, content, created_at,
+  comments!comments_post_id_fkey(id, parent_id, reply_to_id, author_id, content, created_at, updated_at,
     author:profiles!comments_author_id_fkey(display_name, avatar_url), comment_reactions(user_id, kind))`;
 
 // Las relaciones llevan el nombre de la clave foránea: posts↔profiles también se une por post_reactions
@@ -75,6 +77,14 @@ type Bucket = keyof typeof MAX_SIDE;
 
 const ts = (iso: string) => Timestamp.fromDate(new Date(iso));
 const idsOf = (rows: Reaction[], kind: Reaction['kind']) => rows.filter((r) => r.kind === kind).map((r) => r.user_id);
+const byUser = (rows: Reaction[]) => Object.fromEntries(rows.map((r) => [r.user_id, r.kind])) as Record<string, ReactionKind>;
+
+/** Archivo de Storage a partir de su URL pública (para borrar las imágenes que ya no se usan) */
+function storagePath(url: string, bucket: string): string | null {
+  const marker = `/storage/v1/object/public/${bucket}/`;
+  const i = url.indexOf(marker);
+  return i >= 0 ? decodeURIComponent(url.slice(i + marker.length).split('?')[0]) : null;
+}
 
 @Injectable({ providedIn: 'root' })
 export class CommunityService {
@@ -244,6 +254,7 @@ export class CommunityService {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, notify)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, notify)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'post_reactions' }, notify)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'comment_reactions' }, notify)
       .subscribe();
     return () => {
       if (timer) clearTimeout(timer);
@@ -282,9 +293,82 @@ export class CommunityService {
     return (data as { id: string }).id;
   }
 
-  async deletePost(postId: string): Promise<void> {
+  /** Borra la publicación y, si es tuya, sus imágenes y video de Storage */
+  async deletePost(postId: string, media: string[] = []): Promise<void> {
     const { error } = await this.sb.from('posts').delete().eq('id', postId);
     if (error) throw error;
+    await this.removeMedia(media);
+  }
+
+  /** Edita texto/imágenes/video (la base de datos solo deja cambiar esas columnas y solo al autor) */
+  async updatePost(postId: string, changes: { content: string; images: string[]; video: string | null }, removedMedia: string[] = []): Promise<void> {
+    const { data, error } = await this.sb
+      .from('posts')
+      .update({ content: changes.content, image_urls: changes.images, video_url: changes.video })
+      .eq('id', postId)
+      .select('id');
+    if (error) throw error;
+    if (!data?.length) throw new Error('No tienes permiso para editar esta publicación.');
+    await this.removeMedia(removedMedia);
+  }
+
+  /** Quita de Storage archivos propios que ya no usa ninguna publicación (si falla, no bloquea) */
+  private async removeMedia(urls: string[]) {
+    const uid = this.auth.user()?.id;
+    const paths = urls.map((u) => storagePath(u, 'post-media')).filter((p): p is string => !!p && !!uid && p.startsWith(uid + '/'));
+    if (paths.length) await this.sb.storage.from('post-media').remove(paths).catch(() => undefined);
+  }
+
+  /**
+   * Reacciona a una publicación o comentario. Pulsar la misma reacción la quita; otra la reemplaza.
+   * Devuelve la reacción final del usuario (o null si la quitó).
+   */
+  async setReaction(target: 'post' | 'comment', id: string, kind: ReactionKind | null): Promise<void> {
+    const uid = this.auth.user()?.id;
+    if (!uid) throw new Error('Necesitas iniciar sesión para reaccionar.');
+    const table = target === 'post' ? 'post_reactions' : 'comment_reactions';
+    const key = target === 'post' ? 'post_id' : 'comment_id';
+    const result = kind === null
+      ? await this.sb.from(table).delete().eq(key, id).eq('user_id', uid)
+      : await this.sb.from(table).upsert({ [key]: id, user_id: uid, kind }, { onConflict: `${key},user_id` });
+    if (result.error) throw result.error;
+  }
+
+  // Guardados -----------------------------------------------------------------------
+  async getSavedPostIds(): Promise<Set<string>> {
+    if (!this.auth.user()) return new Set();
+    const { data, error } = await this.sb.from('saved_posts').select('post_id');
+    if (error) return new Set();
+    return new Set((data ?? []).map((r: { post_id: string }) => r.post_id));
+  }
+
+  async setSaved(postId: string, saved: boolean): Promise<void> {
+    const uid = this.auth.user()?.id;
+    if (!uid) throw new Error('Necesitas iniciar sesión para guardar publicaciones.');
+    const { error } = saved
+      ? await this.sb.from('saved_posts').upsert({ user_id: uid, post_id: postId }, { onConflict: 'user_id,post_id', ignoreDuplicates: true })
+      : await this.sb.from('saved_posts').delete().eq('post_id', postId).eq('user_id', uid);
+    if (error) throw error;
+  }
+
+  getSavedPosts(): Observable<Post[]> {
+    return from((async () => {
+      const ids = [...(await this.getSavedPostIds())];
+      if (!ids.length) return [];
+      return this.fetchPosts((q) => q.in('id', ids));
+    })());
+  }
+
+  // Reportes ------------------------------------------------------------------------
+  async report(targetType: 'post' | 'comment' | 'user', targetId: string, reason: 'spam' | 'acoso' | 'ofensivo' | 'trampas' | 'otro', details = ''): Promise<'ok' | 'duplicado'> {
+    const uid = this.auth.user()?.id;
+    if (!uid) throw new Error('Necesitas iniciar sesión para reportar.');
+    const { error } = await this.sb.from('reports').insert({
+      reporter_id: uid, target_type: targetType, target_id: targetId, reason, details: details.slice(0, 500), status: 'open',
+    });
+    if (error?.code === '23505') return 'duplicado';
+    if (error) throw error;
+    return 'ok';
   }
 
   /** Me gusta / no me gusta: pulsar de nuevo la misma reacción la quita. */
@@ -315,6 +399,30 @@ export class CommunityService {
       parent_id: parent?.id ?? null,
     });
     if (error) throw error;
+  }
+
+  /** Comenta o responde (por id). Si respondes a una respuesta, la base de datos la cuelga del comentario original. */
+  async addCommentById(postId: string, content: string, parentId: string | null = null): Promise<void> {
+    const uid = this.auth.user()?.id;
+    const text = content.trim();
+    if (!uid) throw new Error('Necesitas iniciar sesión para comentar.');
+    if (!text) return;
+    const { error } = await this.sb.from('comments').insert({ post_id: postId, author_id: uid, content: text, parent_id: parentId });
+    if (error) throw error;
+  }
+
+  async updateComment(commentId: string, content: string): Promise<void> {
+    const text = content.trim();
+    if (!text) throw new Error('El comentario no puede quedar vacío.');
+    const { data, error } = await this.sb.from('comments').update({ content: text }).eq('id', commentId).select('id');
+    if (error) throw error;
+    if (!data?.length) throw new Error('No tienes permiso para editar este comentario.');
+  }
+
+  async deleteComment(commentId: string): Promise<void> {
+    const { data, error } = await this.sb.from('comments').delete().eq('id', commentId).select('id');
+    if (error) throw error;
+    if (!data?.length) throw new Error('No tienes permiso para eliminar este comentario.');
   }
 
   likeComment(postId: string, commentIndex: number, userId: string, replyIndex?: number) {
@@ -362,10 +470,15 @@ export class CommunityService {
       content: c.content,
       likes: idsOf(c.comment_reactions ?? [], 'like'),
       dislikes: idsOf(c.comment_reactions ?? [], 'dislike'),
+      reactions: byUser(c.comment_reactions ?? []),
       createdAt: ts(c.created_at),
+      editedAt: c.updated_at ? ts(c.updated_at) : null,
       parentId: c.parent_id ?? undefined,
+      replyToId: c.reply_to_id ?? null,
     });
     const all = [...(row.comments ?? [])].sort((a, b) => a.created_at.localeCompare(b.created_at)).map(toComment);
+    const names = new Map(all.map((c) => [c.id, c.authorName]));
+    all.forEach((c) => { if (c.replyToId) c.replyToName = names.get(c.replyToId) ?? null; });
     const top = all.filter((c) => !c.parentId);
     for (const c of top) {
       const replies = all.filter((r) => r.parentId === c.id);
@@ -381,6 +494,7 @@ export class CommunityService {
       video: row.video_url ?? undefined,
       likes: idsOf(row.post_reactions ?? [], 'like'),
       dislikes: idsOf(row.post_reactions ?? [], 'dislike'),
+      reactions: byUser(row.post_reactions ?? []),
       comments: top,
       createdAt: ts(row.created_at),
       updatedAt: ts(row.updated_at),

@@ -58,7 +58,7 @@ export const routes: Routes = [
   {
     // Enlaces viejos a publicaciones: ahora todo está en el Feed
     path: 'blog/post/:id',
-    redirectTo: 'feed'
+    redirectTo: ({ params }) => `/feed?post=${encodeURIComponent(params['id'] ?? '')}`
   },
   {
     path: 'login',

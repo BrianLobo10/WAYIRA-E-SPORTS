@@ -33,10 +33,14 @@ export interface Post {
   video?: string;
   likes: string[];
   dislikes?: string[];
+  /** Reacción de cada usuario (userId → tipo). Incluye like/dislike y las demás. */
+  reactions?: Record<string, ReactionKind>;
   comments: Comment[];
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
+
+export type ReactionKind = 'like' | 'love' | 'haha' | 'wow' | 'sad' | 'angry' | 'dislike';
 
 export interface Comment {
   id?: string;
@@ -49,6 +53,13 @@ export interface Comment {
   createdAt: Timestamp;
   replies?: Comment[]; // Respuestas anidadas
   parentId?: string; // ID del comentario padre (si es una respuesta)
+  /** Reacción de cada usuario (userId → tipo) */
+  reactions?: Record<string, ReactionKind>;
+  /** Fecha de la última edición (si se editó) */
+  editedAt?: Timestamp | null;
+  /** Respuesta a otra respuesta: a quién se responde */
+  replyToId?: string | null;
+  replyToName?: string | null;
 }
 
 export interface News {
