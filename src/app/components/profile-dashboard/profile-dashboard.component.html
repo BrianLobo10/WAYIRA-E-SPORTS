@@ -1,13 +1,14 @@
 <section class="dash" aria-labelledby="dash-title">
   <header class="dash-head">
     <p class="kicker">Ficha de temporada · {{ year }}</p>
-    @if (stats(); as st) {
+    @if (phase() === 'ready' && stats(); as st) {
       <h2 class="headline" id="dash-title">
         <span class="hl">{{ st.winRate }}%</span> de victorias en {{ st.games }} partidas de {{ filter().label }}
       </h2>
     } @else {
-      <h2 class="headline" id="dash-title">Tu temporada en {{ filter().label }}</h2>
+      <h2 class="headline" id="dash-title">{{ phase() === 'ready' ? 'Tu temporada en ' + filter().label : 'Tu temporada ' + year }}</h2>
     }
+    @if (phase() === 'ready') {
     <div class="tabs" role="tablist" aria-label="Modo de juego">
       @for (f of visibleFilters(); track f.key) {
         <button type="button" role="tab" class="tab" [class.is-on]="filterKey() === f.key" [attr.aria-selected]="filterKey() === f.key" (click)="filterKey.set(f.key)">
@@ -15,29 +16,33 @@
         </button>
       }
     </div>
+    }
   </header>
 
-  @if (sync(); as s) {
-    @if (s.pending > 0) {
-      <div class="sync" role="status">
-        <span class="sync-n">{{ s.stored }}<small>/{{ s.total }}</small></span>
-        <div class="sync-body">
-          <strong>Armando tu ficha con toda la temporada</strong>
-          <span>{{ s.limited ? 'Riot pidió una pausa; seguimos en un minuto.' : 'Va por tandas porque Riot limita las consultas. Puedes salir: el avance queda guardado.' }}</span>
-          <div class="sync-bar" aria-hidden="true"><i [style.width.%]="progress()"></i></div>
+  @if (phase() === 'syncing') {
+    <div class="loader" role="status" aria-live="polite">
+      <div class="loader-top">
+        <span class="loader-pct">{{ progress() }}<small>%</small></span>
+        <div class="loader-text">
+          <strong>Preparando la ficha con toda la temporada</strong>
+          <span>
+            @if (sync(); as s) { {{ s.stored }} de {{ s.total }} partidas · faltan {{ eta() }} }
+            @else { Otra pestaña está cargando este perfil… }
+          </span>
         </div>
       </div>
-    }
-  }
-
-  @if (!loaded()) {
+      <div class="loader-bar" aria-hidden="true"><i [style.width.%]="progress()"></i></div>
+      <p class="loader-note">
+        {{ sync()?.limited ? 'Riot pidió una pausa; seguimos en un minuto.' : 'Riot limita las consultas, por eso va por tandas. Puedes recargar o salir: el avance queda guardado y sigue donde quedó.' }}
+      </p>
+    </div>
+  } @else if (!loaded()) {
     <div class="skeleton" aria-busy="true"><span></span><span></span><span></span><span></span></div>
   } @else if (error()) {
     <p class="empty">{{ error() }}</p>
   } @else if (!stats()) {
     <p class="empty">
-      @if (sync()?.pending) { Aún no hay partidas de {{ filter().label }} descargadas. Aparecerán aquí en unos minutos. }
-      @else { No hay partidas de {{ filter().label }} esta temporada. Prueba con otro modo. }
+      No hay partidas de {{ filter().label }} esta temporada. Prueba con otro modo.
     </p>
   } @else {
     @let st = stats()!;

@@ -51,7 +51,8 @@
           [puuid]="dashPuuid"
           [gameName]="profile()!.gameName || ''"
           [tagLine]="profile()!.tagLine || ''"
-          (seasonGames)="applySeasonActivity($event)" />
+          (seasonGames)="applySeasonActivity($event)"
+          (syncProgress)="seasonSync.set($event)" />
       }
 
       @if (getActivityTimelineData(); as timelineData) {
@@ -59,7 +60,7 @@
           [data]="timelineData"
           totalLabel="Este año"
           activitiesLabel="partidas"
-          hint="Partidas registradas por mes en el año en curso." />
+          [hint]="activityHint()" />
       }
     }
 

@@ -6,6 +6,7 @@ import { Game, MODE_FILTERS, ModeFilter, Point, computeStats, filterGames, toGam
 import { championIconUrl } from '../../utils/riot-assets';
 interface LineGeom { last: string; average: string; path: string; area: string; avgY: number; dots: { x: number; y: number; tip: string }[]; ticks: { y: number; label: string }[]; labels: { x: number; label: string }[] }
 
+const SYNC_BATCH = 12;
 const SYNC_DELAY_MS = 15_000;     // entre lotes (la clave Personal permite 100 consultas cada 2 min)
 const LIMITED_DELAY_MS = 60_000;  // si Riot pidió esperar
 
@@ -25,12 +26,16 @@ export class ProfileDashboardComponent implements OnDestroy {
   tagLine = input<string>('');
   /** Todas las partidas de la temporada (para la línea de actividad del perfil) */
   seasonGames = output<Game[]>();
+  /** Avance de la descarga de la temporada (para avisar en otras tarjetas del perfil) */
+  syncProgress = output<{ stored: number; total: number; pending: number }>();
 
   readonly filters = MODE_FILTERS;
   readonly year = new Date().getFullYear();
   filterKey = signal('ranked');
   matches = signal<SlimMatch[]>([]);
   loaded = signal(false);
+  /** checking: primera consulta · syncing: descargando la temporada (barra de carga) · ready: datos completos */
+  phase = signal<'checking' | 'syncing' | 'ready'>('checking');
   error = signal('');
   sync = signal<{ stored: number; total: number; pending: number; limited: boolean } | null>(null);
   showTable = signal(false);
@@ -51,6 +56,12 @@ export class ProfileDashboardComponent implements OnDestroy {
   progress = computed(() => {
     const s = this.sync();
     return s && s.total ? Math.min(100, Math.round((s.stored / s.total) * 100)) : 0;
+  });
+  /** Minutos aproximados que faltan (12 partidas cada 15 s) */
+  eta = computed(() => {
+    const p = this.sync()?.pending ?? 0;
+    const sec = Math.ceil(p / SYNC_BATCH) * (SYNC_DELAY_MS / 1000);
+    return sec < 60 ? 'menos de un minuto' : `unos ${Math.ceil(sec / 60)} min`;
   });
 
   // Geometría de las gráficas (SVG propio, sin librerías)
@@ -73,7 +84,8 @@ export class ProfileDashboardComponent implements OnDestroy {
     });
     effect(() => {
       const games = this.allGames();
-      if (this.loaded()) untracked(() => this.seasonGames.emit(games));
+      // Solo cuando la temporada está completa: así la actividad del perfil no cambia a medias
+      if (this.phase() === 'ready' && this.loaded()) untracked(() => this.seasonGames.emit(games));
     });
   }
 
@@ -88,10 +100,16 @@ export class ProfileDashboardComponent implements OnDestroy {
     this.subs = new Subscription();
     if (this.timer) clearTimeout(this.timer);
     this.loaded.set(false);
+    this.phase.set('checking');
     this.matches.set([]);
     this.sync.set(null);
     this.error.set('');
-    this.loadHistory(region, puuid, () => this.runSync(region, puuid));
+    // Primero se pregunta qué falta; si falta algo se muestra la barra (y se retoma donde quedó tras recargar)
+    this.runSync(region, puuid);
+  }
+
+  private finish(region: string, puuid: string) {
+    this.loadHistory(region, puuid, () => this.phase.set('ready'));
   }
 
   private loadHistory(region: string, puuid: string, then?: () => void) {
@@ -105,19 +123,30 @@ export class ProfileDashboardComponent implements OnDestroy {
     if (this.destroyed) return;
     this.subs.add(this.riot.syncSeason(region, puuid).subscribe({
       next: (s) => {
-        if (s.busy) { this.schedule(() => this.runSync(region, puuid, round), SYNC_DELAY_MS); return; }
+        if (s.busy) {
+          // Otra pestaña está descargando este perfil: se muestra la barra y se espera
+          if (this.phase() !== 'ready') this.phase.set('syncing');
+          this.schedule(() => this.runSync(region, puuid, round), SYNC_DELAY_MS);
+          return;
+        }
         const pending = s.pending ?? 0;
-        this.sync.set({ stored: s.stored ?? 0, total: Math.max(s.total ?? 0, s.stored ?? 0), pending, limited: s.limited });
-        const grew = (s.stored ?? 0) > this.allMatchesCount();
-        // Se refrescan las gráficas cada 3 lotes y al terminar
-        if (grew && (pending === 0 || round % 3 === 2)) this.loadHistory(region, puuid);
-        if (pending > 0) this.schedule(() => this.runSync(region, puuid, round + 1), s.limited ? LIMITED_DELAY_MS : SYNC_DELAY_MS);
+        const total = Math.max(s.total ?? 0, s.stored ?? 0);
+        this.sync.set({ stored: s.stored ?? 0, total, pending, limited: s.limited });
+        this.syncProgress.emit({ stored: s.stored ?? 0, total, pending });
+        if (pending > 0) {
+          if (this.phase() !== 'ready') this.phase.set('syncing');
+          this.schedule(() => this.runSync(region, puuid, round + 1), s.limited ? LIMITED_DELAY_MS : SYNC_DELAY_MS);
+        } else {
+          this.finish(region, puuid);
+        }
       },
-      error: () => this.schedule(() => this.runSync(region, puuid, round + 1), LIMITED_DELAY_MS),
+      error: () => {
+        // Si Riot no responde, se muestra lo que ya está guardado
+        if (round === 0) this.finish(region, puuid);
+        else this.schedule(() => this.runSync(region, puuid, round + 1), LIMITED_DELAY_MS);
+      },
     }));
   }
-
-  private allMatchesCount() { return this.matches().length; }
 
   private schedule(fn: () => void, ms: number) {
     if (this.destroyed) return;

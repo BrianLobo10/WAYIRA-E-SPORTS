@@ -134,3 +134,18 @@
   .trophies { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .trophy-v { font-size: 22px; }
 }
+
+/* Barra de carga de la temporada */
+.loader { margin-top: 22px; padding: 20px; background: var(--surface-2); border: 1px solid var(--border); }
+.loader-top { display: flex; align-items: center; gap: 18px; }
+.loader-pct { font-family: var(--font-display); font-size: 44px; line-height: 1; color: var(--volt); font-variant-numeric: tabular-nums; min-width: 2.6ch; }
+.loader-pct small { font-size: 20px; }
+.loader-text { display: grid; gap: 4px; min-width: 0; }
+.loader-text strong { color: var(--white); font-size: 15px; font-weight: 600; }
+.loader-text span { color: var(--text-secondary, #a3a19a); font-size: 13px; font-variant-numeric: tabular-nums; }
+.loader-bar { height: 6px; margin-top: 16px; background: rgba(255,255,255,.08); overflow: hidden; }
+.loader-bar i { position: relative; display: block; height: 100%; background: var(--volt); transition: width 1.2s ease; overflow: hidden; }
+.loader-bar i::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent); transform: translateX(-100%); animation: sweep 1.8s ease-in-out infinite; }
+@keyframes sweep { to { transform: translateX(100%); } }
+.loader-note { margin: 10px 0 0; font-size: 12px; line-height: 1.5; color: var(--text-secondary, #a3a19a); }
+@media (prefers-reduced-motion: reduce) { .loader-bar i { transition: none; } .loader-bar i::after { animation: none; } }

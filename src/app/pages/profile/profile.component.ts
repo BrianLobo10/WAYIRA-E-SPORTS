@@ -113,6 +113,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
   /** Mejor rango Solo Q (desde leagues del summoner) */
   soloQRank = signal<LeagueEntry | null>(null);
   flexRank = signal<LeagueEntry | null>(null);
+  seasonSync = signal<{ stored: number; total: number; pending: number } | null>(null);
+  activityHint = computed(() => {
+    const s = this.seasonSync();
+    return s && s.pending > 0
+      ? `Cargando la temporada: ${s.stored} de ${s.total} partidas. La gráfica se completa sola en unos minutos.`
+      : 'Partidas por mes en el año en curso (sin ARAM: Caos, que Riot no comparte, ni partidas canceladas).';
+  });
   loadingRiot = signal(false);
   // Vincular Riot en editar perfil
   editGameName = signal('');
@@ -1223,10 +1230,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
         puuid: found.puuid
       });
       this.foundLinkSummoner.set(null);
+      this.closeEditModal();
       await this.loadProfile(user.uid);
       if (this.hasRiot(this.profile())) {
         this.loadRiotProfileData(this.profile()!);
       }
+      this.toast.notify('Cuenta vinculada. Estamos cargando tu temporada: mira el avance en tu perfil.');
+      setTimeout(() => document.querySelector('app-profile-dashboard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 600);
     } catch (e) {
       console.error(e);
       const dup = (e as { code?: string })?.code === '23505';
