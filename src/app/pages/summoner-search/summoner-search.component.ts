@@ -9,7 +9,7 @@ import { ChampionService } from '../../services/champion.service';
 const QUEUE_NAMES: Record<number, string> = {
   420: 'Ranked Solo/Duo', 440: 'Ranked Flex', 400: 'Normal (reclutamiento)', 430: 'Normal (a ciegas)',
   480: 'Partida rápida', 490: 'Normal (juego rápido)', 450: 'ARAM', 2400: 'ARAM: Caos', 720: 'ARAM Clash',
-  700: 'Clash', 1700: 'Arena', 1710: 'Arena', 900: 'URF', 1900: 'URF', 1010: 'URF de nieve', 1020: 'Uno para todos',
+  700: 'Clash', 1700: 'Arena', 1710: 'Arena', 1740: 'Arena', 1750: 'Arena', 820: 'Coop vs IA', 900: 'URF', 1900: 'URF', 1010: 'URF de nieve', 1020: 'Uno para todos',
   1300: 'Nexus Blitz', 1400: 'Libro de hechizos', 2300: 'Brawl', 830: 'Coop vs IA', 840: 'Coop vs IA', 850: 'Coop vs IA',
   870: 'Coop vs IA', 880: 'Coop vs IA', 890: 'Coop vs IA', 1810: 'Swarm', 1820: 'Swarm', 1830: 'Swarm', 1840: 'Swarm',
   0: 'Personalizada',
@@ -17,6 +17,7 @@ const QUEUE_NAMES: Record<number, string> = {
 
 export interface ModeSummary { name: string; games: number; wins: number; losses: number; winrate: number; kda: string }
 
+import { profileIconUrl } from '../../utils/riot-assets';
 @Component({
   selector: 'app-summoner-search',
   imports: [FormsModule, CommonModule],
@@ -242,7 +243,7 @@ export class SummonerSearchComponent implements OnInit {
   }
 
   getProfileIconUrl(iconId: number): string {
-    return `https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/${iconId}.png`;
+    return profileIconUrl(iconId);
   }
 
   getRankedQueue(queueType: string): string {
@@ -336,7 +337,7 @@ export class SummonerSearchComponent implements OnInit {
     if (mode === 'CHERRY') return 'Arena';
     if (mode === 'URF' || mode === 'ARURF') return 'URF';
     if (mode === 'ONEFORALL') return 'Uno para todos';
-    if (mode === 'CLASSIC') return 'Normal';
+    if (mode === 'CLASSIC') return 'Grieta (evento)';
     return mode ? mode.charAt(0) + mode.slice(1).toLowerCase() : 'Otro modo';
   }
 

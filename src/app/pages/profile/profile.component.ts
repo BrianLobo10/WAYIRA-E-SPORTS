@@ -17,6 +17,7 @@ import { DialogService } from '../../services/dialog.service';
 import { ProfileDashboardComponent } from '../../components/profile-dashboard/profile-dashboard.component';
 import { Game, activityByDay } from '../../components/profile-dashboard/season-stats';
 
+import { profileIconUrl } from '../../utils/riot-assets';
 @Component({
   selector: 'app-profile',
   standalone: true,
@@ -1197,7 +1198,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
       }
     } catch (e) {
       console.error(e);
-      this.toast.notify('Error al vincular la cuenta.');
+      const dup = (e as { code?: string })?.code === '23505';
+      this.toast.notify(dup
+        ? 'Esa cuenta de Riot ya está vinculada a otro perfil de Wayira. Si es tuya, escríbenos desde Contacto.'
+        : 'Error al vincular la cuenta.');
     } finally {
       this.linkingRiot.set(false);
     }
@@ -1270,7 +1274,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   
   
   getProfileIconUrl(iconId: number): string {
-    return `https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/${iconId}.png`;
+    return profileIconUrl(iconId);
   }
   
 

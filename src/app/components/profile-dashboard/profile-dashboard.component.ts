@@ -3,6 +3,7 @@ import { Subscription } from 'rxjs';
 import { RiotApiService, SlimMatch } from '../../services/riot-api.service';
 import { Game, MODE_FILTERS, ModeFilter, Point, computeStats, filterGames, toGames } from './season-stats';
 
+import { championIconUrl } from '../../utils/riot-assets';
 interface LineGeom { last: string; average: string; path: string; area: string; avgY: number; dots: { x: number; y: number; tip: string }[]; ticks: { y: number; label: string }[]; labels: { x: number; label: string }[] }
 
 const SYNC_DELAY_MS = 15_000;     // entre lotes (la clave Personal permite 100 consultas cada 2 min)
@@ -124,9 +125,7 @@ export class ProfileDashboardComponent implements OnDestroy {
     this.timer = setTimeout(fn, ms);
   }
 
-  champIcon(champ: string) {
-    return `https://ddragon.leagueoflegends.com/cdn/14.24.1/img/champion/${champ}.png`;
-  }
+  champIcon(champId: number) { return championIconUrl(champId); }
 
   private dateFmt = new Intl.DateTimeFormat('es-CO', { timeZone: 'America/Bogota', day: 'numeric', month: 'short' });
   dateLabel(ts: number) { return this.dateFmt.format(new Date(ts)).replace('.', ''); }

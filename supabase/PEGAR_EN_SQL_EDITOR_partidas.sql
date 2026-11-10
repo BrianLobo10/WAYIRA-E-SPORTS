@@ -1,4 +1,4 @@
--- Pegar TODO en Supabase > SQL Editor > Run. Crea las tablas del dashboard de estadísticas. Es seguro repetirlo.
+-- Pegar TODO en Supabase > SQL Editor > Run. Crea las tablas del dashboard y evita que una cuenta de Riot se vincule a dos perfiles. Es seguro repetirlo.
 begin;
 
 -- Partidas de League of Legends guardadas para el dashboard de estadísticas del perfil.
@@ -147,5 +147,11 @@ grant execute on function public.riot_store_match(text, text, timestamptz, integ
 grant execute on function public.riot_sync_save(text, text[], integer, boolean) to service_role;
 grant execute on function public.riot_history(text, timestamptz) to service_role;
 grant select, insert, update, delete on public.riot_matches, public.riot_player_matches, public.riot_sync_state to service_role;
+
+-- Una cuenta de Riot solo puede estar vinculada a un perfil de Wayira.
+-- riot_puuid ya era único, pero el PUUID cambia si cambia la clave de Riot; el Riot ID (nombre#tag) no.
+create unique index if not exists profiles_riot_id_unico
+  on public.profiles (lower(riot_game_name), lower(riot_tag_line))
+  where riot_game_name is not null and riot_tag_line is not null;
 
 commit;

@@ -448,7 +448,8 @@
                 </button>
                 @if (foundLinkSummoner(); as sum) {
                   <div class="found-summoner-link">
-                    <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="getProfileIconUrl(sum.profileIconId)" [alt]="sum.gameName" class="summoner-icon-preview">
+                    <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="getProfileIconUrl(sum.profileIconId)" alt="" class="summoner-icon-preview"
+                         onerror="this.onerror=null; this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/profile-icons/29.jpg';">
                     <span>{{ sum.gameName }}#{{ sum.tagLine }}</span>
                     <button type="button" class="btn-submit" (click)="linkRiotAccount()" [disabled]="linkingRiot()">
                       @if (linkingRiot()) { Vinculando... } @else { Vincular cuenta }

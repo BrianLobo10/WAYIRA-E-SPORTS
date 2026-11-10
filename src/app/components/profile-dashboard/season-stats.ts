@@ -17,7 +17,7 @@ export interface Game { m: SlimMatch; me: SlimParticipant; start: number; end: n
 export interface Rate { wins: number; games: number; rate: number | null }
 export interface Bar { label: string; rate: number | null; games: number }
 export interface Point { label: string; value: number }
-export interface RecordRow { label: string; value: string; champ: string; date: number; matchId: string }
+export interface RecordRow { label: string; value: string; champ: string; champId: number; date: number; matchId: string }
 
 export interface SeasonStats {
   games: number; wins: number; winRate: number;
@@ -202,7 +202,7 @@ function records(games: Game[]): RecordRow[] {
       if (d.lowest ? v < bestV : v > bestV) { best = g; bestV = v; }
     }
     if (!best || !Number.isFinite(bestV) || bestV <= 0 || (d.min && bestV < d.min)) continue;
-    rows.push({ label: d.label, value: d.show ? d.show(bestV, best) : String(bestV), champ: best.me.champ, date: best.start, matchId: best.m.id });
+    rows.push({ label: d.label, value: d.show ? d.show(bestV, best) : String(bestV), champ: best.me.champ, champId: best.me.champId, date: best.start, matchId: best.m.id });
   }
   return rows;
 }
