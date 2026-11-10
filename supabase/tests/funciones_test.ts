@@ -70,7 +70,7 @@ if (fn === 'riot' && Deno.args[1] === 'conclave') {
   await check('jugador inexistente', '/summoner/la1/Fantasma/LAN', H, 404);
   await check('puuid inválido', '/account/la1/abc', H, 404);
   await check('account solo devuelve 3 campos', `/account/la1/${PUUID}`, H, 200, (b) => Object.keys(b).length === 3);
-  await check('matches máximo 20', `/matches/la1/${PUUID}?count=100`, H, 200, (b) => b.length === 20);
+  await check('matches máximo 100', `/matches/la1/${PUUID}?count=500`, H, 200, (b) => b.length === 100);
   await check('mastery sin rankings inventados', `/mastery/la1/${PUUID}?count=50`, H, 200, (b) => b[0].worldRank === undefined);
   await check('POST no permitido', '/health', { method: 'POST', ...H }, 405);
   const pre = await realFetch(base + '/health', { method: 'OPTIONS', headers: { Origin: 'http://localhost:4200' } });

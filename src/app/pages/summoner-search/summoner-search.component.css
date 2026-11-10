@@ -1610,3 +1610,7 @@
 .load-more:disabled { opacity: .6; cursor: progress; }
 @media (max-width: 520px) { .mode-table th:nth-child(5), .mode-table td:nth-child(5) { display: none; } }
 .season-row__wl { display: inline-flex; gap: 6px; }
+
+.mayhem-note { display: flex; gap: 8px; align-items: flex-start; margin: 0 0 14px; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.03); font-size: 13px; line-height: 1.45; color: var(--text-secondary, #a8a8b3); }
+.mayhem-note .material-icons { font-size: 18px; color: var(--volt, #c8aa6e); flex-shrink: 0; }
+.mayhem-note strong { color: inherit; font-weight: 600; }

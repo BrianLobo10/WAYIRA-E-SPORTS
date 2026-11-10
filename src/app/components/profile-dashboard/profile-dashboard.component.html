@@ -1,0 +1,175 @@
+<section class="dash" aria-labelledby="dash-title">
+  <header class="dash-head">
+    <p class="kicker">Ficha de temporada · {{ year }}</p>
+    @if (stats(); as st) {
+      <h2 class="headline" id="dash-title">
+        <span class="hl">{{ st.winRate }}%</span> de victorias en {{ st.games }} partidas de {{ filter().label }}
+      </h2>
+    } @else {
+      <h2 class="headline" id="dash-title">Tu temporada en {{ filter().label }}</h2>
+    }
+    <div class="tabs" role="tablist" aria-label="Modo de juego">
+      @for (f of visibleFilters(); track f.key) {
+        <button type="button" role="tab" class="tab" [class.is-on]="filterKey() === f.key" [attr.aria-selected]="filterKey() === f.key" (click)="filterKey.set(f.key)">
+          {{ f.label }}<span class="tab-n">{{ counts()[f.key] }}</span>
+        </button>
+      }
+    </div>
+  </header>
+
+  @if (sync(); as s) {
+    @if (s.pending > 0) {
+      <div class="sync" role="status">
+        <span class="sync-n">{{ s.stored }}<small>/{{ s.total }}</small></span>
+        <div class="sync-body">
+          <strong>Armando tu ficha con toda la temporada</strong>
+          <span>{{ s.limited ? 'Riot pidió una pausa; seguimos en un minuto.' : 'Va por tandas porque Riot limita las consultas. Puedes salir: el avance queda guardado.' }}</span>
+          <div class="sync-bar" aria-hidden="true"><i [style.width.%]="progress()"></i></div>
+        </div>
+      </div>
+    }
+  }
+
+  @if (!loaded()) {
+    <div class="skeleton" aria-busy="true"><span></span><span></span><span></span><span></span></div>
+  } @else if (error()) {
+    <p class="empty">{{ error() }}</p>
+  } @else if (!stats()) {
+    <p class="empty">
+      @if (sync()?.pending) { Aún no hay partidas de {{ filter().label }} descargadas. Aparecerán aquí en unos minutos. }
+      @else { No hay partidas de {{ filter().label }} esta temporada. Prueba con otro modo. }
+    </p>
+  } @else {
+    @let st = stats()!;
+
+    @if (st.insights.length) {
+      <ul class="insights">
+        @for (t of st.insights; track t) { <li>{{ t }}</li> }
+      </ul>
+    }
+
+    <dl class="figures">
+      <div><dt>Récord</dt><dd><span class="w">{{ st.wins }}</span><span class="sep">–</span><span class="l">{{ st.games - st.wins }}</span></dd></div>
+      <div><dt>Tiempo jugado</dt><dd>{{ st.timePlayed }}</dd></div>
+      <div><dt>Partidas por sesión</dt><dd>{{ st.gamesPerSession }}</dd></div>
+      <div><dt>Sesiones</dt><dd>{{ st.sessions }}</dd></div>
+    </dl>
+
+    <div class="split">
+      <article class="block">
+        <h3 class="block-title">Cuándo juegas</h3>
+        <p class="block-sub">Cada casilla es una hora de la semana (hora de Colombia). Más brillante = más partidas. Pasa el cursor para ver tu % de victorias.</p>
+        <div class="heat-wrap">
+          <div class="heat" role="img" aria-label="Mapa de partidas por día y hora. Abre la tabla de datos para ver el detalle.">
+            <span></span>
+            @for (h of hours; track h) { <span class="heat-h">{{ h % 6 === 0 ? h : '' }}</span> }
+            @for (row of st.heat; track $index; let d = $index) {
+              <span class="heat-d">{{ dayNames[d] }}</span>
+              @for (c of row; track $index; let h = $index) {
+                <span class="cell" [attr.data-l]="heatLevel(c.games)" [class.cell--win]="c.games && c.wins / c.games >= 0.5" [title]="heatTip(dayNames[d], h, c)"></span>
+              }
+            }
+          </div>
+        </div>
+        <p class="heat-key" aria-hidden="true">
+          <span>Menos</span><i data-l="0"></i><i data-l="1"></i><i data-l="2"></i><i data-l="3"></i><i data-l="4"></i><span>Más</span>
+          <span class="heat-key-dot"></span><span>ganas la mitad o más</span>
+        </p>
+        <div class="days">
+          @for (b of st.byDay; track b.label) {
+            <div class="day" [title]="b.games + ' partidas'">
+              <span class="day-n">{{ b.label.slice(0, 3) }}</span>
+              <span class="day-v" [class.is-up]="b.rate !== null && b.rate >= st.winRate">{{ pct(b.rate) }}</span>
+            </div>
+          }
+        </div>
+      </article>
+
+      <article class="block">
+        <h3 class="block-title">Contexto</h3>
+        <div class="sides" [attr.aria-label]="'Lado azul ' + pct(st.blue.rate) + ', lado rojo ' + pct(st.red.rate)">
+          <div class="side side--blue" [style.flex-grow]="st.blue.games || 1"><b>{{ pct(st.blue.rate) }}</b><span>Azul · {{ st.blue.games }}</span></div>
+          <div class="side side--red" [style.flex-grow]="st.red.games || 1"><b>{{ pct(st.red.rate) }}</b><span>Rojo · {{ st.red.games }}</span></div>
+        </div>
+        <ul class="momentum">
+          <li><span>Después de ganar</span><b>{{ pct(st.afterWin.rate) }}</b><small>{{ st.afterWin.games }} p.</small></li>
+          <li><span>Después de perder</span><b>{{ pct(st.afterLoss.rate) }}</b><small>{{ st.afterLoss.games }} p.</small></li>
+          <li><span title="Ganaste las 2 anteriores">Con 2 victorias seguidas</span><b>{{ pct(st.hotStreak.rate) }}</b><small>{{ st.hotStreak.games }} p.</small></li>
+          <li><span title="Perdiste las 2 anteriores">Con 2 derrotas seguidas</span><b>{{ pct(st.coldStreak.rate) }}</b><small>{{ st.coldStreak.games }} p.</small></li>
+        </ul>
+        <h4 class="mini-title">Según la duración</h4>
+        <ul class="durations">
+          @for (b of st.byDuration; track b.label) {
+            <li [title]="b.games + ' partidas'">
+              <span class="dur-l">{{ b.label }}′</span>
+              <span class="dur-track"><i [style.width.%]="share(b.games)"></i></span>
+              <b>{{ pct(b.rate) }}</b>
+            </li>
+          }
+        </ul>
+        <p class="note">La barra muestra cuántas partidas duran eso; el número, tu % de victorias.</p>
+      </article>
+    </div>
+
+    <article class="block">
+      <h3 class="block-title">Tendencia por sesión <small>últimas 10 · una sesión termina tras 1 h sin jugar</small></h3>
+      <div class="trends">
+        @for (ln of [
+          { title: '% de victorias', g: wrLine() },
+          { title: 'Oro por minuto', g: goldLine() },
+          { title: 'Participación en asesinatos', g: kpLine() },
+          { title: 'Visión por minuto', g: visionLine() }
+        ]; track ln.title) {
+          <figure class="trend">
+            <figcaption>{{ ln.title }}</figcaption>
+            @if (ln.g; as g) {
+              <p class="trend-v">{{ g.last }} <small>promedio {{ g.average }}</small></p>
+              <svg class="spark" viewBox="0 0 240 96" preserveAspectRatio="none" role="img" [attr.aria-label]="ln.title + ': última sesión ' + g.last + ', promedio ' + g.average">
+                <path class="area" [attr.d]="g.area" />
+                <line class="avg" x1="4" x2="232" [attr.y1]="g.avgY" [attr.y2]="g.avgY" vector-effect="non-scaling-stroke" />
+                <path class="line" [attr.d]="g.path" vector-effect="non-scaling-stroke" />
+                @for (d of g.dots; track $index) {
+                  <g class="hit"><title>{{ d.tip }}</title><rect [attr.x]="d.x - 10" y="0" width="20" height="96" fill="transparent" /></g>
+                }
+              </svg>
+            } @else {
+              <p class="trend-v trend-v--empty">Juega 2 sesiones para ver la tendencia</p>
+            }
+          </figure>
+        }
+      </div>
+    </article>
+
+    @if (st.records.length) {
+      <article class="block">
+        <h3 class="block-title">Vitrina de récords <small>{{ filter().label }} · {{ year }}</small></h3>
+        <ol class="trophies">
+          @for (r of st.records; track r.label) {
+            <li class="trophy">
+              <span class="trophy-v">{{ r.value }}</span>
+              <span class="trophy-l">{{ r.label }}</span>
+              <span class="trophy-m"><img [src]="champIcon(r.champ)" alt="" width="22" height="22" loading="lazy" />{{ r.champ }} · {{ dateLabel(r.date) }}</span>
+            </li>
+          }
+        </ol>
+      </article>
+    }
+
+    <button type="button" class="link-btn" (click)="showTable.set(!showTable())" [attr.aria-expanded]="showTable()">
+      {{ showTable() ? 'Ocultar' : 'Ver' }} todos los datos en tabla
+    </button>
+    @if (showTable()) {
+      <div class="table-wrap">
+        <table class="data">
+          <caption class="sr-only">% de victorias por día, hora y duración</caption>
+          <thead><tr><th scope="col">Grupo</th><th scope="col">Partidas</th><th scope="col">% victorias</th></tr></thead>
+          <tbody>
+            @for (b of st.byDay; track b.label) { <tr><th scope="row">{{ b.label }}</th><td>{{ b.games }}</td><td>{{ pct(b.rate) }}</td></tr> }
+            @for (b of st.byHour; track b.label) { @if (b.games) { <tr><th scope="row">{{ b.label }}:00 h</th><td>{{ b.games }}</td><td>{{ pct(b.rate) }}</td></tr> } }
+            @for (b of st.byDuration; track b.label) { <tr><th scope="row">{{ b.label }} min</th><td>{{ b.games }}</td><td>{{ pct(b.rate) }}</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</section>

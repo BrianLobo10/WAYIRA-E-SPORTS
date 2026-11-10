@@ -7,6 +7,8 @@
 //   /riot/account/:region/:puuid
 //   /riot/matches/:region/:puuid?count=10        (máximo 20)
 //   /riot/mastery/:region/:puuid?count=5         (máximo 10)
+//   /riot/sync/:region/:puuid                    descarga un lote de partidas de la temporada y las guarda
+//   /riot/history/:region/:puuid                 partidas guardadas de la temporada (para el dashboard)
 //
 // Seguridad: la clave RIOT_API_KEY solo vive en los secretos de Supabase. Límite de 30 consultas
 // por minuto por visitante y caché para no gastar la cuota de Riot.
@@ -22,7 +24,7 @@ const PUUID = /^[A-Za-z0-9_-]{40,100}$/;
 const UNAVAILABLE = 'El servicio de búsqueda de jugadores no está disponible en este momento. Por favor, intenta más tarde.';
 
 class HttpError extends Error {
-  constructor(public status: number, message: string) { super(message); }
+  constructor(public status: number, message: string, public riotStatus = 0) { super(message); }
 }
 
 function riotKey(): string | null {
@@ -42,9 +44,9 @@ async function riot<T>(url: string, key: string, notFound = 'No encontrado'): Pr
     await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
   }
   console.error('Riot API response', lastStatus, new URL(url).pathname);
-  if (lastStatus === 404) throw new HttpError(404, notFound);
-  if ([401, 403, 429, 503].includes(lastStatus)) throw new HttpError(503, UNAVAILABLE);
-  throw new HttpError(502, UNAVAILABLE);
+  if (lastStatus === 404) throw new HttpError(404, notFound, 404);
+  if ([401, 403, 429, 503].includes(lastStatus)) throw new HttpError(503, UNAVAILABLE, lastStatus);
+  throw new HttpError(502, UNAVAILABLE, lastStatus);
 }
 
 function cleanName(value: string): string {
@@ -123,6 +125,128 @@ async function mastery(region: string, puuid: string, count: number, key: string
       key, 'Jugador no encontrado'));
 }
 
+// ---- Partidas guardadas en Supabase (dashboard del perfil) ----
+// Temporada actual: desde el 1 de enero. Cada partida se pide a Riot una sola vez y se guarda reducida.
+const SEASON_START = Date.UTC(new Date().getUTCFullYear(), 0, 1);
+const SYNC_BATCH = 12;           // partidas nuevas por llamada (clave Personal: 100 consultas cada 2 min)
+const IDS_REFRESH_MS = 10 * 60_000;
+
+async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
+  const url = Deno.env.get('SUPABASE_URL');
+  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!url || !key) throw new HttpError(503, UNAVAILABLE);
+  const res = await fetch(`${url}/rest/v1/rpc/${fn}`, {
+    method: 'POST',
+    headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
+    body: JSON.stringify(args),
+  });
+  if (!res.ok) {
+    console.error('rpc', fn, res.status, await res.text());
+    throw new HttpError(503, UNAVAILABLE);
+  }
+  const text = await res.text();
+  return (text ? JSON.parse(text) : null) as T;
+}
+
+type RawParticipant = Record<string, any>;
+type RawMatch = { metadata?: { matchId?: string }; info?: Record<string, any> };
+
+/** Versión reducida de una partida (~3 KB): solo lo que usa el dashboard */
+function slimMatch(m: RawMatch) {
+  const info = m.info ?? {};
+  const teamKills: Record<string, number> = {};
+  for (const t of info.teams ?? []) teamKills[t.teamId] = t.objectives?.champion?.kills ?? 0;
+  return {
+    id: m.metadata?.matchId,
+    created: info.gameCreation,
+    duration: info.gameDuration,
+    queue: info.queueId,
+    mode: info.gameMode,
+    teamKills,
+    participants: (info.participants ?? []).map((p: RawParticipant) => ({
+      puuid: p.puuid, name: p.riotIdGameName, tag: p.riotIdTagline,
+      champ: p.championName, champId: p.championId, team: p.teamId, win: !!p.win,
+      pos: p.teamPosition || p.individualPosition || '',
+      k: p.kills ?? 0, d: p.deaths ?? 0, a: p.assists ?? 0,
+      cs: (p.totalMinionsKilled ?? 0) + (p.neutralMinionsKilled ?? 0),
+      gold: p.goldEarned ?? 0, dmg: p.totalDamageDealtToChampions ?? 0, taken: p.totalDamageTaken ?? 0,
+      heal: p.totalHeal ?? 0, vision: p.visionScore ?? 0, wards: p.wardsPlaced ?? 0, wardsKilled: p.wardsKilled ?? 0,
+      barons: p.baronKills ?? 0, dragons: p.dragonKills ?? 0, turrets: p.turretKills ?? 0,
+      multi: p.largestMultiKill ?? 0, spree: p.largestKillingSpree ?? 0, level: p.champLevel ?? 0,
+      firstBlood: !!p.firstBloodKill, pentas: p.pentaKills ?? 0,
+    })),
+  };
+}
+
+async function seasonIds(routing: string, puuid: string, key: string): Promise<string[]> {
+  const ids: string[] = [];
+  const startTime = Math.floor(SEASON_START / 1000);
+  for (let start = 0; start < 1000; start += 100) {
+    const page = await riot<string[]>(
+      `https://${routing}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?startTime=${startTime}&start=${start}&count=100`, key);
+    ids.push(...page);
+    if (page.length < 100) break;
+  }
+  return ids;
+}
+
+/** Descarga un lote de partidas que faltan. El navegador lo llama varias veces hasta que pending = 0. */
+async function sync(region: string, puuid: string, key: string) {
+  const routing = REGIONS[region];
+  const state = await rpc<{ pending: string[]; total: number; ids_synced_at: string | null } | null>('riot_sync_lock', { p_puuid: puuid });
+  if (!state) {
+    // Otra pestaña está descargando este jugador: se informa sin gastar consultas
+    return { busy: true, limited: false, pending: null, stored: null, total: null };
+  }
+  let pending = state.pending ?? [];
+  let total = state.total ?? 0;
+  let idsSynced = false;
+  let limited = false;
+  try {
+    if (!state.ids_synced_at || Date.now() - Date.parse(state.ids_synced_at) > IDS_REFRESH_MS) {
+      const ids = await seasonIds(routing, puuid, key);
+      total = ids.length;
+      pending = await rpc<string[]>('riot_link_known', { p_puuid: puuid, p_ids: ids }) ?? [];
+      idsSynced = true;
+    }
+    const batch = pending.slice(0, SYNC_BATCH);
+    const done = new Set<string>();
+    for (let i = 0; i < batch.length; i += 4) {
+      const results = await Promise.all(batch.slice(i, i + 4).map(async (id) => {
+        try {
+          const raw = await riot<RawMatch>(`https://${routing}.api.riotgames.com/lol/match/v5/matches/${id}`, key);
+          const slim = slimMatch(raw);
+          await rpc('riot_store_match', {
+            p_puuid: puuid, p_match_id: id, p_created: new Date(slim.created ?? 0).toISOString(),
+            p_queue: slim.queue ?? 0, p_data: slim,
+          });
+          return id;
+        } catch (err) {
+          // 403 = partida privada (p. ej. ARAM: Caos): se descarta. 429/503: se reintenta en la siguiente llamada.
+          const rs = err instanceof HttpError ? err.riotStatus : 0;
+          if (rs === 429 || rs === 503 || rs === 401 || rs === 0 || rs >= 500) { limited = true; return null; }
+          return id;
+        }
+      }));
+      results.forEach((id) => id && done.add(id));
+      if (limited) break;
+    }
+    pending = pending.filter((id) => !done.has(id));
+  } catch (err) {
+    // Límite de Riot al listar partidas: se guarda lo que haya y se reintenta en la siguiente llamada
+    if (err instanceof HttpError && err.riotStatus === 429) limited = true; else {
+      await rpc('riot_sync_save', { p_puuid: puuid, p_pending: pending, p_total: total, p_ids_synced: false });
+      throw err;
+    }
+  }
+  const stored = await rpc<number>('riot_sync_save', { p_puuid: puuid, p_pending: pending, p_total: total, p_ids_synced: idsSynced });
+  return { busy: false, limited, pending: pending.length, stored, total };
+}
+
+async function history(puuid: string) {
+  return await rpc<unknown[]>('riot_history', { p_puuid: puuid, p_since: new Date(SEASON_START).toISOString() }) ?? [];
+}
+
 function clamp(value: string | null, def: number, max: number): number {
   const n = parseInt(value ?? '', 10);
   return Number.isFinite(n) && n > 0 ? Math.min(n, max) : def;
@@ -167,6 +291,12 @@ Deno.serve(async (req) => {
       case 'mastery':
         if (!a || !PUUID.test(a)) break;
         return json(req, await mastery(r, a, clamp(query.get('count'), 5, 10), key));
+      case 'sync':
+        if (!a || !PUUID.test(a)) break;
+        return json(req, await sync(r, a, key));
+      case 'history':
+        if (!a || !PUUID.test(a)) break;
+        return json(req, await history(a));
     }
     return json(req, { error: 'Ruta no válida', statusCode: 404 }, 404);
   } catch (err) {

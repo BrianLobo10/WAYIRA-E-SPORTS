@@ -368,92 +368,12 @@ export class SummonerSearchComponent implements OnInit {
     return Math.min((league.leaguePoints / 100) * 100, 100);
   }
 
-  getLPHistory(): { lp: number, isWin: boolean, date: string }[] {
-    const league = this.getCurrentLeague();
-    if (!league) return [];
-    
-    const currentLP = league.leaguePoints;
-    const history: { lp: number, isWin: boolean, date: string }[] = [];
-    
-    let baseLP = Math.max(0, currentLP - 60);
-    
-    for (let i = 0; i < 12; i++) {
-      const progress = i / 11;
-      const targetLP = currentLP;
-      
-      const smoothProgress = progress < 0.5 
-        ? 2 * progress * progress 
-        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-      
-      const lp = Math.round(baseLP + (targetLP - baseLP) * smoothProgress);
-      
-      const variation = Math.sin(progress * Math.PI * 2) * 8 + (Math.random() - 0.5) * 6;
-      const finalLP = Math.max(0, Math.min(100, lp + variation));
-      
-      const isWin = Math.random() > 0.3;
-      
-      const date = new Date();
-      date.setDate(date.getDate() - (11 - i));
-      
-      history.push({ 
-        lp: Math.round(finalLP), 
-        isWin,
-        date: date.toISOString()
-      });
-    }
-    
-    return history;
-  }
-
   switchQueue(queue: 'RANKED_SOLO_5x5' | 'RANKED_FLEX_SR') {
     this.selectedQueue.set(queue);
   }
 
   getQueueDisplayName(queue: 'RANKED_SOLO_5x5' | 'RANKED_FLEX_SR'): string {
     return queue === 'RANKED_SOLO_5x5' ? 'Solo/Duo' : 'Flex';
-  }
-
-  getSmoothPath(): string {
-    const history = this.getLPHistory();
-    if (history.length < 2) return '';
-
-    let path = '';
-    const width = 380;
-    const height = 180;
-    const padding = 10;
-
-    for (let i = 0; i < history.length; i++) {
-      const x = (i / (history.length - 1)) * width + padding;
-      const y = 200 - (history[i].lp / 100) * height - padding;
-
-      if (i === 0) {
-        path += `M ${x} ${y}`;
-      } else {
-        const prevX = ((i - 1) / (history.length - 1)) * width + padding;
-        const prevY = 200 - (history[i - 1].lp / 100) * height - padding;
-        
-        const cp1x = prevX + (x - prevX) * 0.3;
-        const cp1y = prevY;
-        const cp2x = prevX + (x - prevX) * 0.7;
-        const cp2y = y;
-        
-        path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x} ${y}`;
-      }
-    }
-
-    return path;
-  }
-
-  getPointX(index: number): number {
-    const history = this.getLPHistory();
-    if (history.length === 0) return 0;
-    return (index / (history.length - 1)) * 380 + 10;
-  }
-
-  getPointY(index: number): number {
-    const history = this.getLPHistory();
-    if (history.length === 0) return 0;
-    return 200 - (history[index].lp / 100) * 180 - 10;
   }
 
   // Funciones para el modal de detalles de la partida

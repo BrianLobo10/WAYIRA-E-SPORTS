@@ -14,6 +14,8 @@ import { ProfileActivityTimelineComponent, type ActivityTimelineData } from '../
 import { readCachedUserProfile, writeCachedUserProfile } from '../../utils/profile-view-cache';
 import { ToastService } from '../../services/toast.service';
 import { DialogService } from '../../services/dialog.service';
+import { ProfileDashboardComponent } from '../../components/profile-dashboard/profile-dashboard.component';
+import { Game, activityByDay } from '../../components/profile-dashboard/season-stats';
 
 @Component({
   selector: 'app-profile',
@@ -25,7 +27,8 @@ import { DialogService } from '../../services/dialog.service';
     ProfileHeaderComponent,
     ProfilePerformanceComponent,
     ProfileTopChampionsComponent,
-    ProfileActivityTimelineComponent
+    ProfileActivityTimelineComponent,
+    ProfileDashboardComponent
   ],
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.css']
@@ -712,7 +715,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
         const winRate = totalLeague > 0 ? Math.round((wins / totalLeague) * 1000) / 10 : 0;
 
         forkJoin({
-          matches: this.riotApiService.getMatches(region, puuid, 100),
+          matches: this.riotApiService.getMatches(region, puuid, 20),
           mastery: this.riotApiService.getChampionMastery(region, puuid, 6)
         }).subscribe({
           next: ({ matches, mastery }) => {
@@ -922,6 +925,16 @@ export class ProfileComponent implements OnInit, OnDestroy {
   /** Día del año en Colombia: 0 = 1 ene, 1 = 2 ene, … (medianoche Colombia como instante UTC). */
   private dateAtColombiaDayIndex(year: number, dayIndex: number): Date {
     return new Date(Date.UTC(year, 0, 1, 5, 0, 0, 0) + dayIndex * 24 * 60 * 60 * 1000);
+  }
+
+  /** El dashboard trae toda la temporada guardada: la línea de actividad y «Partidas del año» la usan */
+  applySeasonActivity(games: Game[]) {
+    if (!games.length) return;
+    const map = activityByDay(games);
+    const current = this.activityMap();
+    for (const [k, v] of current) if (!map.has(k)) map.set(k, v);
+    this.activityMap.set(map);
+    this.activityTimelineData = null;
   }
 
   getActivityCount(dateKey: string): number {

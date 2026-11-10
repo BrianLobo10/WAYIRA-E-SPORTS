@@ -45,6 +45,15 @@
           [maxShow]="8" />
       }
 
+      @if (riotPuuid(); as dashPuuid) {
+        <app-profile-dashboard
+          [region]="profile()!.region!"
+          [puuid]="dashPuuid"
+          [gameName]="profile()!.gameName || ''"
+          [tagLine]="profile()!.tagLine || ''"
+          (seasonGames)="applySeasonActivity($event)" />
+      }
+
       @if (getActivityTimelineData(); as timelineData) {
         <app-profile-activity-timeline
           [data]="timelineData"

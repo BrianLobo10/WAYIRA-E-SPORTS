@@ -19,6 +19,19 @@ export interface SummonerData {
   leagues: LeagueEntry[];
 }
 
+/** Partida reducida guardada en Supabase (dashboard de estadísticas) */
+export interface SlimParticipant {
+  puuid: string; name: string; tag: string; champ: string; champId: number; team: number; win: boolean; pos: string;
+  k: number; d: number; a: number; cs: number; gold: number; dmg: number; taken: number; heal: number;
+  vision: number; wards: number; wardsKilled: number; barons: number; dragons: number; turrets: number;
+  multi: number; spree: number; level: number; firstBlood: boolean; pentas: number;
+}
+export interface SlimMatch {
+  id: string; created: number; duration: number; queue: number; mode: string;
+  teamKills: Record<string, number>; participants: SlimParticipant[];
+}
+export interface SyncStatus { busy: boolean; limited: boolean; pending: number | null; stored: number | null; total: number | null }
+
 export interface LeagueEntry {
   queueType: string;
   tier: string;
@@ -94,6 +107,16 @@ export class RiotApiService {
     return this.http.get<MatchData[]>(
       riotUrl(`/matches/${seg(region)}/${seg(puuid)}?count=${count}&start=${start}${queueParam}`)
     );
+  }
+
+  /** Descarga un lote de partidas de la temporada a la base de datos (llamar hasta que pending = 0) */
+  syncSeason(region: string, puuid: string): Observable<SyncStatus> {
+    return this.http.get<SyncStatus>(riotUrl(`/sync/${seg(region)}/${seg(puuid)}`));
+  }
+
+  /** Partidas de la temporada ya guardadas (sin gastar consultas a Riot) */
+  getSeasonHistory(region: string, puuid: string): Observable<SlimMatch[]> {
+    return this.http.get<SlimMatch[]>(riotUrl(`/history/${seg(region)}/${seg(puuid)}`));
   }
 
   getChampionMastery(region: string, puuid: string, count: number = 5): Observable<ChampionMastery[]> {
