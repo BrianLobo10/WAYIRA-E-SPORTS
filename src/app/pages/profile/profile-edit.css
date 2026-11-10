@@ -1,0 +1,127 @@
+/* Editar perfil + pestañas de publicaciones/guardados.
+   Solo variables del tema del Super Admin: nada de colores fijos. */
+
+/* ---------- Pestañas y cuadrícula de publicaciones ---------- */
+.posts-tabs { gap: 8px; border-top: 1px solid var(--border); }
+.tab-btn { color: var(--text-secondary); font: inherit; font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; min-height: 48px; padding: 0 20px; }
+.tab-btn:hover { color: var(--white); }
+.tab-btn.active { color: var(--white); border-top-color: var(--volt); }
+.tab-btn:focus-visible { outline: 2px solid var(--volt); outline-offset: -2px; }
+
+button.post-thumbnail { display: block; width: 100%; padding: 0; border: 0; font: inherit; color: inherit; text-align: inherit; background: var(--surface-2); }
+button.post-thumbnail:focus-visible { outline: 2px solid var(--volt); outline-offset: 2px; z-index: 1; }
+.text-post { color: var(--white); background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; }
+.text-post p { margin: 0; font-size: 14px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+@media (max-width: 560px) { .text-post { padding: 10px; } .text-post p { font-size: 12px; -webkit-line-clamp: 5; } }
+.post-overlay { background: color-mix(in srgb, var(--bg) 60%, transparent); }
+button.post-thumbnail:focus-visible .post-overlay { opacity: 1; }
+.overlay-stats > span { display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+.thumb-multi { position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: color-mix(in srgb, var(--bg) 65%, transparent); color: var(--white); }
+.thumb-multi svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.empty-posts p { max-width: 360px; margin-inline: auto; color: var(--text-secondary); }
+
+/* ---------- Editar perfil ---------- */
+.pe-overlay { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 24px 16px; background: color-mix(in srgb, var(--bg) 78%, transparent); }
+.pe-dialog { display: flex; flex-direction: column; width: min(640px, 100%); max-height: calc(100dvh - 48px); background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius-sm, 2px); box-shadow: var(--shadow-pop); overflow: hidden; }
+.pe-head { display: flex; align-items: center; justify-content: space-between; min-height: 56px; padding: 0 8px 0 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.pe-head h2 { margin: 0; font-family: var(--font-display); font-size: 18px; font-weight: 600; color: var(--white); }
+.pe-x { display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 50%; background: none; color: var(--text-secondary); cursor: pointer; }
+.pe-x:hover { background: var(--surface-2); color: var(--white); }
+.pe-x svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.pe-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+
+/* Vista previa */
+.pe-preview { position: relative; margin: 20px 20px 4px; border: 1px solid var(--border); border-radius: var(--radius-sm, 2px); overflow: hidden; background: var(--surface-2); }
+.pe-cover { height: 84px; background: linear-gradient(120deg, rgba(var(--volt-rgb), .32), rgba(var(--volt-rgb), .04) 70%), var(--surface-3); background-size: cover; background-position: center; }
+.pe-card { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; padding: 0 16px 16px; }
+.pe-avatar { display: grid; place-items: center; width: 84px; height: 84px; margin-top: -42px; border-radius: 50%; overflow: hidden; background: var(--volt); color: var(--volt-ink); font-size: 30px; font-weight: 700; box-shadow: 0 0 0 4px var(--surface-2); }
+.pe-avatar--changed { box-shadow: 0 0 0 4px var(--surface-2), 0 0 0 6px var(--volt); }
+.pe-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.pe-id { min-width: 0; padding-top: 8px; }
+.pe-name { display: block; font-family: var(--font-display); font-size: 20px; line-height: 1.2; color: var(--white); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pe-handle { display: block; margin-top: 2px; font-size: 13px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pe-bio { margin: 8px 0 0; font-size: 14px; line-height: 1.45; color: var(--white); white-space: pre-line; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.pe-bio.is-empty { color: var(--text-muted, var(--text-secondary)); font-style: italic; }
+.pe-kicker { position: absolute; top: 10px; left: 12px; padding: 3px 8px; border-radius: 999px; background: color-mix(in srgb, var(--bg) 70%, transparent); color: var(--white); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+
+/* Secciones */
+.pe-section { padding: 20px; border-bottom: 1px solid var(--border); }
+.pe-section:last-child { border-bottom: 0; }
+.pe-h { margin: 0 0 12px; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-secondary); }
+.pe-field { display: grid; gap: 6px; margin-bottom: 14px; }
+.pe-field:last-child { margin-bottom: 0; }
+.pe-field label, .pe-label-row label { font-size: 14px; font-weight: 600; color: var(--white); }
+.pe-label-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.pe-count { font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.pe-count.is-warn { color: var(--ember-text, var(--ember)); }
+.pe-input { width: 100%; min-height: 42px; padding: 0 12px; border: 1px solid var(--border-input, var(--border)); border-radius: var(--radius-sm, 2px); background: var(--surface-2); color: var(--white); font: inherit; font-size: 15px; transition: border-color var(--duration-micro, .15s) ease; }
+.pe-input:hover { border-color: var(--border-strong, var(--border)); }
+.pe-input:focus { outline: 2px solid var(--volt); outline-offset: 0; border-color: transparent; }
+.pe-input::placeholder { color: var(--text-muted, var(--text-secondary)); }
+.pe-textarea { min-height: 88px; padding: 10px 12px; line-height: 1.45; resize: vertical; }
+select.pe-input { cursor: pointer; }
+.pe-hint { margin: 8px 0 0; font-size: 13px; line-height: 1.45; color: var(--text-secondary); }
+.pe-hint b { color: var(--white); }
+.pe-error { margin: 6px 0 0; font-size: 13px; color: var(--ember-text, var(--ember)); }
+
+/* Botones tipo ficha */
+.pe-seg, .pe-suggest { display: flex; flex-wrap: wrap; gap: 8px; }
+.pe-suggest { margin-top: 4px; }
+.pe-chip { position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 14px; border: 1px solid var(--border-strong, var(--border)); border-radius: 999px; background: none; color: var(--white); font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; transition: var(--t-ui); }
+.pe-chip:hover:not(:disabled):not(.is-off) { border-color: var(--volt); color: var(--volt); }
+.pe-chip.is-on { border-color: var(--volt); background: rgba(var(--volt-rgb), .12); color: var(--volt); }
+.pe-chip:disabled, .pe-chip.is-off { opacity: .5; cursor: not-allowed; }
+.pe-chip input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.pe-chip svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.pe-chip:focus-within, .pe-chip:focus-visible { outline: 2px solid var(--volt); outline-offset: 2px; }
+.pe-chip--ghost { border-color: transparent; color: var(--text-secondary); }
+.pe-chip--danger { color: var(--ember-text, var(--ember)); }
+.pe-chip--danger:hover:not(:disabled) { border-color: var(--ember); color: var(--ember-text, var(--ember)) !important; }
+.pe-tag { min-height: 30px; padding: 0 10px; border: 1px dashed var(--border-strong, var(--border)); border-radius: 999px; background: none; color: var(--text-secondary); font: inherit; font-size: 13px; cursor: pointer; }
+.pe-tag:hover { color: var(--white); border-color: var(--volt); }
+.pe-tag:focus-visible, .pe-champ:focus-visible, .pe-x:focus-visible, .pe-save:focus-visible, .pe-cancel:focus-visible { outline: 2px solid var(--volt); outline-offset: 2px; }
+
+/* Campeones con su ícono */
+.pe-champs { margin-top: 14px; display: grid; gap: 10px; }
+.pe-champ-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; max-height: 260px; overflow-y: auto; padding: 2px; }
+.pe-champ { display: grid; justify-items: center; gap: 4px; padding: 6px 4px; border: 1px solid transparent; border-radius: var(--radius-sm, 2px); background: var(--surface-2); color: var(--text-secondary); font: inherit; font-size: 11px; cursor: pointer; }
+.pe-champ img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: var(--surface-3); }
+.pe-champ span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pe-champ:hover { color: var(--white); border-color: var(--border-strong, var(--border)); }
+.pe-champ.is-on { color: var(--volt); border-color: var(--volt); background: rgba(var(--volt-rgb), .1); }
+.pe-champ-grid .pe-hint { grid-column: 1 / -1; }
+
+/* Riot */
+.pe-riot-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1.4fr); gap: 10px; margin-top: 12px; }
+.pe-riot-grid .pe-field { margin: 0; }
+.pe-riot-actions { margin-top: 12px; }
+.pe-riot-linked { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm, 2px); background: var(--surface-2); }
+.pe-riot-found { margin-top: 12px; border-color: var(--volt); }
+.pe-riot-linked img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.pe-riot-linked > div { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.pe-riot-linked strong { color: var(--white); font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pe-riot-linked span { color: var(--text-secondary); font-size: 13px; }
+.pe-riot-badge { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: rgba(var(--volt-rgb), .14); color: var(--volt); flex-shrink: 0; }
+.pe-riot-badge svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Pie fijo */
+.pe-foot { display: flex; align-items: center; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--border); background: var(--surface-1); flex-shrink: 0; }
+.pe-status { flex: 1; font-size: 13px; color: var(--text-secondary); }
+.pe-cancel { min-height: 40px; padding: 0 16px; border: 0; border-radius: var(--radius-sm, 2px); background: none; color: var(--text-secondary); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.pe-cancel:hover:not(:disabled) { color: var(--white); background: var(--surface-2); }
+.pe-save { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 18px; border: 0; border-radius: var(--radius-sm, 2px); background: var(--volt); color: var(--volt-ink); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; transition: var(--t-ui); white-space: nowrap; }
+.pe-save:hover:not(:disabled) { background: var(--accent-hover, var(--volt)); }
+.pe-save:disabled { opacity: .45; cursor: not-allowed; }
+
+@media (max-width: 640px) {
+  .pe-overlay { padding: 0; place-items: stretch; }
+  .pe-dialog { width: 100%; max-height: none; height: 100dvh; border: 0; border-radius: 0; }
+  .pe-preview { margin: 16px 16px 4px; }
+  .pe-section { padding: 18px 16px; }
+  .pe-riot-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .pe-riot-grid .pe-field:first-child { grid-column: 1 / -1; }
+  .pe-foot { padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); }
+  .pe-status { display: none; }
+  .pe-save { flex: 1; justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) { .pe-chip, .pe-save, .pe-input { transition: none; } }

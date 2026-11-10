@@ -25,6 +25,10 @@ const TIER_COLORS: Record<string, string> = {
   EMERALD: '#36c77c', DIAMOND: '#7d97ff', MASTER: '#c06ae0', GRANDMASTER: '#ec5a60', CHALLENGER: '#f4d06a',
 };
 import { SeasonSyncService } from '../../services/season-sync.service';
+import { PostDetailComponent } from '../../components/social/post-detail.component';
+import { PostEditorComponent } from '../../components/social/post-editor.component';
+import { countReactions } from '../../components/social/reactions';
+import { gsap } from 'gsap';
 @Component({
   selector: 'app-profile',
   standalone: true,
@@ -36,10 +40,12 @@ import { SeasonSyncService } from '../../services/season-sync.service';
     ProfilePerformanceComponent,
     ProfileTopChampionsComponent,
     ProfileActivityTimelineComponent,
-    ProfileDashboardComponent
+    ProfileDashboardComponent,
+    PostDetailComponent,
+    PostEditorComponent
   ],
   templateUrl: './profile.component.html',
-  styleUrls: ['./profile.component.css']
+  styleUrls: ['./profile.component.css', './profile-edit.css']
 })
 export class ProfileComponent implements OnInit, OnDestroy {
   private readonly toast = inject(ToastService);
@@ -199,6 +205,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.route.params.subscribe(params => {
       const userId = params['id'];
+      this.postsTab.set('posts');
+      this.savedPosts.set([]);
+      this.selectedPost.set(null);
+      this.loadSavedIds();
       if (userId) {
         this.userId.set(userId);
         this.loadProfile(userId);
@@ -357,13 +367,72 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.router.navigate(['/messages'], { queryParams: { userId: profile.uid } });
   }
 
+  // --- Publicaciones y guardados (visor compartido con el feed) ---
+  postsTab = signal<'posts' | 'saved'>('posts');
+  savedPosts = signal<Post[]>([]);
+  loadingSaved = signal(false);
+  savedIds = signal<Set<string>>(new Set());
+  viewerId = computed(() => { this.currentUserProfile(); return this.community.getCurrentUser()?.uid ?? null; });
+
   openPost(post: Post) {
     this.selectedPost.set(post);
-    // Inicializar el índice del carrusel si no existe
-    if (post.id && !this.postImageIndices().has(post.id)) {
-      this.setCurrentImageIndex(post.id, 0);
-    }
     this.showPostModal.set(true);
+    this.refreshSelected();
+  }
+
+  setPostsTab(tab: 'posts' | 'saved') {
+    this.postsTab.set(tab);
+    if (tab === 'saved') this.loadSaved();
+  }
+
+  private loadSaved() {
+    this.loadingSaved.set(!this.savedPosts().length);
+    this.community.getSavedPosts().subscribe({
+      next: (list) => { this.savedPosts.set(list); this.savedIds.set(new Set(list.map((p) => p.id!))); this.loadingSaved.set(false); },
+      error: () => { this.loadingSaved.set(false); this.toast.error('No se pudieron cargar tus guardados'); },
+    });
+  }
+
+  private loadSavedIds() {
+    if (!this.community.getCurrentUser()) return;
+    this.community.getSavedPostIds().then((ids) => this.savedIds.set(ids)).catch(() => { /* sin guardados */ });
+  }
+
+  private refreshSelected() {
+    const id = this.selectedPost()?.id;
+    if (!id) return;
+    this.community.getPostById(id).subscribe({ next: (p) => p && this.selectedPost()?.id === id && this.selectedPost.set(p) });
+  }
+
+  onPostChanged() {
+    if (this.userId()) this.loadPosts(this.userId()!);
+    if (this.postsTab() === 'saved') this.loadSaved();
+    this.refreshSelected();
+  }
+
+  onPostDeleted(id: string) {
+    this.posts.update((l) => l.filter((p) => p.id !== id));
+    this.savedPosts.update((l) => l.filter((p) => p.id !== id));
+    this.closePostModal();
+  }
+
+  onSavedChange(post: Post, saved: boolean) {
+    this.savedIds.update((s) => { const n = new Set(s); saved ? n.add(post.id!) : n.delete(post.id!); return n; });
+    this.savedPosts.update((l) => saved ? (l.some((p) => p.id === post.id) ? l : [post, ...l]) : l.filter((p) => p.id !== post.id));
+  }
+
+  onPostCreated() {
+    this.showCreatePostModal.set(false);
+    if (this.userId()) this.loadPosts(this.userId()!);
+  }
+
+  reactionTotal(post: Post): number {
+    const c = countReactions(post.reactions);
+    return c.like + c.love + c.haha + c.wow + c.sad + c.angry;
+  }
+
+  commentTotal(post: Post): number {
+    return (post.comments ?? []).reduce((s, c) => s + 1 + (c.replies?.length ?? 0), 0);
   }
 
   getCurrentImageIndex(postId: string): number {
@@ -1202,9 +1271,70 @@ export class ProfileComponent implements OnInit, OnDestroy {
     return total;
   }
 
+  // --- Editar perfil: vista previa, cambios pendientes y animación ---
+  private editOriginal = { name: '', bio: '', photo: null as string | null };
+  readonly bioIdeas = ['Main: ', 'Rol: ', 'Busco dúo para ', 'Juego en las noches', 'Equipo: '];
+  photoChanged = computed(() => (this.editPhotoPreview() || null) !== this.editOriginal.photo || !!this.editPhotoFile());
+  editDirty = computed(() =>
+    this.editDisplayName().trim() !== this.editOriginal.name.trim() ||
+    this.editBio().trim() !== this.editOriginal.bio.trim() ||
+    this.photoChanged());
+
+  championIcon(champion: string): string {
+    const special: Record<string, string> = {
+      'Dr. Mundo': 'DrMundo', 'Jarvan IV': 'JarvanIV', "K'Sante": 'KSante', "Kai'Sa": 'Kaisa', "Kha'Zix": 'Khazix', "Kog'Maw": 'KogMaw',
+      'Nunu & Willump': 'Nunu', "Rek'Sai": 'RekSai', "Vel'Koz": 'Velkoz', "Bel'Veth": 'Belveth', "Cho'Gath": 'Chogath', 'Renata Glasc': 'Renata',
+      'Tahm Kench': 'TahmKench', 'Twisted Fate': 'TwistedFate', 'Master Yi': 'MasterYi', 'Miss Fortune': 'MissFortune', 'Xin Zhao': 'XinZhao',
+      'LeBlanc': 'Leblanc', 'Wukong': 'MonkeyKing',
+    };
+    const key = special[champion] ?? champion.replace(/'/g, '').replace(/[\s.]/g, '');
+    return `https://ddragon.leagueoflegends.com/cdn/14.24.1/img/champion/${key}.png`;
+  }
+
+  addBioIdea(text: string) {
+    const cur = this.editBio().trimEnd();
+    const next = (cur ? cur + (cur.endsWith('.') || cur.endsWith('·') ? ' ' : ' · ') : '') + text;
+    if (next.length <= 500) this.editBio.set(next);
+    queueMicrotask(() => { const el = document.getElementById('pe-bio') as HTMLTextAreaElement | null; el?.focus(); el?.setSelectionRange(el.value.length, el.value.length); });
+  }
+
+  resetEditPhoto() {
+    this.editPhotoFile.set(null);
+    this.selectedChampion.set(null);
+    this.foundSummoner.set(null);
+    this.editPhotoPreview.set(this.editOriginal.photo);
+  }
+
+  onEditPhotoError(ev: Event) {
+    const img = ev.target as HTMLImageElement;
+    if (img.dataset['fallback']) return;
+    img.dataset['fallback'] = '1';
+    img.src = 'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/profile-icons/29.jpg';
+  }
+
+  async requestCloseEdit() {
+    if (this.uploadingPhoto()) return;
+    if (this.editDirty() && !(await this.dialog.confirm({ title: '¿Descartar los cambios?', message: 'Lo que cambiaste en tu perfil no se guardará.', confirmLabel: 'Descartar', danger: true }))) return;
+    this.closeEditModal();
+  }
+
+  private animateEditIn() {
+    setTimeout(() => {
+      const el = document.querySelector('.pe-dialog');
+      if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      gsap.fromTo(el, { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.26, ease: 'power2.out' });
+      gsap.fromTo(el.querySelectorAll('.pe-preview, .pe-section'), { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: 0.3, stagger: 0.05, delay: 0.06, ease: 'power2.out' });
+    });
+  }
+
   openEditModal() {
     const profile = this.profile();
     if (profile) {
+      this.editOriginal = { name: profile.displayName || '', bio: profile.bio || '', photo: profile.photoURL || null };
+      this.editPhotoFile.set(null);
+      this.selectedChampion.set(null);
+      this.foundSummoner.set(null);
+      this.showChampionSelector.set(false);
       this.editDisplayName.set(profile.displayName);
       this.editBio.set(profile.bio || '');
       this.editPhotoPreview.set(profile.photoURL || null);
@@ -1215,6 +1345,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       this.foundLinkSummoner.set(null);
       this.linkSummonerError.set(null);
       this.showEditModal.set(true);
+      this.animateEditIn();
     }
   }
 
@@ -1342,6 +1473,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
           // Cargar automáticamente la foto de perfil del invocador
           const iconUrl = this.getProfileIconUrl(data.profileIconId);
           this.editPhotoPreview.set(iconUrl);
+          this.popAvatar();
           this.editPhotoFile.set(null);
           this.selectedChampion.set(null);
         },
@@ -1377,6 +1509,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       const reader = new FileReader();
       reader.onload = (e) => {
         this.editPhotoPreview.set(e.target?.result as string);
+        this.popAvatar();
       };
       reader.readAsDataURL(file);
     }
@@ -1385,29 +1518,15 @@ export class ProfileComponent implements OnInit, OnDestroy {
   selectChampion(champion: string) {
     this.selectedChampion.set(champion);
     this.editPhotoFile.set(null);
-    // Normalizar el nombre del campeón para la URL
-    let championKey = champion.replace(/'/g, '').replace(/\s/g, '');
-    // Casos especiales
-    if (champion === 'Dr. Mundo') championKey = 'DrMundo';
-    if (champion === 'Jarvan IV') championKey = 'JarvanIV';
-    if (champion === 'K\'Sante') championKey = 'KSante';
-    if (champion === 'Kai\'Sa') championKey = 'Kaisa';
-    if (champion === 'Kha\'Zix') championKey = 'Khazix';
-    if (champion === 'Kog\'Maw') championKey = 'KogMaw';
-    if (champion === 'Nunu & Willump') championKey = 'Nunu';
-    if (champion === 'Rek\'Sai') championKey = 'RekSai';
-    if (champion === 'Vel\'Koz') championKey = 'Velkoz';
-    if (champion === 'Bel\'Veth') championKey = 'Belveth';
-    if (champion === 'Cho\'Gath') championKey = 'Chogath';
-    if (champion === 'Renata Glasc') championKey = 'Renata';
-    if (champion === 'Tahm Kench') championKey = 'TahmKench';
-    if (champion === 'Twisted Fate') championKey = 'TwistedFate';
-    if (champion === 'Master Yi') championKey = 'MasterYi';
-    if (champion === 'Miss Fortune') championKey = 'MissFortune';
-    if (champion === 'Xin Zhao') championKey = 'XinZhao';
-    
-    const championImageUrl = `https://ddragon.leagueoflegends.com/cdn/14.1.1/img/champion/${championKey}.png`;
-    this.editPhotoPreview.set(championImageUrl);
+    this.foundSummoner.set(null);
+    this.editPhotoPreview.set(this.championIcon(champion));
+    this.popAvatar();
+  }
+
+  /** Pequeño rebote del avatar de la vista previa al cambiar de foto */
+  private popAvatar() {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    setTimeout(() => { const a = document.querySelector('.pe-avatar'); if (a) gsap.fromTo(a, { scale: 0.86 }, { scale: 1, duration: 0.4, ease: 'back.out(2.5)' }); });
   }
 
   toggleChampionSelector() {

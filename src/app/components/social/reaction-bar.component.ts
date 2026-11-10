@@ -15,11 +15,10 @@ import { DISLIKE, REACTIONS, ReactionDef, countReactions, reactionDef } from './
     <div class="bar" [class.bar--compact]="compact()">
       <div class="main" (mouseenter)="openTraySoon()" (mouseleave)="closeTraySoon()" (focusin)="openTraySoon()" (focusout)="closeTraySoon()">
         <button type="button" class="btn" [class.is-on]="mine() && mine() !== 'dislike'" [attr.data-tone]="mainDef().tone"
-                [attr.aria-pressed]="!!mine() && mine() !== 'dislike'" [attr.aria-label]="mine() && mine() !== 'dislike' ? 'Quitar reacción: ' + mainDef().label : 'Me gusta'"
+                [attr.aria-pressed]="!!mine() && mine() !== 'dislike'" [attr.aria-label]="mine() && mine() !== 'dislike' ? 'Quitar reacción: ' + mainDef().label : 'Me gusta'" [title]="mine() && mine() !== 'dislike' ? mainDef().label : 'Me gusta (mantén para más reacciones)'"
                 (click)="toggleMain()" (touchstart)="pressStart()" (touchend)="pressEnd($event)" (contextmenu)="$event.preventDefault()"
                 [disabled]="disabled()">
           <svg #mainIcon viewBox="0 0 24 24" aria-hidden="true">@for (d of mainDef().paths; track $index) { <path [attr.d]="d" /> }</svg>
-          @if (!compact()) { <span class="lbl">{{ mine() && mine() !== 'dislike' ? mainDef().label : 'Me gusta' }}</span> }
         </button>
         @if (trayOpen()) {
           <div #tray class="tray" role="menu" aria-label="Elegir reacción">
@@ -66,7 +65,6 @@ import { DISLIKE, REACTIONS, ReactionDef, countReactions, reactionDef } from './
     .btn.is-on[data-tone="alert"], .tray-btn.is-on[data-tone="alert"] { color: var(--ember-text, var(--ember)); }
     .btn.is-on[data-tone="text"], .tray-btn.is-on[data-tone="text"] { color: var(--white); }
     .btn.is-on svg { fill: color-mix(in srgb, currentColor 22%, transparent); }
-    .lbl { font-weight: 500; }
     .n { font-variant-numeric: tabular-nums; }
     .tray { position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 30; display: flex; gap: 2px; padding: 4px;
       background: var(--surface-3); border-radius: 999px; box-shadow: var(--shadow-pop); }

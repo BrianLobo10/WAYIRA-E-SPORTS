@@ -68,24 +68,45 @@
 
     <div class="profile-content">
       <div class="container">
-        <div class="posts-tabs">
-          <button class="tab-btn active">
-            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            PUBLICACIONES
+        <div class="posts-tabs" role="tablist" aria-label="Contenido del perfil">
+          <button type="button" role="tab" class="tab-btn" [class.active]="postsTab() === 'posts'" [attr.aria-selected]="postsTab() === 'posts'" (click)="setPostsTab('posts')">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5h16v14H4zM4 15l4-4 4 4 3-3 5 5" /></svg>
+            Publicaciones
           </button>
+          @if (isOwnProfile()) {
+            <button type="button" role="tab" class="tab-btn" [class.active]="postsTab() === 'saved'" [attr.aria-selected]="postsTab() === 'saved'" (click)="setPostsTab('saved')">
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 3h12v18l-6-4-6 4V3z" /></svg>
+              Guardados
+            </button>
+          }
         </div>
 
+        @if (postsTab() === 'saved') {
+          @if (loadingSaved()) {
+            <div class="loading-container"><span class="spinner"></span><span>Cargando guardados…</span></div>
+          } @else if (savedPosts().length === 0) {
+            <div class="empty-posts">
+              <svg width="56" height="56" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 3h12v18l-6-4-6 4V3z" /></svg>
+              <p>Aún no guardas publicaciones. Usa el menú ⋯ de cualquier publicación y elige «Guardar».</p>
+              <a routerLink="/feed" class="btn-secondary">Ir al inicio</a>
+            </div>
+          } @else {
+            <div class="posts-grid">
+              @for (post of savedPosts(); track post.id) {
+                <ng-container *ngTemplateOutlet="thumb; context: { $implicit: post }"></ng-container>
+              }
+            </div>
+          }
+        } @else {
         @if (posts().length === 0 && isOwnProfile()) {
           <div class="empty-posts-container">
-            <div class="post-thumbnail create-post-thumbnail" (click)="openCreateModal()">
+            <button type="button" class="post-thumbnail create-post-thumbnail" (click)="openCreateModal()" aria-label="Crear publicación">
               <div class="create-post-thumbnail-content">
                 <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
               </div>
-            </div>
+            </button>
             <div class="empty-posts">
               <svg width="64" height="64" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -103,478 +124,199 @@
         } @else {
           <div class="posts-grid">
             @if (isOwnProfile()) {
-              <div class="post-thumbnail create-post-thumbnail" (click)="openCreateModal()">
+              <button type="button" class="post-thumbnail create-post-thumbnail" (click)="openCreateModal()" aria-label="Crear publicación">
                 <div class="create-post-thumbnail-content">
                   <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                   </svg>
                 </div>
-              </div>
+              </button>
             }
             @for (post of posts(); track post.id) {
-              <div class="post-thumbnail" (click)="openPost(post)">
-                @if (post.images && post.images.length > 0) {
-                  <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="post.images[0]" [alt]="post.content">
-                } @else if (post.video) {
-                  <div class="video-thumbnail">
-                    <video [src]="post.video" muted></video>
-                    <div class="play-overlay">
-                      <svg width="32" height="32" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z"/>
-                      </svg>
-                    </div>
-                  </div>
-                } @else {
-                  <div class="text-post">
-                    <p>{{ post.content }}</p>
-                  </div>
-                }
-                <div class="post-overlay">
-                  <div class="overlay-stats">
-                    <span>
-                      <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                      </svg>
-                      {{ (post.likes || []).length }}
-                    </span>
-                    <span>
-                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                      </svg>
-                      {{ (post.comments || []).length }}
-                    </span>
-                  </div>
-                </div>
-              </div>
+              <ng-container *ngTemplateOutlet="thumb; context: { $implicit: post }"></ng-container>
             }
           </div>
+        }
         }
       </div>
     </div>
     </div>
 
-  <!-- Post Modal -->
-  @if (showPostModal() && selectedPost()) {
-    <div class="modal-overlay" (click)="closePostModal()">
-      <div class="post-modal-content" (click)="$event.stopPropagation()">
-        <button type="button" class="post-modal-close" (click)="closePostModal()" aria-label="Cerrar">
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-        <div class="post-modal-body">
-          <div class="post-modal-image" [class.text-only]="(!selectedPost()!.images || selectedPost()!.images!.length === 0) && !selectedPost()!.video">
-            @if (selectedPost()!.images && selectedPost()!.images!.length > 0) {
-              <div class="post-image-carousel-modal">
-                <div class="carousel-container">
-                  @for (image of selectedPost()!.images!; track $index) {
-                    <div class="carousel-slide" [class.active]="$index === getCurrentImageIndex(selectedPost()!.id || '')">
-                      <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="image" [alt]="selectedPost()!.content">
-                    </div>
-                  }
-                </div>
-                @if (selectedPost()!.images!.length > 1) {
-                  <button class="carousel-btn carousel-btn-prev" (click)="prevImage(selectedPost()!, $event)" title="Imagen anterior">
-                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <button class="carousel-btn carousel-btn-next" (click)="nextImage(selectedPost()!, $event)" title="Siguiente imagen">
-                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                  <div class="carousel-indicators">
-                    @for (image of selectedPost()!.images!; track $index) {
-                      <button 
-                        class="carousel-dot" 
-                        [class.active]="$index === getCurrentImageIndex(selectedPost()!.id || '')"
-                        (click)="goToImage(selectedPost()!, $index, $event)"
-                        [attr.aria-label]="'Ir a imagen ' + ($index + 1)">
-                      </button>
-                    }
-                  </div>
-                  <div class="carousel-counter">
-                    {{ getCurrentImageIndex(selectedPost()!.id || '') + 1 }} / {{ selectedPost()!.images!.length }}
-                  </div>
-                }
-              </div>
-            } @else if (selectedPost()!.video) {
-              <video [src]="selectedPost()!.video" controls></video>
-            } @else {
-              <div class="text-post-large">
-                <p class="text-content-large" [ngClass]="getTextSizeClass(selectedPost()!.content)">{{ selectedPost()!.content }}</p>
-              </div>
-            }
-          </div>
-          <div class="post-modal-sidebar">
-            <div class="post-modal-author">
-              @if (selectedPost()!.authorPhoto) {
-                <img referrerpolicy="no-referrer" loading="lazy" decoding="async" 
-                  [src]="selectedPost()!.authorPhoto" 
-                  [alt]="selectedPost()!.authorName" 
-                  class="author-avatar"
-                  (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
-              } @else {
-                <div class="author-avatar-placeholder">
-                  {{ selectedPost()!.authorName.charAt(0).toUpperCase() }}
-                </div>
-              }
-              <a [routerLink]="['/profile', selectedPost()!.authorId]" class="author-name-link" (click)="closePostModal()">
-                {{ selectedPost()!.authorName }}
-              </a>
-            </div>
-            <div class="post-modal-comments">
-              @if (selectedPost()!.images && selectedPost()!.images!.length > 0 || selectedPost()!.video) {
-                <div class="post-content-section">
-                  <p class="post-text">{{ selectedPost()!.content }}</p>
-                </div>
-              }
-              <div class="comments-section">
-                <div class="comments-header">
-                  <h4>Comentarios</h4>
-                </div>
-                <div class="comments-list">
-                  @if ((selectedPost()!.comments || []).length === 0) {
-                    <div class="empty-comments">
-                      <p>Nadie ha opinado todavía. ¿Qué dices tú?</p>
-                    </div>
-                  } @else {
-                    @for (comment of selectedPost()!.comments || []; track $index) {
-                      <div class="comment-item">
-                        <div class="comment-header">
-                          @if (comment.authorPhoto) {
-                            <img referrerpolicy="no-referrer" loading="lazy" decoding="async" 
-                              [src]="comment.authorPhoto" 
-                              [alt]="comment.authorName" 
-                              class="comment-avatar"
-                              (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
-                          } @else {
-                            <div class="comment-avatar-placeholder">
-                              {{ comment.authorName.charAt(0).toUpperCase() }}
-                            </div>
-                          }
-                          <a [routerLink]="['/profile', comment.authorId]" class="comment-author-link" (click)="closePostModal()">
-                            {{ comment.authorName }}
-                          </a>
-                        </div>
-                        <p class="comment-content">{{ comment.content }}</p>
-                        <div class="comment-actions">
-                          <button class="comment-btn" (click)="likeComment($index)">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                            </svg>
-                            <span>{{ (comment.likes || []).length }}</span>
-                          </button>
-                          <button class="comment-btn" (click)="dislikeComment($index)">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
-                            </svg>
-                            <span>{{ (comment.dislikes || []).length }}</span>
-                          </button>
-                        </div>
-                      </div>
-                    }
-                  }
-                </div>
-              </div>
-            </div>
-            <div class="post-modal-actions">
-              <div class="post-reactions">
-                <button class="action-btn" (click)="likePost(selectedPost()!)" [class.liked]="isLiked(selectedPost()!)">
-                  <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" [attr.fill]="isLiked(selectedPost()!) ? 'currentColor' : 'none'">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                  </svg>
-                  <span>{{ (selectedPost()!.likes || []).length }}</span>
-                </button>
-                <button class="action-btn" (click)="dislikePost(selectedPost()!)" [class.disliked]="isDisliked(selectedPost()!)">
-                  <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" [attr.fill]="isDisliked(selectedPost()!) ? 'currentColor' : 'none'">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
-                  </svg>
-                  <span>{{ (selectedPost()!.dislikes || []).length }}</span>
-                </button>
-              </div>
-              <div class="comment-input-container">
-                <input 
-                  type="text" 
-                  [(ngModel)]="newComment" 
-                  placeholder="Añade un comentario..."
-                  class="comment-input"
-                  (keyup.enter)="addComment()">
-                <button class="send-btn" (click)="addComment()">
-                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
+  <ng-template #thumb let-post>
+    <button type="button" class="post-thumbnail" (click)="openPost(post)" [attr.aria-label]="'Abrir publicación: ' + (post.content | slice:0:60)">
+      @if (post.images && post.images.length > 0) {
+        <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="post.images[0]" alt="">
+        @if (post.images.length > 1) { <span class="thumb-multi" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 8h12v12H8zM4 16V4h12" /></svg></span> }
+      } @else if (post.video) {
+        <div class="video-thumbnail">
+          <video [src]="post.video" muted preload="metadata"></video>
+          <div class="play-overlay"><svg width="32" height="32" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></div>
         </div>
-      </div>
-    </div>
+      } @else {
+        <div class="text-post"><p>{{ post.content }}</p></div>
+      }
+      <span class="post-overlay">
+        <span class="overlay-stats">
+          <span><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M7 11v9H4v-9h3zm0 0l4-8a2 2 0 012 2v4h5.5a2 2 0 012 2.3l-1.2 7A2 2 0 0117.3 20H7" /></svg>{{ reactionTotal(post) }}</span>
+          <span><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.4A8 8 0 1121 12z" /></svg>{{ commentTotal(post) }}</span>
+        </span>
+      </span>
+    </button>
+  </ng-template>
+
+  @if (selectedPost(); as post) {
+    <app-post-detail [post]="post" [userId]="viewerId()" [saved]="savedIds().has(post.id!)"
+                     (closed)="closePostModal()" (changed)="onPostChanged()" (deleted)="onPostDeleted($event)" (savedChange)="onSavedChange(post, $event)" />
   }
 
-  <!-- Edit Profile Modal -->
+  <!-- Editar perfil -->
   @if (showEditModal()) {
-    <div class="modal-overlay" (click)="closeEditModal()">
-      <div class="modal-content edit-profile-modal" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <h3>Editar Perfil</h3>
-          <button class="close-btn" (click)="closeEditModal()" [disabled]="uploadingPhoto()">
-            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+    <div class="pe-overlay" (click)="requestCloseEdit()">
+      <div class="pe-dialog" role="dialog" aria-modal="true" aria-labelledby="pe-title" (click)="$event.stopPropagation()" (keydown.escape)="requestCloseEdit()">
+        <header class="pe-head">
+          <h2 id="pe-title">Editar perfil</h2>
+          <button type="button" class="pe-x" (click)="requestCloseEdit()" [disabled]="uploadingPhoto()" aria-label="Cerrar">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
           </button>
-        </div>
-        <div class="modal-body">
-          <div class="edit-photo-section">
-            <div class="photo-preview">
-              @if (editPhotoPreview()) {
-                <img referrerpolicy="no-referrer" loading="lazy" decoding="async" 
-                  [src]="editPhotoPreview()!" 
-                  alt="Preview" 
-                  class="preview-photo"
-                  (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
-              } @else if (profile()?.photoURL) {
-                <img referrerpolicy="no-referrer" loading="lazy" decoding="async" 
-                  [src]="profile()!.photoURL!" 
-                  alt="Current photo" 
-                  class="preview-photo"
-                  (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
-              } @else {
-                <div class="photo-placeholder">
-                  {{ (profile()?.displayName && profile()!.displayName.charAt(0).toUpperCase()) || 'U' }}
-                </div>
-              }
-            </div>
-            <div class="photo-options">
-              <label class="file-label" [class.disabled]="uploadingPhoto()">
-                <input type="file" accept="image/*" (change)="onPhotoSelected($event)" [disabled]="uploadingPhoto()">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <span>Subir Foto</span>
-              </label>
-              <button class="champion-btn" (click)="toggleChampionSelector()" [class.active]="showChampionSelector()" [disabled]="uploadingPhoto()">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-                <span>Personaje LoL</span>
-              </button>
-              <button class="summoner-btn" (click)="loadSummonerIcon()" [disabled]="uploadingPhoto() || searchingSummoner()">
-                @if (searchingSummoner()) {
-                  <span class="spinner-small"></span>
-                  <span>Cargando...</span>
+        </header>
+
+        <div class="pe-scroll">
+          <!-- Vista previa en vivo -->
+          <section class="pe-preview" aria-label="Vista previa">
+            <div class="pe-cover" [style.background-image]="profile()?.coverImageURL ? 'url(' + profile()!.coverImageURL + ')' : null"></div>
+            <div class="pe-card">
+              <div class="pe-avatar" [class.pe-avatar--changed]="photoChanged()">
+                @if (editPhotoPreview()) {
+                  <img [src]="editPhotoPreview()!" alt="" referrerpolicy="no-referrer" (error)="onEditPhotoError($event)">
                 } @else {
-                  <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  <span>Foto Invocador</span>
+                  <span>{{ (editDisplayName() || 'U').charAt(0).toUpperCase() }}</span>
                 }
+              </div>
+              <div class="pe-id">
+                <strong class="pe-name">{{ editDisplayName().trim() || 'Tu nombre' }}</strong>
+                <span class="pe-handle">{{ getProfileHandle() }}@if (hasRiot(profile())) { · {{ profile()!.gameName }}#{{ profile()!.tagLine }} }</span>
+                <p class="pe-bio" [class.is-empty]="!editBio().trim()">{{ editBio().trim() || 'Tu biografía aparecerá aquí.' }}</p>
+              </div>
+            </div>
+            <span class="pe-kicker">Así te verán</span>
+          </section>
+
+          <!-- Foto -->
+          <section class="pe-section" aria-labelledby="pe-photo">
+            <h3 id="pe-photo" class="pe-h">Foto de perfil</h3>
+            <div class="pe-seg" role="group" aria-label="Origen de la foto">
+              <label class="pe-chip" [class.is-off]="uploadingPhoto()">
+                <input type="file" accept="image/*" (change)="onPhotoSelected($event)" [disabled]="uploadingPhoto()">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" /></svg>
+                Subir imagen
+              </label>
+              <button type="button" class="pe-chip" [class.is-on]="showChampionSelector()" [attr.aria-expanded]="showChampionSelector()" (click)="toggleChampionSelector()" [disabled]="uploadingPhoto()">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.5 5 5.5.8-4 3.9.9 5.5L12 15.6 7.1 18.2 8 12.7 4 8.8 9.5 8z" /></svg>
+                Campeón de LoL
               </button>
+              @if (hasRiot(profile())) {
+                <button type="button" class="pe-chip" (click)="loadSummonerIcon()" [disabled]="uploadingPhoto() || searchingSummoner()">
+                  @if (searchingSummoner()) { <span class="spinner-small"></span> Buscando… } @else {
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 8a4 4 0 11-8 0 4 4 0 018 0zM4 21a8 8 0 0116 0" /></svg>
+                    Ícono de invocador
+                  }
+                </button>
+              }
+              @if (photoChanged()) {
+                <button type="button" class="pe-chip pe-chip--ghost" (click)="resetEditPhoto()">Deshacer</button>
+              }
             </div>
             @if (showChampionSelector()) {
-              <div class="champion-selector">
-                <div class="champion-search">
-                  <input type="text" placeholder="Buscar personaje..." class="champion-search-input" #searchInput (input)="filterChampions(searchInput.value)">
-                </div>
-                <div class="champions-grid">
+              <div class="pe-champs">
+                <input #champSearch type="search" class="pe-input" placeholder="Busca un campeón…" aria-label="Buscar campeón" (input)="filterChampions(champSearch.value)">
+                <div class="pe-champ-grid">
                   @for (champion of filteredChampions(); track champion) {
-                    <button class="champion-item" (click)="selectChampion(champion)" [class.selected]="selectedChampion() === champion">
+                    <button type="button" class="pe-champ" [class.is-on]="selectedChampion() === champion" (click)="selectChampion(champion)" [attr.aria-pressed]="selectedChampion() === champion" [title]="champion">
+                      <img [src]="championIcon(champion)" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
                       <span>{{ champion }}</span>
                     </button>
-                  }
+                  } @empty { <p class="pe-hint">Ningún campeón coincide.</p> }
                 </div>
               </div>
             }
-            @if (summonerError()) {
-              <div class="error-message-small">
-                <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                </svg>
-                <span>{{ summonerError() }}</span>
-              </div>
-            }
-            @if (foundSummoner()) {
-              <div class="summoner-result">
-                <div class="summoner-preview">
-                  <img referrerpolicy="no-referrer" loading="lazy" decoding="async" 
-                    [src]="getProfileIconUrl(foundSummoner()!.profileIconId)" 
-                    [alt]="foundSummoner()!.gameName" 
-                    class="summoner-icon-preview"
-                    (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
-                  <div class="summoner-info">
-                    <h4>{{ foundSummoner()!.gameName }}#{{ foundSummoner()!.tagLine }}</h4>
-                    <p>Nivel {{ foundSummoner()!.summonerLevel }}</p>
-                  </div>
-                </div>
-              </div>
-            }
-          </div>
-          <div class="form-group">
-            <label>Nombre de Usuario</label>
-            <input type="text" [(ngModel)]="editDisplayName" [disabled]="uploadingPhoto()" class="form-input">
-          </div>
-          <div class="form-group">
-            <label>Biografía</label>
-            <textarea [(ngModel)]="editBio" [disabled]="uploadingPhoto()" class="form-textarea" rows="4" placeholder="Cuéntanos sobre ti..."></textarea>
-          </div>
+            @if (summonerError()) { <p class="pe-error" role="alert">{{ summonerError() }}</p> }
+            @if (foundSummoner()) { <p class="pe-hint">Usarás el ícono de <b>{{ foundSummoner()!.gameName }}#{{ foundSummoner()!.tagLine }}</b> (nivel {{ foundSummoner()!.summonerLevel }}).</p> }
+          </section>
 
-          <!-- Vincular cuenta Riot: solo cuando no está vinculada se puede vincular -->
-          <div class="form-group riot-link-section">
-            <label>Cuenta Riot (League of Legends)</label>
+          <!-- Sobre ti -->
+          <section class="pe-section" aria-labelledby="pe-about">
+            <h3 id="pe-about" class="pe-h">Sobre ti</h3>
+            <div class="pe-field">
+              <div class="pe-label-row"><label for="pe-name">Nombre visible</label><span class="pe-count" [class.is-warn]="editDisplayName().length > 34">{{ editDisplayName().length }}/40</span></div>
+              <input id="pe-name" type="text" class="pe-input" maxlength="40" autocomplete="nickname" [ngModel]="editDisplayName()" (ngModelChange)="editDisplayName.set($event)" [disabled]="uploadingPhoto()">
+              @if (!editDisplayName().trim()) { <p class="pe-error">Escribe un nombre para que te reconozcan.</p> }
+            </div>
+            <div class="pe-field">
+              <div class="pe-label-row"><label for="pe-bio">Biografía</label><span class="pe-count" [class.is-warn]="editBio().length > 450">{{ editBio().length }}/500</span></div>
+              <textarea id="pe-bio" class="pe-input pe-textarea" rows="3" maxlength="500" [ngModel]="editBio()" (ngModelChange)="editBio.set($event)" [disabled]="uploadingPhoto()"
+                        placeholder="Rol favorito, main, equipo, horarios en los que juegas…"></textarea>
+              <div class="pe-suggest" aria-label="Ideas para tu biografía">
+                @for (s of bioIdeas; track s) { <button type="button" class="pe-tag" (click)="addBioIdea(s)">+ {{ s }}</button> }
+              </div>
+            </div>
+          </section>
+
+          <!-- Cuenta Riot -->
+          <section class="pe-section" aria-labelledby="pe-riot">
+            <h3 id="pe-riot" class="pe-h">Cuenta de Riot</h3>
             @if (hasRiot(profile())) {
-              <div class="riot-linked">
-                <p class="riot-linked-text">Vinculada: <strong>{{ profile()!.gameName }}#{{ profile()!.tagLine }}</strong></p>
-                <p class="riot-linked-hint">Las estadísticas del perfil se muestran desde tu cuenta Riot.</p>
-                <button type="button" class="btn-unlink" (click)="unlinkRiotAccount()">Desvincular cuenta</button>
+              <div class="pe-riot-linked">
+                <span class="pe-riot-badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7" /></svg></span>
+                <div>
+                  <strong>{{ profile()!.gameName }}#{{ profile()!.tagLine }}</strong>
+                  <span>Tus estadísticas y la ficha de temporada salen de esta cuenta.</span>
+                </div>
+                <button type="button" class="pe-chip pe-chip--danger" (click)="unlinkRiotAccount()">Desvincular</button>
               </div>
             } @else {
-              <p class="riot-link-hint">Vincula tu cuenta para mostrar estadísticas reales (partidas, win rate, KDA, timeline).</p>
-              <div class="riot-link-inputs">
-                <input type="text" [ngModel]="editGameName()" (ngModelChange)="editGameName.set($event)" placeholder="Nombre de invocador" class="form-input short">
-                <input type="text" [ngModel]="editTagLine()" (ngModelChange)="editTagLine.set($event)" placeholder="Tag (ej: LAN)" class="form-input short">
-                <select [ngModel]="editRegion()" (ngModelChange)="editRegion.set($event)" class="form-input short">
-                  @for (r of regions; track r.code) {
-                    <option [value]="r.code">{{ r.name }}</option>
-                  }
-                </select>
+              <p class="pe-hint">Vincúlala para mostrar tu rango, campeones y la ficha de temporada.</p>
+              <div class="pe-riot-grid">
+                <div class="pe-field"><label for="pe-gn">Nombre en el juego</label><input id="pe-gn" type="text" class="pe-input" [ngModel]="editGameName()" (ngModelChange)="editGameName.set($event)" placeholder="BR LOBO"></div>
+                <div class="pe-field"><label for="pe-tag">Tag</label><input id="pe-tag" type="text" class="pe-input" [ngModel]="editTagLine()" (ngModelChange)="editTagLine.set($event.replace('#', ''))" placeholder="LAN"></div>
+                <div class="pe-field"><label for="pe-reg">Región</label>
+                  <select id="pe-reg" class="pe-input" [ngModel]="editRegion()" (ngModelChange)="editRegion.set($event)">
+                    @for (r of regions; track r.code) { <option [value]="r.code">{{ r.name }}</option> }
+                  </select>
+                </div>
               </div>
-              <div class="riot-link-actions">
-                <button type="button" class="btn-secondary" (click)="searchSummonerForLink()" [disabled]="searchingLinkSummoner()">
-                  @if (searchingLinkSummoner()) { Buscando... } @else { Buscar invocador }
+              <div class="pe-riot-actions">
+                <button type="button" class="pe-chip" (click)="searchSummonerForLink()" [disabled]="searchingLinkSummoner()">
+                  @if (searchingLinkSummoner()) { <span class="spinner-small"></span> Buscando… } @else { Buscar invocador }
                 </button>
-                @if (foundLinkSummoner(); as sum) {
-                  <div class="found-summoner-link">
-                    <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="getProfileIconUrl(sum.profileIconId)" alt="" class="summoner-icon-preview"
-                         (error)="$any($event.target).src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/profile-icons/29.jpg'">
-                    <span>{{ sum.gameName }}#{{ sum.tagLine }}</span>
-                    <button type="button" class="btn-submit" (click)="linkRiotAccount()" [disabled]="linkingRiot()">
-                      @if (linkingRiot()) { Vinculando... } @else { Vincular cuenta }
-                    </button>
-                  </div>
-                }
               </div>
-              @if (linkSummonerError()) {
-                <p class="error-message-small">{{ linkSummonerError() }}</p>
+              @if (foundLinkSummoner(); as sum) {
+                <div class="pe-riot-linked pe-riot-found">
+                  <img [src]="getProfileIconUrl(sum.profileIconId)" alt="" referrerpolicy="no-referrer" (error)="onEditPhotoError($event)">
+                  <div><strong>{{ sum.gameName }}#{{ sum.tagLine }}</strong><span>Nivel {{ sum.summonerLevel }} · ¿Es tu cuenta?</span></div>
+                  <button type="button" class="pe-save" (click)="linkRiotAccount()" [disabled]="linkingRiot()">
+                    @if (linkingRiot()) { Vinculando… } @else { Vincular }
+                  </button>
+                </div>
               }
+              @if (linkSummonerError()) { <p class="pe-error" role="alert">{{ linkSummonerError() }}</p> }
             }
-          </div>
-
-          <div class="modal-footer">
-            <button class="btn-cancel" (click)="closeEditModal()" [disabled]="uploadingPhoto()">
-              Cancelar
-            </button>
-            <button class="btn-submit" (click)="saveProfile()" [disabled]="uploadingPhoto() || !editDisplayName().trim()">
-              @if (uploadingPhoto()) {
-                <span class="spinner-small"></span>
-                <span>Guardando...</span>
-              } @else {
-                <span>Guardar</span>
-              }
-            </button>
-          </div>
+          </section>
         </div>
+
+        <footer class="pe-foot">
+          <span class="pe-status">@if (editDirty()) { Cambios sin guardar } @else { Sin cambios }</span>
+          <button type="button" class="pe-cancel" (click)="requestCloseEdit()" [disabled]="uploadingPhoto()">Cancelar</button>
+          <button type="button" class="pe-save" (click)="saveProfile()" [disabled]="uploadingPhoto() || !editDisplayName().trim() || !editDirty()">
+            @if (uploadingPhoto()) { <span class="spinner-small"></span> Guardando… } @else { Guardar cambios }
+          </button>
+        </footer>
       </div>
     </div>
   }
 
-  <!-- Create Post Modal from Profile -->
   @if (showCreatePostModal()) {
-    <div class="modal-overlay" (click)="closeCreatePostModal()">
-      <div class="modal-content create-post-modal" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <h3>Nueva publicación</h3>
-          <button class="close-btn" (click)="closeCreatePostModal()" [disabled]="uploadingPost()">
-            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        <div class="modal-body">
-          @if (currentUserProfile()) {
-            <div class="post-author-info">
-              @if (currentUserProfile()!.photoURL) {
-                <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="currentUserProfile()!.photoURL" [alt]="currentUserProfile()!.displayName" class="author-avatar-small">
-              } @else {
-                <span class="author-avatar-placeholder-small">
-                  {{ (currentUserProfile()!.displayName && currentUserProfile()!.displayName.charAt(0).toUpperCase()) || 'U' }}
-                </span>
-              }
-              <span class="author-name-small">{{ currentUserProfile()!.displayName || 'Usuario' }}</span>
-            </div>
-          }
-          <textarea 
-            [(ngModel)]="newPostContent" 
-            placeholder="¿Qué estás pensando?"
-            class="post-textarea"
-            rows="8"
-            [disabled]="uploadingPost()">
-          </textarea>
-          
-          @if (newPostImages().length > 0) {
-            <div class="preview-images">
-              @for (img of newPostImages(); track $index) {
-                <div class="preview-image-container">
-                  <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="getImagePreview(img)" [alt]="img.name" class="preview-image">
-                  <button class="remove-image-btn" (click)="removePostImage($index)" [disabled]="uploadingPost()">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              }
-            </div>
-          }
-          
-          @if (newPostVideo()) {
-            <div class="preview-video-container">
-              <video [src]="getVideoPreview(newPostVideo()!)" controls class="preview-video"></video>
-              <button class="remove-video-btn" (click)="removePostVideo()" [disabled]="uploadingPost()">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-                Eliminar video
-              </button>
-            </div>
-          }
-          
-          <div class="file-uploads">
-            <label class="file-label" [class.disabled]="uploadingPost()">
-              <input type="file" accept="image/*" multiple (change)="onPostImageSelected($event)" [disabled]="uploadingPost()">
-              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span>Añadir imágenes</span>
-            </label>
-            <label class="file-label" [class.disabled]="uploadingPost()">
-              <input type="file" accept="video/*" (change)="onPostVideoSelected($event)" [disabled]="uploadingPost() || !!newPostVideo()">
-              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-              <span>Agregar Video</span>
-            </label>
-          </div>
-          
-          <div class="modal-footer">
-            <button class="btn-cancel" (click)="closeCreatePostModal()" [disabled]="uploadingPost()">
-              Cancelar
-            </button>
-            <button class="btn-submit" (click)="createPostFromProfile()" [disabled]="uploadingPost() || !newPostContent().trim()">
-              @if (uploadingPost()) {
-                <span class="spinner-small"></span>
-                <span>Publicando...</span>
-              } @else {
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-                <span>Publicar</span>
-              }
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <app-post-editor [authorName]="currentUserProfile()?.displayName || 'Tú'" [authorPhoto]="currentUserProfile()?.photoURL ?? null"
+                     (saved)="onPostCreated()" (closed)="showCreatePostModal.set(false)" />
   }
 
   <!-- Followers Modal -->

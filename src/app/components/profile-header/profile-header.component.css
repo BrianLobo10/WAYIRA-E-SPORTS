@@ -126,7 +126,7 @@
 .profile-rank-text {
   font-size: 0.8rem;
   font-weight: 700;
-  color: #e5e7eb;
+  color: var(--white);
   letter-spacing: 0.01em;
 }
 
@@ -360,10 +360,10 @@
 .rank-tier { font-family: var(--font-display); font-weight: 500; font-size: 1.5rem; line-height: 1.1; color: var(--tier); }
 .rank-tier span { color: var(--white); }
 .rank-lp { font-size: 14px; font-weight: 600; color: var(--white); font-variant-numeric: tabular-nums; }
-.rank-record { display: flex; gap: 6px; font-size: 12px; color: rgba(255,255,255,.7); font-variant-numeric: tabular-nums; }
-.rank-record .w { color: #4ade80; font-weight: 600; }
-.rank-record .l { color: #f87171; font-weight: 600; }
-.rank-sub { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-top: 1px solid rgba(255,255,255,.08); font-size: 13px; color: var(--white); }
+.rank-record { display: flex; gap: 6px; font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.rank-record .w { color: var(--volt); font-weight: 600; }
+.rank-record .l { color: var(--ember-text, var(--ember)); font-weight: 600; }
+.rank-sub { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-top: 1px solid var(--border); font-size: 13px; color: var(--white); }
 .rank-sub img { width: 28px; height: 28px; object-fit: contain; }
 .rank-sub .rank-queue { font-size: 10px; }
 .rank-sub-tier { margin-left: auto; color: var(--tier); font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -380,7 +380,7 @@
 .profile-name-section { gap: 12px; }
 .profile-handle { margin-top: 2px; }
 .profile-stats-inline { gap: 16px; margin: 10px 0 8px; }
-.stat-inline { background: none; border: 0; padding: 0; font: inherit; color: rgba(255,255,255,.7); cursor: default; }
+.stat-inline { background: none; border: 0; padding: 0; font: inherit; color: var(--text-secondary); cursor: default; }
 button.stat-inline { cursor: pointer; }
 button.stat-inline:hover { color: var(--white); text-decoration: underline; text-underline-offset: 3px; }
 .stat-inline b { color: var(--white); font-weight: 600; margin-right: 2px; font-variant-numeric: tabular-nums; }
