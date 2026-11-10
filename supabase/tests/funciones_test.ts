@@ -77,8 +77,8 @@ if (fn === 'riot' && Deno.args[1] === 'conclave') {
   results.push(`${pre.status === 204 && pre.headers.get('access-control-allow-origin') === 'http://localhost:4200' ? 'OK   ' : 'FALLO'} riot CORS para localhost:4200`);
   const evil = await realFetch(base + '/health', { headers: { Origin: 'https://sitio-falso.com' } });
   results.push(`${evil.headers.get('access-control-allow-origin') !== 'https://sitio-falso.com' ? 'OK   ' : 'FALLO'} riot CORS no autoriza otros sitios`);
-  for (let i = 0; i < 30; i++) await realFetch(base + `/account/la1/${PUUID}`, H).then((r) => r.body?.cancel());
-  await check('límite 30 por minuto', `/account/la1/${PUUID}`, H, 429);
+  for (let i = 0; i < 90; i++) await realFetch(base + `/account/la1/${PUUID}`, H).then((r) => r.body?.cancel());
+  await check('límite 90 por minuto', `/account/la1/${PUUID}`, H, 429);
   results.push(`${calls.some((u) => u.includes('RGAPI')) ? 'FALLO' : 'OK   '} riot la clave nunca va en la URL`);
 }
 if (fn === 'potato') {

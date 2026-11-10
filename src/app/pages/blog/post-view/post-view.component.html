@@ -77,8 +77,7 @@
                   [src]="post()!.authorPhoto" 
                   [alt]="post()!.authorName" 
                   class="author-avatar"
-                  (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
-                  onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png';">
+                  (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
               } @else {
                 <div class="author-avatar-placeholder">
                   {{ post()!.authorName.charAt(0).toUpperCase() }}
@@ -133,8 +132,7 @@
                           [src]="comment.authorPhoto" 
                           [alt]="comment.authorName" 
                           class="comment-avatar"
-                          (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
-                          onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png';">
+                          (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
                       } @else {
                         <div class="comment-avatar-placeholder">
                           {{ comment.authorName.charAt(0).toUpperCase() }}
@@ -180,8 +178,7 @@
                                   [src]="reply.authorPhoto" 
                                   [alt]="reply.authorName" 
                                   class="comment-avatar reply-avatar"
-                                  (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
-                                  onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png';">
+                                  (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
                               } @else {
                                 <div class="comment-avatar-placeholder reply-avatar">
                                   {{ reply.authorName.charAt(0).toUpperCase() }}

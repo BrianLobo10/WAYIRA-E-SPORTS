@@ -264,7 +264,10 @@ Deno.serve(async (req) => {
   }
   if (!key) return json(req, { error: UNAVAILABLE, statusCode: 503 }, 503);
   if (!region || !REGIONS[region.toLowerCase()]) return json(req, { error: 'Región no válida', statusCode: 400 }, 400);
-  if (!(await allowRequest(`riot:${clientIp(req)}`, 30, 60))) {
+  // Límite por visitante. "history" solo lee la base de datos (no gasta la cuota de Riot) y va aparte.
+  // Un perfil hace ~5 consultas al abrirse y el dashboard 4 por minuto mientras descarga: 90/min deja margen.
+  const bucket = action === 'history' ? `riotdb:${clientIp(req)}` : `riot:${clientIp(req)}`;
+  if (!(await allowRequest(bucket, action === 'history' ? 60 : 90, 60))) {
     return json(req, { error: 'Demasiadas consultas. Espera un momento.', statusCode: 429 }, 429, { 'Retry-After': '60' });
   }
 

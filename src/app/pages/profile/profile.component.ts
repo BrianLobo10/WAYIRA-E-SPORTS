@@ -1261,8 +1261,15 @@ export class ProfileComponent implements OnInit, OnDestroy {
         puuid: undefined
       });
       await this.loadProfile(user.uid);
+      this.riotPuuid.set(null);
+      this.soloQRank.set(null);
+      this.flexRank.set(null);
+      this.seasonSync.set(null);
       this.riotStats.set(null);
       this.topChampions.set([]);
+      this.editGameName.set('');
+      this.editTagLine.set('');
+      this.toast.notify('Cuenta de Riot desvinculada. Puedes vincular otra cuando quieras.');
       this.activityMap.set(new Map());
       this.activityTimelineData = null;
     } catch (e) {

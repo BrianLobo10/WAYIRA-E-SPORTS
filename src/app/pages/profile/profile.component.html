@@ -212,8 +212,7 @@
                   [src]="selectedPost()!.authorPhoto" 
                   [alt]="selectedPost()!.authorName" 
                   class="author-avatar"
-                  (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
-                  onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png';">
+                  (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
               } @else {
                 <div class="author-avatar-placeholder">
                   {{ selectedPost()!.authorName.charAt(0).toUpperCase() }}
@@ -247,8 +246,7 @@
                               [src]="comment.authorPhoto" 
                               [alt]="comment.authorName" 
                               class="comment-avatar"
-                              (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
-                              onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png';">
+                              (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
                           } @else {
                             <div class="comment-avatar-placeholder">
                               {{ comment.authorName.charAt(0).toUpperCase() }}
@@ -334,15 +332,13 @@
                   [src]="editPhotoPreview()!" 
                   alt="Preview" 
                   class="preview-photo"
-                  (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
-                  onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png';">
+                  (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
               } @else if (profile()?.photoURL) {
                 <img referrerpolicy="no-referrer" loading="lazy" decoding="async" 
                   [src]="profile()!.photoURL!" 
                   alt="Current photo" 
                   class="preview-photo"
-                  (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
-                  onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png';">
+                  (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
               } @else {
                 <div class="photo-placeholder">
                   {{ (profile()?.displayName && profile()!.displayName.charAt(0).toUpperCase()) || 'U' }}
@@ -404,8 +400,7 @@
                     [src]="getProfileIconUrl(foundSummoner()!.profileIconId)" 
                     [alt]="foundSummoner()!.gameName" 
                     class="summoner-icon-preview"
-                    (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
-                    onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png';">
+                    (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
                   <div class="summoner-info">
                     <h4>{{ foundSummoner()!.gameName }}#{{ foundSummoner()!.tagLine }}</h4>
                     <p>Nivel {{ foundSummoner()!.summonerLevel }}</p>
@@ -426,7 +421,7 @@
           <!-- Vincular cuenta Riot: solo cuando no está vinculada se puede vincular -->
           <div class="form-group riot-link-section">
             <label>Cuenta Riot (League of Legends)</label>
-            @if (profile()?.puuid && profile()?.region) {
+            @if (hasRiot(profile())) {
               <div class="riot-linked">
                 <p class="riot-linked-text">Vinculada: <strong>{{ profile()!.gameName }}#{{ profile()!.tagLine }}</strong></p>
                 <p class="riot-linked-hint">Las estadísticas del perfil se muestran desde tu cuenta Riot.</p>
@@ -450,7 +445,7 @@
                 @if (foundLinkSummoner(); as sum) {
                   <div class="found-summoner-link">
                     <img referrerpolicy="no-referrer" loading="lazy" decoding="async" [src]="getProfileIconUrl(sum.profileIconId)" alt="" class="summoner-icon-preview"
-                         onerror="this.onerror=null; this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/profile-icons/29.jpg';">
+                         (error)="$any($event.target).src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/profile-icons/29.jpg'">
                     <span>{{ sum.gameName }}#{{ sum.tagLine }}</span>
                     <button type="button" class="btn-submit" (click)="linkRiotAccount()" [disabled]="linkingRiot()">
                       @if (linkingRiot()) { Vinculando... } @else { Vincular cuenta }
@@ -611,8 +606,7 @@
                       [src]="user.photoURL" 
                       [alt]="user.displayName" 
                       class="user-avatar"
-                      (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
-                      onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
+                      (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
                   } @else {
                     <div class="user-avatar-placeholder">
                       {{ user.displayName.charAt(0).toUpperCase() }}
@@ -659,8 +653,7 @@
                       [src]="user.photoURL" 
                       [alt]="user.displayName" 
                       class="user-avatar"
-                      (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'"
-                      onerror="this.onerror=null; this.src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
+                      (error)="$any($event.target).src='https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/29.png'">
                   } @else {
                     <div class="user-avatar-placeholder">
                       {{ user.displayName.charAt(0).toUpperCase() }}
