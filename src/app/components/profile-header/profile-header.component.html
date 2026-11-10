@@ -41,14 +41,6 @@
         <div class="profile-details">
           <div class="profile-name-section">
             <h1 class="profile-username">{{ profile().displayName }}</h1>
-            @if (rankLabel()) {
-              <span class="profile-rank-badge" title="Rango Solo/Duo">
-                @if (rankIconUrl()) {
-                  <img referrerpolicy="no-referrer" loading="lazy" decoding="async" class="profile-rank-icon" [src]="rankIconUrl()" alt="Rango">
-                }
-                <span class="profile-rank-text">{{ rankLabel() }}</span>
-              </span>
-            }
             @if (isOwnProfile()) {
               <button type="button" class="btn-edit" (click)="editProfile.emit()">
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
@@ -71,11 +63,9 @@
             <p class="profile-joined">Se unió {{ joinDate() }}</p>
           }
           <div class="profile-stats-inline">
-            <span class="stat-inline clickable" (click)="openFollowers.emit()">{{ followersCount() }} Seguidor{{ followersCount() !== 1 ? 'es' : '' }}</span>
-            <span class="stat-sep">·</span>
-            <span class="stat-inline clickable" (click)="openFollowing.emit()">{{ followingCount() }} Siguiendo</span>
-            <span class="stat-sep">·</span>
-            <span class="stat-inline">{{ activitiesCount() }} Actividades</span>
+            <button type="button" class="stat-inline" (click)="openFollowers.emit()"><b>{{ followersCount() }}</b> seguidor{{ followersCount() !== 1 ? 'es' : '' }}</button>
+            <button type="button" class="stat-inline" (click)="openFollowing.emit()"><b>{{ followingCount() }}</b> siguiendo</button>
+            <span class="stat-inline"><b>{{ activitiesCount() }}</b> publicaciones</span>
           </div>
           <div class="profile-bio">
             @if (profile().bio) {

@@ -19,18 +19,24 @@
           </div>
           <a [routerLink]="['/profile', profile.uid]" class="profile-link">Ver perfil</a>
         </div>
-        <div class="sidebar-block">
-          <h3 class="sidebar-title">Actividad reciente</h3>
-          <p class="sidebar-text">League of Legends · WAYIRA E-SPORTS</p>
-        </div>
-        <a [routerLink]="['/search']" [queryParams]="getGameLogParams()" class="sidebar-block game-log">
-          <span>Tu registro de juego</span>
-          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-        </a>
-        <div class="sidebar-block feedback-card">
-          <p>¿Tienes 30 segundos? Ayúdanos a mejorar WAYIRA</p>
-          <a routerLink="/contact" class="btn-feedback">Comparte tu opinión →</a>
-        </div>
+        <nav class="sidebar-block shortcuts" aria-label="Atajos">
+          <a [routerLink]="['/search']" [queryParams]="getGameLogParams()" class="shortcut">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9m6 10V5m6 14v-7m4 7H2" /></svg>
+            <span>Mis partidas</span>
+          </a>
+          <a routerLink="/tournaments" class="shortcut">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8m-4-4v4M7 4h10v5a5 5 0 01-10 0V4zM7 6H4v1a3 3 0 003 3m10-4h3v1a3 3 0 01-3 3" /></svg>
+            <span>Torneos</span>
+          </a>
+          <a routerLink="/explore" class="shortcut">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11a4 4 0 10-8 0 4 4 0 008 0zM4 21a8 8 0 0116 0" /></svg>
+            <span>Buscar jugadores</span>
+          </a>
+          <a routerLink="/contact" class="shortcut shortcut--muted">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.4A8 8 0 1121 12z" /></svg>
+            <span>Danos tu opinión</span>
+          </a>
+        </nav>
       }
     </aside>
 
@@ -42,11 +48,15 @@
         } @else {
           <div class="create-avatar-placeholder">{{ (currentUser()?.displayName || 'U').charAt(0).toUpperCase() }}</div>
         }
-        <span class="create-placeholder">Publica tus ideas gamer</span>
+        <span class="create-placeholder">¿Qué jugada quieres contar?</span>
+        <span class="create-tools" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 15l4-4 4 4 3-3 5 5" /><circle cx="9" cy="9" r="1.5" /></svg>
+          <svg viewBox="0 0 24 24"><path d="M4 6h11v12H4zM15 10l5-3v10l-5-3" /></svg>
+        </span>
       </div>
-      <div class="feed-tabs">
-        <button class="feed-tab" [class.active]="activeTab() === 'all'" (click)="activeTab.set('all')">Para ti</button>
-        <button class="feed-tab" [class.active]="activeTab() === 'following'" (click)="activeTab.set('following')">Sigues</button>
+      <div class="feed-tabs" role="tablist">
+        <button type="button" role="tab" class="feed-tab" [class.active]="activeTab() === 'all'" [attr.aria-selected]="activeTab() === 'all'" (click)="activeTab.set('all')">Para ti</button>
+        <button type="button" role="tab" class="feed-tab" [class.active]="activeTab() === 'following'" [attr.aria-selected]="activeTab() === 'following'" (click)="activeTab.set('following')">Siguiendo</button>
       </div>
 
       @if (loading()) {
@@ -79,6 +89,7 @@
                   <span class="post-date">{{ formatDate(post.createdAt) }}</span>
                 </div>
               </div>
+              @if (post.content) { <p class="post-text">{{ post.content }}</p> }
               @if (post.images && post.images.length > 0) {
                 <div class="post-media images">
                   <div class="post-img-wrap">
@@ -92,11 +103,16 @@
               } @else if (post.video) {
                 <div class="post-media"><video [src]="post.video" controls></video></div>
               }
-              <p class="post-text">{{ post.content }}</p>
               <div class="post-actions">
-                <button class="post-action" (click)="likePost(post, $event)" [class.active]="isLiked(post)">👍 {{ (post.likes || []).length }}</button>
-                <button class="post-action" (click)="dislikePost(post, $event)" [class.active]="isDisliked(post)">👎 {{ (post.dislikes || []).length }}</button>
-                <button class="post-action" (click)="openPost(post); $event.stopPropagation()">💬 {{ (post.comments || []).length }}</button>
+                <button type="button" class="post-action" (click)="likePost(post, $event)" [class.active]="isLiked(post)" [attr.aria-pressed]="isLiked(post)" aria-label="Me gusta">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11v9H4v-9h3zm0 0l4-8a2 2 0 012 2v4h5.5a2 2 0 012 2.3l-1.2 7A2 2 0 0117.3 20H7" /></svg>{{ (post.likes || []).length }}
+                </button>
+                <button type="button" class="post-action" (click)="dislikePost(post, $event)" [class.active]="isDisliked(post)" [attr.aria-pressed]="isDisliked(post)" aria-label="No me gusta">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 13V4h3v9h-3zm0 0l-4 8a2 2 0 01-2-2v-4H5.5a2 2 0 01-2-2.3l1.2-7A2 2 0 016.7 4H17" /></svg>{{ (post.dislikes || []).length }}
+                </button>
+                <button type="button" class="post-action" (click)="openPost(post); $event.stopPropagation()" aria-label="Comentarios">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.4A8 8 0 1121 12z" /></svg>{{ (post.comments || []).length }}
+                </button>
               </div>
             </article>
           }
@@ -107,7 +123,8 @@
     <!-- Columna derecha: sugerencias e invitar -->
     <aside class="feed-sidebar right">
       <div class="sidebar-block">
-        <h3 class="sidebar-title">Seguir en WAYIRA</h3>
+        <h3 class="sidebar-title">A quién seguir</h3>
+        @if (!suggestedUsers().length) { <p class="sidebar-text">Ya sigues a todos por ahora.</p> }
         @for (user of suggestedUsers(); track user.uid) {
           <div class="suggested-user">
             <a [routerLink]="['/profile', user.uid]" class="suggested-avatar-wrap">
@@ -126,9 +143,9 @@
         }
       </div>
       <div class="sidebar-block invite-card">
-        <h3 class="sidebar-title">Invitar a WAYIRA</h3>
-        <p class="invite-text">Conecta con tus amigos y comparte tu link de invitación.</p>
-        <button type="button" class="btn-invite" (click)="copyInviteLink()">Obtener tu link de invitación</button>
+        <h3 class="sidebar-title">Trae a tu dúo</h3>
+        <p class="invite-text">Comparte tu enlace y armen equipo para el próximo torneo.</p>
+        <button type="button" class="btn-invite" (click)="copyInviteLink()">Copiar enlace de invitación</button>
       </div>
     </aside>
   </div>

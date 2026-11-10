@@ -176,3 +176,10 @@
   height: 10px;
   border-radius: 2px;
 }
+
+/* Simetría del perfil: todas las tarjetas con el mismo marco, margen interior de 24 px y títulos alineados a la izquierda */
+.aurea-card { padding: 24px !important; }
+.aurea-container { max-width: none !important; padding: 0 !important; }
+
+.activity-header { justify-content: flex-start; align-items: baseline; }
+.activity-hint { text-align: left; }

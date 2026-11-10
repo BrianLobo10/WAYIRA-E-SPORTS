@@ -2,7 +2,7 @@
 .dash, .dash * { box-sizing: border-box; }
 
 /* Ficha editorial: titular grande, cifras en banda, bloques separados por reglas finas */
-.dash { background: var(--surface-1); border: 1px solid var(--border); border-top: 3px solid var(--volt); border-radius: 2px; padding: 1.75rem 1.5rem 1.5rem; }
+.dash { background: var(--surface-1); border: 1px solid var(--border); border-radius: 2px; padding: 24px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2); }
 .kicker { margin: 0 0 6px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--text-secondary, #a3a19a); }
 .headline { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(1.5rem, 3.2vw, 2.25rem); line-height: 1.15; color: var(--white); max-width: 28ch; text-wrap: balance; }
 .hl { color: var(--volt); font-variant-numeric: tabular-nums; }

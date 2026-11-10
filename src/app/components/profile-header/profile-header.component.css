@@ -368,3 +368,33 @@
 .rank-sub .rank-queue { font-size: 10px; }
 .rank-sub-tier { margin-left: auto; color: var(--tier); font-weight: 600; font-variant-numeric: tabular-nums; }
 @media (max-width: 768px) { .rank-card { width: 100%; min-width: 0; } }
+
+/* Simetría: avatar | datos | rango en una rejilla, mismo margen interior (24 px) que las demás tarjetas */
+.profile-header { padding: 0 24px 24px; }
+.container.aurea-container { max-width: none; padding: 0; }
+.profile-info.aurea-profile-info { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0 24px; align-items: center; }
+.profile-avatar { width: 128px; height: 128px; border: 0; }
+.profile-avatar-overlap { margin-top: -56px; align-self: start; box-shadow: 0 0 0 4px var(--surface-1); }
+.profile-details { padding-top: 16px; }
+.profile-username { font-family: var(--font-display); font-weight: 500; font-size: 1.75rem; line-height: 1.15; }
+.profile-name-section { gap: 12px; }
+.profile-handle { margin-top: 2px; }
+.profile-stats-inline { gap: 16px; margin: 10px 0 8px; }
+.stat-inline { background: none; border: 0; padding: 0; font: inherit; color: rgba(255,255,255,.7); cursor: default; }
+button.stat-inline { cursor: pointer; }
+button.stat-inline:hover { color: var(--white); text-decoration: underline; text-underline-offset: 3px; }
+.stat-inline b { color: var(--white); font-weight: 600; margin-right: 2px; font-variant-numeric: tabular-nums; }
+.rank-card { align-self: center; margin-top: 16px; width: 280px; }
+@media (max-width: 860px) {
+  .profile-info.aurea-profile-info { grid-template-columns: auto minmax(0, 1fr); }
+  .rank-card { grid-column: 1 / -1; width: 100%; }
+}
+@media (max-width: 768px) {
+  .profile-header { padding: 0 16px 20px; }
+  .profile-info.aurea-profile-info { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; }
+  .profile-avatar { width: 104px; height: 104px; }
+  .profile-avatar-overlap { margin-top: -52px; align-self: center; }
+  .profile-details { padding-top: 12px; }
+  .profile-stats-inline { justify-content: center; }
+  .rank-main { justify-content: center; text-align: left; }
+}

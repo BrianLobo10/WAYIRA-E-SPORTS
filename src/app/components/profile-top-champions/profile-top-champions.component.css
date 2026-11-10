@@ -96,3 +96,11 @@
   color: rgba(255, 255, 255, 0.95);
   text-align: center;
 }
+
+/* Simetría del perfil: todas las tarjetas con el mismo marco, margen interior de 24 px y títulos alineados a la izquierda */
+.aurea-card { padding: 24px !important; }
+.aurea-container { max-width: none !important; padding: 0 !important; }
+
+.champions-header { justify-content: flex-start; align-items: baseline; }
+.champions-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 12px; justify-content: stretch; }
+.champion-tile { width: auto; }
