@@ -50,17 +50,17 @@
       </div>
 
       @if (loading()) {
-        <div class="feed-loading"><span class="spinner"></span> Cargando publicaciones...</div>
+        <div class="feed-loading"><span class="spinner"></span> Cargando…</div>
       } @else if (displayedPosts().length === 0) {
         <div class="feed-empty">
           <svg class="feed-empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
           </svg>
           @if (activeTab() === 'following') {
-            <p>No hay publicaciones de quienes sigues. Sigue a más usuarios para verlas aquí.</p>
+            <p>Tu feed está vacío. Sigue a otros jugadores y aquí verás sus jugadas.</p>
             <a routerLink="/explore" class="btn-create-first">Explorar usuarios sugeridos</a>
           } @else {
-            <p>No hay publicaciones aún. ¡Sé el primero en publicar!</p>
+            <p>Esto está muy callado. Rompe el hielo con tu primera jugada.</p>
             <button type="button" class="btn-create-first" (click)="showCreateModal.set(true)">Crear publicación</button>
           }
         </div>

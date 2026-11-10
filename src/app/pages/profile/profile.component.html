@@ -2,7 +2,7 @@
   @if (loading()) {
     <div class="loading-container">
       <span class="spinner"></span>
-      <span>Cargando perfil...</span>
+      <span>Cargando…</span>
     </div>
   } @else if (profile()) {
     <div class="profile-page-inner">
@@ -78,7 +78,7 @@
               <svg width="64" height="64" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <p>No hay publicaciones aún</p>
+              <p>Todavía no hay publicaciones</p>
             </div>
           </div>
         } @else if (posts().length === 0 && !isOwnProfile()) {
@@ -86,7 +86,7 @@
             <svg width="64" height="64" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <p>No hay publicaciones aún</p>
+            <p>Todavía no hay publicaciones</p>
           </div>
         } @else {
           <div class="posts-grid">
@@ -226,7 +226,7 @@
                 <div class="comments-list">
                   @if ((selectedPost()!.comments || []).length === 0) {
                     <div class="empty-comments">
-                      <p>No hay comentarios aún. ¡Sé el primero en comentar!</p>
+                      <p>Nadie ha opinado todavía. ¿Qué dices tú?</p>
                     </div>
                   } @else {
                     @for (comment of selectedPost()!.comments || []; track $index) {
@@ -462,7 +462,7 @@
                 <span class="spinner-small"></span>
                 <span>Guardando...</span>
               } @else {
-                <span>Guardar Cambios</span>
+                <span>Guardar</span>
               }
             </button>
           </div>
@@ -476,7 +476,7 @@
     <div class="modal-overlay" (click)="closeCreatePostModal()">
       <div class="modal-content create-post-modal" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <h3>Crear Nueva Publicación</h3>
+          <h3>Nueva publicación</h3>
           <button class="close-btn" (click)="closeCreatePostModal()" [disabled]="uploadingPost()">
             <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -537,7 +537,7 @@
               <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <span>Agregar Imágenes</span>
+              <span>Añadir imágenes</span>
             </label>
             <label class="file-label" [class.disabled]="uploadingPost()">
               <input type="file" accept="video/*" (change)="onPostVideoSelected($event)" [disabled]="uploadingPost() || !!newPostVideo()">
@@ -589,7 +589,7 @@
             </div>
           } @else if (followersList().length === 0) {
             <div class="empty-list">
-              <p>No hay seguidores</p>
+              <p>Aún sin seguidores</p>
             </div>
           } @else {
             <div class="users-list">
@@ -637,7 +637,7 @@
             </div>
           } @else if (followingList().length === 0) {
             <div class="empty-list">
-              <p>No está siguiendo a nadie</p>
+              <p>Todavía no sigue a nadie</p>
             </div>
           } @else {
             <div class="users-list">

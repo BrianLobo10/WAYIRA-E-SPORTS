@@ -2,7 +2,7 @@
   <div class="search-hero">
     <span class="kicker">04 · Buscar</span>
     <h1>Buscar <span>invocador</span></h1>
-    <p>Encuentra estadísticas y ranking de cualquier invocador</p>
+    <p>Busca a cualquier jugador por su Riot ID y mira cómo le va.</p>
   </div>
 
   <div class="search-form-container">
@@ -130,7 +130,7 @@
           @if (loadingMatches()) {
             <div class="loading-container">
               <span class="spinner"></span>
-              <span>Cargando campeones...</span>
+              <span>Cargando…</span>
             </div>
           } @else if (championMastery().length > 0) {
             <div class="mastery-grid">
@@ -188,7 +188,7 @@
         @if (loadingMatches()) {
           <div class="loading-container">
             <span class="spinner"></span>
-            <span>Cargando historial...</span>
+            <span>Cargando…</span>
           </div>
         } @else if (matches().length > 0) {
           <div class="matches-list">
@@ -235,7 +235,7 @@
                     <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="click-icon">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
                     </svg>
-                    <span class="click-text">Click para detalles</span>
+                    <span class="click-text">Ver partida</span>
                   </div>
                 </div>
               }
@@ -248,7 +248,7 @@
           }
         } @else {
           <div class="no-matches">
-            <p>No se encontraron partidas recientes</p>
+            <p>Este invocador no ha jugado últimamente.</p>
           </div>
         }
       </div>

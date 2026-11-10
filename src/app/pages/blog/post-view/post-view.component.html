@@ -2,7 +2,7 @@
   @if (loading()) {
     <div class="loading-container">
       <span class="spinner"></span>
-      <span>Cargando publicación...</span>
+      <span>Cargando…</span>
     </div>
   } @else if (error()) {
     <div class="error-container">
@@ -122,7 +122,7 @@
             <div class="comments-list">
               @if ((post()!.comments || []).length === 0) {
                 <div class="empty-comments">
-                  <p>No hay comentarios aún. ¡Sé el primero en comentar!</p>
+                  <p>Nadie ha opinado todavía. ¿Qué dices tú?</p>
                 </div>
               } @else {
                 @for (comment of post()!.comments || []; track $index; let commentIndex = $index) {

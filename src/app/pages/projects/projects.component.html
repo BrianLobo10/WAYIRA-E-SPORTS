@@ -4,7 +4,7 @@
       <div class="hero-content">
         <span class="kicker">Proyectos</span>
         <h1>Lo que estamos <span>construyendo</span>.</h1>
-        <p>Iniciativas y programas que impulsan el crecimiento de los e-Sports en Colombia</p>
+        <p>Lo que estamos construyendo para la escena gamer de La Guajira.</p>
       </div>
     </div>
   </section>
@@ -19,7 +19,7 @@
       </div>
 
       @if (loading()) {
-        <p class="projects-state" aria-live="polite">Cargando proyectos…</p>
+        <p class="projects-state" aria-live="polite">Cargando…</p>
       } @else if (failed()) {
         <p class="projects-state">No pudimos cargar los proyectos. Recarga la página en unos segundos.</p>
       } @else if (projects().length === 0) {

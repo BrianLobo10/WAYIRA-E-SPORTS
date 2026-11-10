@@ -5,7 +5,7 @@
       @if (loading()) {
         <div class="loading-container">
           <span class="spinner"></span>
-          <span>Cargando publicaciones...</span>
+          <span>Cargando…</span>
         </div>
       } @else {
         @if (posts().length === 0 && isAuthenticated()) {
@@ -15,11 +15,11 @@
                 <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
-                <p>Crear Publicación</p>
+                <p>Crear publicación</p>
               </div>
             </article>
             <div class="empty-state">
-              <p>No hay publicaciones aún. ¡Sé el primero en compartir!</p>
+              <p>Esto está muy callado. Rompe el hielo con tu primera jugada.</p>
             </div>
           </div>
         } @else {
@@ -30,7 +30,7 @@
                   <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                   </svg>
-                  <p>Crear Publicación</p>
+                  <p>Crear publicación</p>
                 </div>
               </article>
             }
@@ -150,7 +150,7 @@
     <div class="modal-overlay" (click)="closeCreateModal()">
       <div class="modal-content create-post-modal" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <h3>Crear Nueva Publicación</h3>
+          <h3>Nueva publicación</h3>
           <button class="close-btn" (click)="closeCreateModal()" [disabled]="uploading()">
             <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -216,7 +216,7 @@
               <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <span>Agregar Imágenes</span>
+              <span>Añadir imágenes</span>
             </label>
             <label class="file-label" [class.disabled]="uploading()">
               <input type="file" accept="video/*" (change)="onVideoSelect($event)" [disabled]="uploading() || !!newPostVideo()">
@@ -335,7 +335,7 @@
                 <div class="comments-list">
                   @if ((selectedPost()!.comments || []).length === 0) {
                     <div class="empty-comments">
-                      <p>No hay comentarios aún. ¡Sé el primero en comentar!</p>
+                      <p>Nadie ha opinado todavía. ¿Qué dices tú?</p>
                     </div>
                   } @else {
                   @for (comment of selectedPost()!.comments || []; track $index; let commentIndex = $index) {
@@ -488,7 +488,7 @@
     <div class="modal-overlay" (click)="closeEditModal()">
       <div class="modal-content create-post-modal" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <h3>Editar Publicación</h3>
+          <h3>Editar publicación</h3>
           <button class="close-btn" (click)="closeEditModal()" [disabled]="uploading()">
             <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -591,7 +591,7 @@
                 <span class="spinner-small"></span>
                 <span>Guardando...</span>
               } @else {
-                <span>Guardar Cambios</span>
+                <span>Guardar</span>
               }
             </button>
           </div>

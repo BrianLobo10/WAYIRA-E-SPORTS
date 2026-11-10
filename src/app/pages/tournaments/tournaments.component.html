@@ -4,7 +4,7 @@
       <div class="hero-content">
         <span class="kicker">02 · Torneos</span>
         <h1>Arma tu equipo. <span>Entra</span> al bracket.</h1>
-        <p>Participa en los torneos competitivos de WAYIRA E-SPORTS. <a routerLink="/tournaments/historial" class="hero-historial-link">Ver historial de torneos finalizados</a></p>
+        <p>Arma tu equipo, inscríbelo y juega por el título. <a routerLink="/tournaments/historial" class="hero-historial-link">Ver historial de torneos finalizados</a></p>
       </div>
     </div>
   </section>
@@ -46,11 +46,11 @@
       @if (loading()) {
         <div class="loading-container">
           <span class="spinner"></span>
-          <span>Cargando torneos...</span>
+          <span>Cargando…</span>
         </div>
       } @else if (tournaments().length === 0) {
         <div class="empty-state">
-          <p>No hay torneos disponibles aún.</p>
+          <p>No hay torneos abiertos ahora. El próximo se anuncia aquí y en Discord.</p>
           <p class="empty-hint">Los administradores pueden crear un torneo real con «Crear Torneo» o uno de prueba con «Torneo de Prueba».</p>
         </div>
       } @else {
@@ -251,7 +251,7 @@
           <div class="form-section">
             <h4 class="form-section-title">General</h4>
           <div class="form-group">
-            <label for="tournamentName">Nombre del Torneo *</label>
+            <label for="tournamentName">Nombre del torneo</label>
             <input
               type="text"
               id="tournamentName"
@@ -265,7 +265,7 @@
           </div>
 
           <div class="form-group">
-            <label for="tournamentDescription">Descripción *</label>
+            <label for="tournamentDescription">Descripción</label>
             <textarea
               id="tournamentDescription"
               [ngModel]="tournamentDescription()"
@@ -298,7 +298,7 @@
             <h4 class="form-section-title">Formato y cupos</h4>
           <div class="form-row">
             <div class="form-group">
-              <label for="tournamentGame">Juego *</label>
+              <label for="tournamentGame">Juego</label>
               <select
                 id="tournamentGame"
                 [ngModel]="tournamentGame()"
@@ -313,7 +313,7 @@
             </div>
 
             <div class="form-group">
-              <label for="tournamentMaxTeams">Cantidad de Equipos *</label>
+              <label for="tournamentMaxTeams">Número de equipos</label>
               <select
                 id="tournamentMaxTeams"
                 [ngModel]="tournamentMaxTeams()"
@@ -330,7 +330,7 @@
 
           <div class="form-row form-row--rounds-format">
             <div class="form-group">
-              <label for="tournamentConfiguredRounds">Número de Rondas *</label>
+              <label for="tournamentConfiguredRounds">Número de rondas</label>
               <select
                 id="tournamentConfiguredRounds"
                 [ngModel]="tournamentConfiguredRounds()"
@@ -364,7 +364,7 @@
             <h4 class="form-section-title">Calendario</h4>
           <div class="form-row">
             <div class="form-group">
-              <label for="tournamentStartDate">Fecha de Inicio *</label>
+              <label for="tournamentStartDate">Fecha de inicio</label>
               <input
                 type="datetime-local"
                 id="tournamentStartDate"
@@ -378,7 +378,7 @@
             </div>
 
             <div class="form-group">
-              <label for="tournamentEndDate">Fecha de Finalización *</label>
+              <label for="tournamentEndDate">Fecha de cierre</label>
               <input
                 type="datetime-local"
                 id="tournamentEndDate"
@@ -469,7 +469,7 @@
         <div class="modal-body">
           <form class="register-form">
             <div class="form-group">
-              <label for="teamName">Nombre del Equipo *</label>
+              <label for="teamName">Nombre del equipo</label>
               <input
                 type="text"
                 id="teamName"
@@ -483,7 +483,7 @@
             </div>
 
             <div class="form-group">
-              <label for="teamLogo">Logo del Equipo (Opcional)</label>
+              <label for="teamLogo">Logo del equipo (opcional)</label>
               <div class="logo-upload-section">
                 @if (teamLogoPreview()) {
                   <div class="logo-preview">
@@ -527,7 +527,7 @@
                   <span class="spinner-small"></span>
                   <span>Subiendo logo...</span>
                 } @else {
-                  <span>Continuar con Jugadores</span>
+                  <span>Siguiente: jugadores</span>
                 }
               </button>
             </div>
@@ -560,7 +560,7 @@
                     </div>
                     <div class="player-card-form">
                       <div class="form-group">
-                        <label>Nombre Completo *</label>
+                        <label>Nombre completo</label>
                         <input
                           type="text"
                           [value]="getPlayerCard(i).name"
@@ -570,7 +570,7 @@
                       </div>
                       <div class="form-row">
                         <div class="form-group">
-                          <label>Nombre de Invocador *</label>
+                          <label>Nombre de invocador</label>
                           <input
                             type="text"
                             [value]="getPlayerCard(i).gameName"
@@ -579,7 +579,7 @@
                             class="form-input">
                         </div>
                         <div class="form-group">
-                          <label>Tagline *</label>
+                          <label>Tagline</label>
                           <input
                             type="text"
                             [value]="getPlayerCard(i).tagLine"
@@ -601,7 +601,7 @@
                         </select>
                       </div>
                       <div class="form-group">
-                        <label>Campeón Principal (Main) 🎮</label>
+                        <label>Main</label>
                         <select
                           [value]="getPlayerCard(i).mainChampion"
                           (change)="updatePlayerInfo(i, 'mainChampion', $any($event.target).value)"
@@ -933,7 +933,7 @@
           </div>
         } @else {
           <div class="empty-bracket">
-            <p>El bracket aún no ha sido generado</p>
+            <p>El bracket se arma cuando cierren las inscripciones.</p>
             @if (selectedTournamentForBracket()!.teams && selectedTournamentForBracket()!.teams!.length < selectedTournamentForBracket()!.maxTeams) {
               <p class="empty-bracket-hint">
                 Esperando a que se registren todos los equipos ({{ selectedTournamentForBracket()!.teams!.length }}/{{ selectedTournamentForBracket()!.maxTeams }})
