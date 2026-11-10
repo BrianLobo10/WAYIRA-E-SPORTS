@@ -31,6 +31,8 @@
         (coverCancel)="cancelCoverChange()" />
 
     @if (hasRiot(profile())) {
+      <!-- Mientras se descarga la temporada por primera vez solo se muestra la barra de carga -->
+      @if (showRiotCards()) {
       <app-profile-performance
         [loading]="loadingRiot()"
         [riotStats]="riotStats()"
@@ -44,23 +46,23 @@
           periodLabel="Últimas 4 semanas"
           [maxShow]="8" />
       }
-
-      @if (riotPuuid(); as dashPuuid) {
-        <app-profile-dashboard
-          [region]="profile()!.region!"
-          [puuid]="dashPuuid"
-          [gameName]="profile()!.gameName || ''"
-          [tagLine]="profile()!.tagLine || ''"
-          (seasonGames)="applySeasonActivity($event)"
-          (syncProgress)="seasonSync.set($event)" />
       }
 
-      @if (getActivityTimelineData(); as timelineData) {
-        <app-profile-activity-timeline
-          [data]="timelineData"
-          totalLabel="Este año"
-          activitiesLabel="partidas"
-          [hint]="activityHint()" />
+      <app-profile-dashboard
+        [region]="profile()!.region!"
+        [puuid]="riotPuuid() || ''"
+        [gameName]="profile()!.gameName || ''"
+        [tagLine]="profile()!.tagLine || ''"
+        (seasonGames)="applySeasonActivity($event)" />
+
+      @if (showRiotCards()) {
+        @if (getActivityTimelineData(); as timelineData) {
+          <app-profile-activity-timeline
+            [data]="timelineData"
+            totalLabel="Este año"
+            activitiesLabel="partidas"
+            hint="Partidas por mes en el año en curso (sin ARAM: Caos, que Riot no comparte, ni partidas canceladas)." />
+        }
       }
     }
 

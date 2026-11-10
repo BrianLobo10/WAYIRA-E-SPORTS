@@ -24,6 +24,7 @@ const TIER_COLORS: Record<string, string> = {
   IRON: '#8c7b72', BRONZE: '#b9785a', SILVER: '#a9b4c0', GOLD: '#e1b24e', PLATINUM: '#4cc3b4',
   EMERALD: '#36c77c', DIAMOND: '#7d97ff', MASTER: '#c06ae0', GRANDMASTER: '#ec5a60', CHALLENGER: '#f4d06a',
 };
+import { SeasonSyncService } from '../../services/season-sync.service';
 @Component({
   selector: 'app-profile',
   standalone: true,
@@ -113,12 +114,17 @@ export class ProfileComponent implements OnInit, OnDestroy {
   /** Mejor rango Solo Q (desde leagues del summoner) */
   soloQRank = signal<LeagueEntry | null>(null);
   flexRank = signal<LeagueEntry | null>(null);
-  seasonSync = signal<{ stored: number; total: number; pending: number } | null>(null);
-  activityHint = computed(() => {
-    const s = this.seasonSync();
-    return s && s.pending > 0
-      ? `Cargando la temporada: ${s.stored} de ${s.total} partidas. La gráfica se completa sola en unos minutos.`
-      : 'Partidas por mes en el año en curso (sin ARAM: Caos, que Riot no comparte, ni partidas canceladas).';
+  private seasonSyncService = inject(SeasonSyncService);
+  /** Hay una copia de la temporada de una visita anterior (se puede mostrar al instante) */
+  private hasCachedSeason = signal(false);
+  /**
+   * Rendimiento, campeones y actividad se muestran cuando la temporada está completa.
+   * Si ya se cargó antes (copia guardada) se muestran al instante, salvo que esté descargando partidas.
+   */
+  showRiotCards = computed(() => {
+    const s = this.seasonSyncService.state(this.riotPuuid());
+    if (s?.phase === 'ready' || s?.phase === 'error') return true;
+    return this.hasCachedSeason() && s?.phase !== 'syncing';
   });
   loadingRiot = signal(false);
   // Vincular Riot en editar perfil
@@ -694,8 +700,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
   /** Carga datos Riot: muestra caché al instante si existe y está reciente; actualiza en segundo plano. */
   loadRiotWithCache(profile: UserProfile) {
     const uid = profile.uid;
+    this.seasonActivity.set(null);
+    this.hasCachedSeason.set(false);
     const fromCache = this.loadRiotFromCache(uid);
     const fromProfileSnapshot = !fromCache ? this.loadRiotSnapshotFromProfile(profile) : false;
+    this.restoreSeasonActivity(uid);
     if (fromCache || fromProfileSnapshot) this.loadingRiot.set(false);
     this.loadRiotProfileData(profile, true);
   }
@@ -779,7 +788,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
               rankLabel: this.rankLabel(soloQ ?? leagues.find((l: LeagueEntry) => l.queueType === 'RANKED_FLEX_SR') ?? null),
               totalGames: totalLeague || games
             });
-            this.activityMap.set(dayCount);
+            // Si ya llegó la temporada guardada, las 20 recientes solo completan días; nunca la reemplazan
+            this.activityMap.set(this.mergeActivity(this.seasonActivity(), dayCount));
             this.activityTimelineData = null;
             this.recentMatches.set(matches);
 
@@ -944,14 +954,47 @@ export class ProfileComponent implements OnInit, OnDestroy {
     return new Date(Date.UTC(year, 0, 1, 5, 0, 0, 0) + dayIndex * 24 * 60 * 60 * 1000);
   }
 
-  /** El dashboard trae toda la temporada guardada: la línea de actividad y «Partidas del año» la usan */
+  /** Partidas por día de toda la temporada (sale de la base de datos vía el dashboard) */
+  private seasonActivity = signal<Map<string, number> | null>(null);
+
+  /** Une dos mapas de actividad quedándose con el mayor conteo de cada día */
+  private mergeActivity(a: Map<string, number> | null, b: Map<string, number> | null): Map<string, number> {
+    const out = new Map(a ?? []);
+    for (const [k, v] of b ?? []) out.set(k, Math.max(out.get(k) ?? 0, v));
+    return out;
+  }
+
+  /**
+   * El dashboard trae toda la temporada guardada: la gráfica de actividad y «Partidas del año» la usan.
+   * Se guarda en el navegador para que al recargar se vea completa al instante (y se corrige sola si hay cambios).
+   */
   applySeasonActivity(games: Game[]) {
     if (!games.length) return;
-    const map = activityByDay(games);
-    const current = this.activityMap();
-    for (const [k, v] of current) if (!map.has(k)) map.set(k, v);
-    this.activityMap.set(map);
+    const season = activityByDay(games);
+    this.seasonActivity.set(season);
+    const merged = this.mergeActivity(season, this.activityMap());
+    this.activityMap.set(merged);
     this.activityTimelineData = null;
+    const uid = this.profile()?.uid;
+    if (!uid) return;
+    try {
+      localStorage.setItem(`wayira-season-activity-${uid}`, JSON.stringify({ year: new Date().getFullYear(), days: Object.fromEntries(season) }));
+    } catch { /* sin almacenamiento local: se recalcula al cargar */ }
+  }
+
+  /** Muestra al instante la actividad de la temporada guardada la última vez (se actualiza sola al cargar) */
+  private restoreSeasonActivity(uid: string) {
+    try {
+      const raw = localStorage.getItem(`wayira-season-activity-${uid}`);
+      if (!raw) return;
+      const data = JSON.parse(raw) as { year: number; days: Record<string, number> };
+      if (data.year !== new Date().getFullYear() || !data.days) return;
+      const season = new Map(Object.entries(data.days).map(([k, v]) => [k, Number(v) || 0]));
+      this.seasonActivity.set(season);
+      this.hasCachedSeason.set(true);
+      this.activityMap.set(this.mergeActivity(season, this.activityMap()));
+      this.activityTimelineData = null;
+    } catch { /* caché dañada: se ignora */ }
   }
 
   getActivityCount(dateKey: string): number {
@@ -1264,7 +1307,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
       this.riotPuuid.set(null);
       this.soloQRank.set(null);
       this.flexRank.set(null);
-      this.seasonSync.set(null);
       this.riotStats.set(null);
       this.topChampions.set([]);
       this.editGameName.set('');
