@@ -349,3 +349,22 @@
     width: 100%;
   }
 }
+
+/* Tarjeta de rango oficial (Solo/Duo y Flex) */
+.rank-card { flex-shrink: 0; min-width: 240px; border: 1px solid rgba(255, 255, 255, 0.1); background: linear-gradient(160deg, rgba(255,255,255,0.04), rgba(0,0,0,0.25)); border-radius: 4px; overflow: hidden; }
+.rank-main { position: relative; display: flex; align-items: center; gap: 12px; padding: 14px 16px 14px 10px; }
+.rank-main::before { content: ''; position: absolute; inset: 0; background: radial-gradient(120px 90px at 50px 50%, color-mix(in srgb, var(--tier) 28%, transparent), transparent 70%); pointer-events: none; }
+.rank-crest { position: relative; width: 84px; height: 84px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0,0,0,.45)); }
+.rank-info { position: relative; display: grid; gap: 2px; min-width: 0; }
+.rank-queue { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.6); }
+.rank-tier { font-family: var(--font-display); font-weight: 500; font-size: 1.5rem; line-height: 1.1; color: var(--tier); }
+.rank-tier span { color: var(--white); }
+.rank-lp { font-size: 14px; font-weight: 600; color: var(--white); font-variant-numeric: tabular-nums; }
+.rank-record { display: flex; gap: 6px; font-size: 12px; color: rgba(255,255,255,.7); font-variant-numeric: tabular-nums; }
+.rank-record .w { color: #4ade80; font-weight: 600; }
+.rank-record .l { color: #f87171; font-weight: 600; }
+.rank-sub { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-top: 1px solid rgba(255,255,255,.08); font-size: 13px; color: var(--white); }
+.rank-sub img { width: 28px; height: 28px; object-fit: contain; }
+.rank-sub .rank-queue { font-size: 10px; }
+.rank-sub-tier { margin-left: auto; color: var(--tier); font-weight: 600; font-variant-numeric: tabular-nums; }
+@media (max-width: 768px) { .rank-card { width: 100%; min-width: 0; } }

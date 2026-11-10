@@ -18,6 +18,12 @@ import { ProfileDashboardComponent } from '../../components/profile-dashboard/pr
 import { Game, activityByDay } from '../../components/profile-dashboard/season-stats';
 
 import { profileIconUrl } from '../../utils/riot-assets';
+import { RankCard } from '../../components/profile-header/profile-header.component';
+
+const TIER_COLORS: Record<string, string> = {
+  IRON: '#8c7b72', BRONZE: '#b9785a', SILVER: '#a9b4c0', GOLD: '#e1b24e', PLATINUM: '#4cc3b4',
+  EMERALD: '#36c77c', DIAMOND: '#7d97ff', MASTER: '#c06ae0', GRANDMASTER: '#ec5a60', CHALLENGER: '#f4d06a',
+};
 @Component({
   selector: 'app-profile',
   standalone: true,
@@ -106,6 +112,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   championWinRatesFromMatches = signal<Map<number, { wins: number; games: number; winRate: number }>>(new Map());
   /** Mejor rango Solo Q (desde leagues del summoner) */
   soloQRank = signal<LeagueEntry | null>(null);
+  flexRank = signal<LeagueEntry | null>(null);
   loadingRiot = signal(false);
   // Vincular Riot en editar perfil
   editGameName = signal('');
@@ -698,6 +705,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       this.last4WeeksStats.set(null);
       this.championWinRatesFromMatches.set(new Map());
       this.soloQRank.set(null);
+      this.flexRank.set(null);
     }
 
     this.riotApiService.getSummoner(region, profile.gameName!, profile.tagLine!).subscribe({
@@ -712,6 +720,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
         });
         const soloQ = leagues.find((l: LeagueEntry) => l.queueType === 'RANKED_SOLO_5x5') ?? null;
         this.soloQRank.set(soloQ);
+        this.flexRank.set(leagues.find((l: LeagueEntry) => l.queueType === 'RANKED_FLEX_SR') ?? null);
         const totalLeague = wins + losses;
         const winRate = totalLeague > 0 ? Math.round((wins / totalLeague) * 1000) / 10 : 0;
 
@@ -1078,7 +1087,29 @@ export class ProfileComponent implements OnInit, OnDestroy {
     const entry = this.soloQRank();
     if (!entry?.tier) return null;
     const tier = entry.tier.toLowerCase();
-    return `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-emblem/emblem-${tier}.png`;
+    return `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-mini-crests/${tier}.svg`;
+  }
+
+  /** Rangos oficiales (Solo/Duo y Flex) para la tarjeta del encabezado */
+  getRankCards(): RankCard[] {
+    const make = (queue: string, e: LeagueEntry | null): RankCard | null => {
+      if (!e?.tier) return null;
+      const key = e.tier.toLowerCase();
+      const apex = ['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(e.tier);
+      const games = (e.wins || 0) + (e.losses || 0);
+      return {
+        queue,
+        tier: this.formatSoloQRank({ ...e, rank: '' } as LeagueEntry).replace(/ \d+ LP$/, ''),
+        division: apex ? '' : e.rank || '',
+        lp: e.leaguePoints ?? 0,
+        wins: e.wins || 0,
+        losses: e.losses || 0,
+        winRate: games ? Math.round(((e.wins || 0) / games) * 100) : 0,
+        crest: `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-shared-components/global/default/${key}.png`,
+        color: TIER_COLORS[e.tier] ?? '#9aa4af',
+      };
+    };
+    return [make('Solo/Duo', this.soloQRank()), make('Flex', this.flexRank())].filter((c): c is RankCard => !!c);
   }
 
   /** Tarjeta Solo Q (mejor rango/elo) para el header (estilo Aurea). */

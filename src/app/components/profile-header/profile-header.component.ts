@@ -2,6 +2,9 @@ import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type { UserProfile } from '../../models';
 
+export interface RankCard {
+  queue: string; tier: string; division: string; lp: number; wins: number; losses: number; winRate: number; crest: string; color: string;
+}
 @Component({
   selector: 'app-profile-header',
   standalone: true,
@@ -21,7 +24,7 @@ export class ProfileHeaderComponent {
   rankLabel = input<string | null>(null);
   rankIconUrl = input<string | null>(null);
   /** Tarjeta Solo Q / mejor rango (estilo Aurea) */
-  scoreCard = input<{ period: string; value: number | string; label: string } | null>(null);
+  rankCards = input<RankCard[]>([]);
   uploadingCover = input<boolean>(false);
 
   coverSelected = output<Event>();

@@ -89,12 +89,28 @@
             }
           </div>
         </div>
-        @if (scoreCard(); as card) {
-          <div class="profile-score-card aurea-score-card">
-            <span class="score-period">{{ card.period }}</span>
-            <span class="score-value">{{ card.value }}</span>
-            <span class="score-label">{{ card.label }}</span>
-          </div>
+        @if (rankCards().length) {
+          <aside class="rank-card" aria-label="Rango oficial de Riot">
+            @for (r of rankCards(); track r.queue; let first = $first) {
+              @if (first) {
+                <div class="rank-main" [style.--tier]="r.color">
+                  <img class="rank-crest" [src]="r.crest" alt="" width="84" height="84" loading="lazy" referrerpolicy="no-referrer" />
+                  <div class="rank-info">
+                    <span class="rank-queue">{{ r.queue }}</span>
+                    <strong class="rank-tier">{{ r.tier }} <span>{{ r.division }}</span></strong>
+                    <span class="rank-lp">{{ r.lp }} LP</span>
+                    <span class="rank-record"><b class="w">{{ r.wins }}V</b> <b class="l">{{ r.losses }}D</b> · {{ r.winRate }}%</span>
+                  </div>
+                </div>
+              } @else {
+                <div class="rank-sub" [style.--tier]="r.color">
+                  <img [src]="r.crest" alt="" width="28" height="28" loading="lazy" referrerpolicy="no-referrer" />
+                  <span class="rank-queue">{{ r.queue }}</span>
+                  <span class="rank-sub-tier">{{ r.tier }} {{ r.division }} · {{ r.lp }} LP</span>
+                </div>
+              }
+            }
+          </aside>
         }
       </div>
     </div>

@@ -17,7 +17,7 @@
         [activitiesCount]="getActivitiesCount()"
         [rankLabel]="getSoloQRankLabel()"
         [rankIconUrl]="getSoloQRankIconUrl()"
-        [scoreCard]="getProfileScoreCard()"
+        [rankCards]="getRankCards()"
         [uploadingCover]="uploadingCover()"
         [showCoverConfirm]="showCoverConfirm()"
         [editCoverPreview]="editCoverPreview()"
@@ -30,7 +30,7 @@
         (coverConfirm)="confirmCoverChange()"
         (coverCancel)="cancelCoverChange()" />
 
-    @if (profile()!.puuid && profile()!.region) {
+    @if (hasRiot(profile())) {
       <app-profile-performance
         [loading]="loadingRiot()"
         [riotStats]="riotStats()"
