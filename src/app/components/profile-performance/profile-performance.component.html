@@ -20,8 +20,13 @@
           }
         </div>
         <div class="perf-item">
-          <span class="perf-value">{{ stats.wayiraScore }}</span>
-          <span class="perf-label">Puntuación WAYIRA</span>
+          <span class="perf-value"><span class="w">{{ stats.wins }}V</span> · <span class="l">{{ stats.losses }}D</span></span>
+          <span class="perf-label">Victorias / Derrotas</span>
+          <span class="perf-hint">Ranked, temporada actual</span>
+        </div>
+        <div class="perf-item">
+          <span class="perf-value perf-value--rank">{{ stats.rankLabel }}</span>
+          <span class="perf-label">Rango actual</span>
         </div>
         <div class="perf-item">
           <span class="perf-value">{{ totalMatchesThisYear() }}</span>

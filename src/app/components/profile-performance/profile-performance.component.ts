@@ -6,7 +6,7 @@ export interface RiotStats {
   wins: number;
   losses: number;
   kda: number;
-  wayiraScore: number;
+  rankLabel: string;
   totalGames: number;
 }
 

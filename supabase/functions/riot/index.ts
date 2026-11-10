@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
           const queue = queueParam && /^\d{1,4}$/.test(queueParam) ? Number(queueParam) : undefined;
           const startParam = parseInt(query.get('start') ?? '0', 10);
           const start = Number.isFinite(startParam) && startParam > 0 ? Math.min(startParam, 200) : 0;
-          return json(req, await matches(r, a, clamp(query.get('count'), 10, 20), key, queue, start));
+          return json(req, await matches(r, a, clamp(query.get('count'), 10, 100), key, queue, start));
         }
       case 'mastery':
         if (!a || !PUUID.test(a)) break;

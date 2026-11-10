@@ -44,7 +44,7 @@
 
 .performance-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 1rem;
   max-width: 100%;
 }
@@ -93,3 +93,7 @@
 .perf-delta.negative {
   color: var(--ember-text);
 }
+
+.perf-value .w { color: #4ade80; }
+.perf-value .l { color: #f87171; }
+.perf-value--rank { font-size: 1.1rem; }

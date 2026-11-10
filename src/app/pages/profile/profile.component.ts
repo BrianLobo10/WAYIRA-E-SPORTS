@@ -91,7 +91,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   uploadingCover = signal(false);
 
   // Stats desde Riot API
-  riotStats = signal<{ winRate: number; wins: number; losses: number; kda: number; wayiraScore: number; totalGames: number } | null>(null);
+  riotStats = signal<{ winRate: number; wins: number; losses: number; kda: number; rankLabel: string; totalGames: number } | null>(null);
   topChampions = signal<{ championId: number; championName: string; points: number; level: number }[]>([]);
   activityMap = signal<Map<string, number>>(new Map());
   /** Partidas recientes (para última actividad y win rate por campeón) */
@@ -554,7 +554,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   private applyRiotSnapshot(snapshot: {
-    stats?: { winRate: number; wins: number; losses: number; kda: number; wayiraScore: number; totalGames: number } | null;
+    stats?: { winRate: number; wins: number; losses: number; kda: number; rankLabel: string; totalGames: number } | null;
     champions?: { championId: number; championName: string; points: number; level: number }[];
     activity?: Record<string, number>;
     last4?: { winRate: number; kda: number; games: number; wins: number; losses: number } | null;
@@ -649,7 +649,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   private async saveRiotSnapshotToProfile(
     uid: string,
-    stats: { winRate: number; wins: number; losses: number; kda: number; wayiraScore: number; totalGames: number } | null,
+    stats: { winRate: number; wins: number; losses: number; kda: number; rankLabel: string; totalGames: number } | null,
     champions: { championId: number; championName: string; points: number; level: number }[],
     activity: Map<string, number>,
     last4: { winRate: number; kda: number; games: number; wins: number; losses: number } | null,
@@ -751,13 +751,12 @@ export class ProfileComponent implements OnInit, OnDestroy {
             const games = matches.length;
             const totalKda = games > 0 && d > 0 ? (k + a) / d : (k + a);
             const kda = Math.round(totalKda * 100) / 100;
-            const wayiraScore = totalLeague > 0 ? Math.round((winRate * 0.4 + Math.min(totalKda * 10, 60)) * 10) / 10 : 0;
             this.riotStats.set({
               winRate: totalLeague > 0 ? winRate : 0,
               wins,
               losses,
               kda,
-              wayiraScore: wayiraScore || 0,
+              rankLabel: this.rankLabel(soloQ ?? leagues.find((l: LeagueEntry) => l.queueType === 'RANKED_FLEX_SR') ?? null),
               totalGames: totalLeague || games
             });
             this.activityMap.set(dayCount);
@@ -1526,6 +1525,18 @@ export class ProfileComponent implements OnInit, OnDestroy {
       this.profileSubscription.unsubscribe();
       this.profileSubscription = null;
     }
+  }
+
+  /** Rango oficial de Riot en español, p. ej. "Oro II · 45 LP" (Solo/Duo; si no tiene, Flex) */
+  private rankLabel(league: LeagueEntry | null): string {
+    if (!league?.tier) return 'Sin clasificar';
+    const tiers: Record<string, string> = {
+      IRON: 'Hierro', BRONZE: 'Bronce', SILVER: 'Plata', GOLD: 'Oro', PLATINUM: 'Platino', EMERALD: 'Esmeralda',
+      DIAMOND: 'Diamante', MASTER: 'Maestro', GRANDMASTER: 'Gran Maestro', CHALLENGER: 'Retador',
+    };
+    const tier = tiers[league.tier] ?? league.tier;
+    const division = ['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(league.tier) ? '' : ` ${league.rank ?? ''}`;
+    return `${tier}${division} · ${league.leaguePoints ?? 0} LP`;
   }
 }
 
