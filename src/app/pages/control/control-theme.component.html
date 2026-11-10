@@ -2,25 +2,44 @@
   <div>
     <p class="view-kicker">Centro de control</p>
     <h1 class="view-title">Apariencia</h1>
-    <p class="view-lead">Elige los colores de la web. Pruébalos en vivo antes de guardar: hasta que pulses «Aplicar», solo los ves tú.</p>
+    <p class="view-lead">Elige los colores y las fuentes de la web. Pruébalos en vivo antes de guardar: hasta que pulses «Aplicar», solo los ves tú.</p>
   </div>
 </header>
 
 <div class="layout">
   <div>
     <section class="panel">
-      <div class="panel__head"><h2 class="panel__title">Temas listos</h2></div>
+      <div class="panel__head"><h2 class="panel__title">Estilos completos</h2><span class="muted" style="font-size: 12px">colores + fuentes</span></div>
       <div class="panel__body">
-        <div class="presets">
-          @for (p of presets; track p.name) {
-            <button type="button" class="preset" [class.is-on]="activePreset() === p.name" [attr.aria-pressed]="activePreset() === p.name" (click)="usePreset(p.colors)">
-              <span class="dots" aria-hidden="true">
-                <i [style.background]="p.colors.bg"></i><i [style.background]="p.colors.surface"></i><i [style.background]="p.colors.accent"></i><i [style.background]="p.colors.alert"></i>
-              </span>
-              {{ p.name }}
+        <div class="styles">
+          @for (st of stylePresets; track st.name) {
+            <button type="button" class="style-card" [class.is-on]="activeStyle() === st.name" [attr.aria-pressed]="activeStyle() === st.name"
+                    [style.background]="st.theme.bg" [style.color]="st.theme.accent" (click)="useStyle(st.theme)">
+              <span class="style-card__title" [style.font-family]="stackOf(st.theme.headingFont)">{{ st.name }}</span>
+              <span class="style-card__meta" [style.color]="st.theme.textSecondary">{{ fontLabel(st.theme.headingFont) }} · {{ fontLabel(st.theme.bodyFont) }}</span>
+              <span class="style-card__bar" aria-hidden="true"><i [style.background]="st.theme.surface"></i><i [style.background]="st.theme.accent"></i><i [style.background]="st.theme.alert"></i></span>
             </button>
           }
         </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__head"><h2 class="panel__title">Paletas de color</h2><span class="muted" style="font-size: 12px">mantienen tus fuentes</span></div>
+      <div class="panel__body">
+        @for (g of colorGroups; track g.name) {
+          <p class="group-title">{{ g.name }}</p>
+          <div class="presets">
+            @for (p of g.items; track p.name) {
+              <button type="button" class="preset" [class.is-on]="activePreset() === p.name" [attr.aria-pressed]="activePreset() === p.name" (click)="usePreset(p.colors)">
+                <span class="dots" aria-hidden="true">
+                  <i [style.background]="p.colors.bg"></i><i [style.background]="p.colors.surface"></i><i [style.background]="p.colors.accent"></i><i [style.background]="p.colors.alert"></i>
+                </span>
+                {{ p.name }}
+              </button>
+            }
+          </div>
+        }
       </div>
     </section>
 
@@ -41,6 +60,62 @@
                    [value]="hexText()[f.key]" (input)="typeHex(f.key, $any($event.target).value)" [attr.aria-label]="'Código hexadecimal: ' + f.label" />
           </div>
         }
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__head"><h2 class="panel__title">Tipografía</h2><span class="muted" style="font-size: 12px">{{ fontLabel(draft().headingFont) }} · {{ fontLabel(draft().bodyFont) }}</span></div>
+      <div class="panel__body typography-fields">
+        <div class="typography-field">
+          <span class="field__label" id="heading-font-label">Títulos</span>
+          <span class="field__hint">Encabezados, titulares y nombres destacados. Aquí caben las más locas.</span>
+          <div class="cats" role="group" aria-label="Estilo de fuente de títulos">
+            @for (c of headingCats; track c) {
+              <button type="button" class="cat" [class.is-on]="headingCat() === c" [attr.aria-pressed]="headingCat() === c" (click)="headingCat.set(c)">{{ c }}</button>
+            }
+          </div>
+          <div class="font-options" role="radiogroup" aria-labelledby="heading-font-label">
+            @for (font of visibleHeading(); track font.value) {
+              <button type="button" role="radio" class="font-option" [class.is-on]="draft().headingFont === font.value"
+                      [attr.aria-checked]="draft().headingFont === font.value" (click)="setHeadingFont(font.value)">
+                <span class="font-option__sample" [style.font-family]="font.stack">Wayira 26</span>
+                <span>{{ font.label }}{{ font.value === 'Newsreader' ? ' · original' : '' }}<span class="font-option__cat">{{ font.category }}</span></span>
+              </button>
+            }
+          </div>
+          <select class="font-picker-mobile" aria-label="Fuente de títulos" [value]="draft().headingFont" (change)="setHeadingFont($any($event.target).value)">
+            @for (font of headingFonts; track font.value) { <option [value]="font.value">{{ font.category }} · {{ font.label }}</option> }
+          </select>
+          <div class="font-selected-preview">
+            <span>Título seleccionado</span>
+            <strong [style.font-family]="headingFontStack()">Campeonato Wayira 2026</strong>
+          </div>
+        </div>
+        <div class="typography-field">
+          <span class="field__label" id="body-font-label">Texto normal</span>
+          <span class="field__hint">Párrafos, botones, menú y contenido. Mejor algo que se lea fácil.</span>
+          <div class="cats" role="group" aria-label="Estilo de fuente de texto">
+            @for (c of bodyCats; track c) {
+              <button type="button" class="cat" [class.is-on]="bodyCat() === c" [attr.aria-pressed]="bodyCat() === c" (click)="bodyCat.set(c)">{{ c }}</button>
+            }
+          </div>
+          <div class="font-options" role="radiogroup" aria-labelledby="body-font-label">
+            @for (font of visibleBody(); track font.value) {
+              <button type="button" role="radio" class="font-option" [class.is-on]="draft().bodyFont === font.value"
+                      [attr.aria-checked]="draft().bodyFont === font.value" (click)="setBodyFont(font.value)">
+                <span class="font-option__sample font-option__sample--body" [style.font-family]="font.stack">Jugamos, competimos y ganamos juntos. 0123</span>
+                <span>{{ font.label }}{{ font.value === 'Inter' ? ' · original' : '' }}<span class="font-option__cat">{{ font.category }}</span></span>
+              </button>
+            }
+          </div>
+          <select class="font-picker-mobile" aria-label="Fuente del texto normal" [value]="draft().bodyFont" (change)="setBodyFont($any($event.target).value)">
+            @for (font of bodyFonts; track font.value) { <option [value]="font.value">{{ font.category }} · {{ font.label }}</option> }
+          </select>
+          <div class="font-selected-preview font-selected-preview--body">
+            <span>Texto seleccionado</span>
+            <strong [style.font-family]="bodyFontStack()">Inscripciones abiertas hasta el viernes. Equipos de cinco jugadores, eliminación doble y transmisión en vivo.</strong>
+          </div>
+        </div>
       </div>
     </section>
 

@@ -88,9 +88,11 @@ export class RiotApiService {
     );
   }
 
-  getMatches(region: string, puuid: string, count: number = 5): Observable<MatchData[]> {
+  /** Partidas de todos los modos (ranked, ARAM, ARAM: Caos, Arena, normales...). `start` pagina hacia atrás. */
+  getMatches(region: string, puuid: string, count: number = 10, start = 0, queue?: number): Observable<MatchData[]> {
+    const queueParam = queue ? `&queue=${queue}` : '';
     return this.http.get<MatchData[]>(
-      riotUrl(`/matches/${seg(region)}/${seg(puuid)}?count=${count}`)
+      riotUrl(`/matches/${seg(region)}/${seg(puuid)}?count=${count}&start=${start}${queueParam}`)
     );
   }
 
@@ -107,4 +109,3 @@ export class RiotApiService {
     );
   }
 }
-

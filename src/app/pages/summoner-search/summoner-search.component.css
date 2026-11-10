@@ -51,10 +51,15 @@
 
 .form-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 1.5rem;
   width: 100%;
   box-sizing: border-box;
+}
+
+.search-form .form-row .form-group,
+.search-form .form-row .form-input {
+  width: 100%;
 }
 
 .form-group {
@@ -719,6 +724,18 @@
   margin-top: 1.5rem;
 }
 
+.ranked-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.unranked-rank {
+  min-height: 112px;
+  align-items: center;
+}
+
 .rank-info {
   display: flex;
   align-items: center;
@@ -888,6 +905,10 @@
   .mastery-section {
     padding: 1.5rem;
     margin-bottom: 1.5rem; /* Agregado espaciado adicional */
+  }
+
+  .ranked-grid {
+    grid-template-columns: 1fr;
   }
   
   .rank-info {
@@ -1569,3 +1590,23 @@
   }
 }
 
+/* Estadísticas por modo (todas las colas) */
+.season-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 10px 12px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,.08); border-radius: 8px; font-size: 14px; }
+.season-row__name { color: var(--text-secondary, #a8a8b3); }
+.season-row__wr { font-variant-numeric: tabular-nums; font-weight: 600; }
+.w { color: #4ade80; } .l { color: #f87171; }
+.mode-note { margin: 14px 0 8px; font-size: 12px; color: var(--text-secondary, #a8a8b3); }
+.mode-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.mode-table th, .mode-table td { padding: 8px 6px; text-align: right; border-bottom: 1px solid rgba(255,255,255,.06); white-space: nowrap; }
+.mode-table th[scope="row"], .mode-table thead th:first-child { text-align: left; white-space: normal; }
+.mode-table thead th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary, #a8a8b3); font-weight: 600; }
+.wr-bar { display: inline-block; width: 40px; height: 4px; margin-right: 8px; vertical-align: middle; border-radius: 2px; background: linear-gradient(90deg, var(--volt, #c8aa6e) var(--wr), rgba(255,255,255,.1) var(--wr)); }
+.mode-filter { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+.mode-chip { padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.12); background: transparent; color: inherit; font: inherit; font-size: 13px; cursor: pointer; min-height: 32px; }
+.mode-chip span { opacity: .6; margin-left: 4px; font-variant-numeric: tabular-nums; }
+.mode-chip.is-on { border-color: var(--volt, #c8aa6e); color: var(--volt, #c8aa6e); }
+.mode-chip:focus-visible, .load-more:focus-visible { outline: 2px solid var(--volt, #c8aa6e); outline-offset: 2px; }
+.load-more { display: block; margin: 16px auto 0; padding: 10px 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,.15); background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.load-more:disabled { opacity: .6; cursor: progress; }
+@media (max-width: 520px) { .mode-table th:nth-child(5), .mode-table td:nth-child(5) { display: none; } }
+.season-row__wl { display: inline-flex; gap: 6px; }

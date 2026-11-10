@@ -38,7 +38,7 @@ set role anon;
 do $$ declare n int; begin
   select count(*) into n from public.tournaments;      assert n = 1, 'torneos públicos';
   select count(*) into n from public.news;             assert n = 1, 'solo noticias publicadas';
-  select count(*) into n from public.site_config;      assert n = 1, 'config pública';
+  select count(*) into n from public.site_config where key <> 'theme'; assert n = 1, 'config pública';
   assert public.count_registered_users() = 3, 'contador';
   raise notice 'OK 2 visitante lee torneos, noticias publicadas, config y contador';
 

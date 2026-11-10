@@ -19,23 +19,18 @@
           [routerLinkActiveOptions]="{ exact: !isAuthenticated() }"
           class="header-nav__link"
           (click)="closeMobileNav()">
-          <span class="nav-num" aria-hidden="true">01</span>
           <span>Inicio</span>
         </a>
         <a routerLink="/tournaments" routerLinkActive="is-active" class="header-nav__link" (click)="closeMobileNav()">
-          <span class="nav-num" aria-hidden="true">02</span>
           <span>Torneos</span>
         </a>
         <a routerLink="/sorteos" routerLinkActive="is-active" class="header-nav__link" (click)="closeMobileNav()">
-          <span class="nav-num" aria-hidden="true">03</span>
           <span>Sorteos</span>
         </a>
         <a routerLink="/search" routerLinkActive="is-active" class="header-nav__link" (click)="closeMobileNav()">
-          <span class="nav-num" aria-hidden="true">04</span>
           <span>Buscar</span>
         </a>
         <a href="https://www.twitch.tv/wayiraesports" target="_blank" rel="noopener noreferrer" class="header-nav__link" (click)="closeMobileNav()">
-          <span class="nav-num" aria-hidden="true">05</span>
           <span>Live</span>
         </a>
 

@@ -9,25 +9,13 @@
     <form (ngSubmit)="searchSummoner()" class="search-form">
       <div class="form-row">
         <div class="form-group">
-          <label for="gameName">Nombre del Jugador</label>
+          <label for="riotId">Riot ID</label>
           <input
             type="text"
-            id="gameName"
-            [(ngModel)]="gameName"
-            name="gameName"
-            placeholder="Ej: Faker"
-            class="form-input"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="tagLine">Etiqueta</label>
-          <input
-            type="text"
-            id="tagLine"
-            [(ngModel)]="tagLine"
-            name="tagLine"
-            placeholder="Ej: KR1"
+            id="riotId"
+            [(ngModel)]="riotId"
+            name="riotId"
+            placeholder="Ej: BR LOBO#MADFK"
             class="form-input"
           />
         </div>
@@ -84,11 +72,13 @@
             <h2 class="summoner-name">
               {{ summoner()!.gameName }}
               <span class="tagline">#{{ summoner()!.tagLine }}</span>
-              @if (getCurrentLeague(); as league) {
-                <span class="inline-rank-badge" [style.border-color]="getTierColor(league.tier)">
-                  <img referrerpolicy="no-referrer" loading="lazy" decoding="async" class="inline-rank-icon" [src]="getRankImageUrl(league.tier)" [alt]="league.tier">
-                  <span>{{ getLeagueDisplayName(league) }}</span>
-                </span>
+              @for (queueType of ['RANKED_SOLO_5x5', 'RANKED_FLEX_SR']; track queueType) {
+                @if (getLeague($any(queueType)); as league) {
+                  <span class="inline-rank-badge" [style.border-color]="getTierColor(league.tier)" [title]="getRankedQueue(queueType)">
+                    <img referrerpolicy="no-referrer" loading="lazy" decoding="async" class="inline-rank-icon" [src]="getRankImageUrl(league.tier)" [alt]="league.tier">
+                    <span>{{ getLeagueDisplayName(league) }}</span>
+                  </span>
+                }
               }
             </h2>
             <div class="summoner-level">
@@ -101,12 +91,37 @@
 
       <div class="stats-mastery-container">
         <div class="ranked-stats-section">
-          <h3 class="section-title">Estadísticas Rankeadas</h3>
-          <div class="ranked-coming-soon">
-            <span class="coming-soon-badge">Próximamente</span>
-            <p class="coming-soon-title">Esta sección aún no está disponible</p>
-            <p class="coming-soon-text">Estamos trabajando para mostrar aquí estadísticas rankeadas detalladas. Por ahora puedes ver maestría de campeones y partidas recientes.</p>
-          </div>
+          <h3 class="section-title">Estadísticas por modo</h3>
+          @for (queueType of ['RANKED_SOLO_5x5', 'RANKED_FLEX_SR']; track queueType) {
+            @if (getLeague($any(queueType)); as league) {
+              <div class="season-row">
+                <span class="season-row__name">{{ getRankedQueue(queueType) }} · temporada</span>
+                <span class="season-row__wl"><b class="w">{{ league.wins }}V</b> <b class="l">{{ league.losses }}D</b></span>
+                <span class="season-row__wr">{{ getWinRate(league) }}%</span>
+              </div>
+            }
+          }
+          @if (loadingMatches()) {
+            <div class="loading-container"><span class="spinner"></span><span>Calculando...</span></div>
+          } @else if (modeSummary().length) {
+            <p class="mode-note">Últimas {{ matches().length }} partidas, todos los modos</p>
+            <table class="mode-table">
+              <thead><tr><th scope="col">Modo</th><th scope="col">Partidas</th><th scope="col">V / D</th><th scope="col">% victorias</th><th scope="col">KDA</th></tr></thead>
+              <tbody>
+                @for (m of modeSummary(); track m.name) {
+                  <tr>
+                    <th scope="row">{{ m.name }}</th>
+                    <td>{{ m.games }}</td>
+                    <td><span class="w">{{ m.wins }}</span> / <span class="l">{{ m.losses }}</span></td>
+                    <td><span class="wr-bar" [style.--wr]="m.winrate + '%'"></span>{{ m.winrate }}%</td>
+                    <td>{{ m.kda }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else {
+            <p class="mode-note">Sin partidas recientes.</p>
+          }
         </div>
 
         <div class="mastery-section">
@@ -159,8 +174,16 @@
       <div class="matches-container">
         <div class="matches-header">
           <h3 class="section-title">Partidas Recientes</h3>
-          <div class="matches-count">{{ matches().length }} partidas</div>
+          <div class="matches-count">{{ filteredMatches().length }} partidas</div>
         </div>
+        @if (modeSummary().length > 1) {
+          <div class="mode-filter" role="group" aria-label="Filtrar por modo">
+            <button type="button" class="mode-chip" [class.is-on]="modeFilter() === 'Todos'" [attr.aria-pressed]="modeFilter() === 'Todos'" (click)="modeFilter.set('Todos')">Todos <span>{{ matches().length }}</span></button>
+            @for (m of modeSummary(); track m.name) {
+              <button type="button" class="mode-chip" [class.is-on]="modeFilter() === m.name" [attr.aria-pressed]="modeFilter() === m.name" (click)="modeFilter.set(m.name)">{{ m.name }} <span>{{ m.games }}</span></button>
+            }
+          </div>
+        }
         
         @if (loadingMatches()) {
           <div class="loading-container">
@@ -169,7 +192,7 @@
           </div>
         } @else if (matches().length > 0) {
           <div class="matches-list">
-            @for (match of matches(); track match.metadata.matchId) {
+            @for (match of filteredMatches(); track match.metadata.matchId) {
               @let participant = getParticipantData(match);
               @if (participant) {
                 <div class="match-card" 
@@ -179,7 +202,7 @@
                      [title]="'Click para ver detalles de la partida'">
                   <div class="match-result">
                     <span class="result-text">{{ participant.win ? 'VICTORIA' : 'DERROTA' }}</span>
-                    <span class="match-mode">{{ getQueueName(match.info.queueId) }}</span>
+                    <span class="match-mode">{{ getQueueName(match.info.queueId, match.info.gameMode) }}</span>
                   </div>
 
                   <div class="match-champion">
@@ -218,6 +241,11 @@
               }
             }
           </div>
+          @if (!noMoreMatches()) {
+            <button type="button" class="load-more" (click)="loadMoreMatches()" [disabled]="loadingMore()">
+              {{ loadingMore() ? 'Cargando…' : 'Cargar 20 partidas más' }}
+            </button>
+          }
         } @else {
           <div class="no-matches">
             <p>No se encontraron partidas recientes</p>
@@ -243,7 +271,7 @@
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="mode-icon">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
             </svg>
-            <span class="mode-name">{{ getQueueName(selectedMatch()!.info.queueId) }}</span>
+            <span class="mode-name">{{ getQueueName(selectedMatch()!.info.queueId, selectedMatch()!.info.gameMode) }}</span>
           </div>
           <div class="match-duration">
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="duration-icon">
@@ -346,4 +374,3 @@
     </div>
   </div>
 </div>
-

@@ -32,10 +32,18 @@ function riotKey(): string | null {
 }
 
 async function riot<T>(url: string, key: string, notFound = 'No encontrado'): Promise<T> {
-  const res = await fetch(url, { headers: { 'X-Riot-Token': key } });
-  if (res.ok) return await res.json() as T;
-  if (res.status === 404) throw new HttpError(404, notFound);
-  if ([401, 403, 429].includes(res.status)) throw new HttpError(503, UNAVAILABLE);
+  let res: Response | null = null;
+  let lastStatus = 0;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    res = await fetch(url, { headers: { 'X-Riot-Token': key } });
+    lastStatus = res.status;
+    if (res.ok) return await res.json() as T;
+    if (![502, 503].includes(res.status) || attempt === 2) break;
+    await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
+  }
+  console.error('Riot API response', lastStatus, new URL(url).pathname);
+  if (lastStatus === 404) throw new HttpError(404, notFound);
+  if ([401, 403, 429, 503].includes(lastStatus)) throw new HttpError(503, UNAVAILABLE);
   throw new HttpError(502, UNAVAILABLE);
 }
 
@@ -87,11 +95,13 @@ async function account(region: string, puuid: string, key: string) {
   });
 }
 
-async function matches(region: string, puuid: string, count: number, key: string) {
+// Todas las colas de partidas (ARAM 450, ARAM: Caos 2400, Arena 1700, normales, URF...) salvo que se filtre una
+async function matches(region: string, puuid: string, count: number, key: string, queue?: number, start = 0) {
   const routing = REGIONS[region];
-  return await cached(`matches:${region}:${puuid}:${count}`, 10 * 60_000, async () => {
+  return await cached(`matches:${region}:${puuid}:${start}:${count}:${queue ?? 'all'}`, 60_000, async () => {
+    const queueFilter = queue ? `&queue=${queue}` : '';
     const ids = await riot<string[]>(
-      `https://${routing}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?start=0&count=${count}`, key);
+      `https://${routing}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?start=${start}&count=${count}${queueFilter}`, key);
     const details: unknown[] = [];
     for (let i = 0; i < ids.length; i += 5) {
       const batch = await Promise.all(ids.slice(i, i + 5).map(async (id) => {
@@ -146,7 +156,14 @@ Deno.serve(async (req) => {
         return json(req, await account(r, a, key));
       case 'matches':
         if (!a || !PUUID.test(a)) break;
-        return json(req, await matches(r, a, clamp(query.get('count'), 10, 20), key));
+        {
+          // queue: cualquier cola numérica de Riot (opcional). start: paginación para "cargar más".
+          const queueParam = query.get('queue');
+          const queue = queueParam && /^\d{1,4}$/.test(queueParam) ? Number(queueParam) : undefined;
+          const startParam = parseInt(query.get('start') ?? '0', 10);
+          const start = Number.isFinite(startParam) && startParam > 0 ? Math.min(startParam, 200) : 0;
+          return json(req, await matches(r, a, clamp(query.get('count'), 10, 20), key, queue, start));
+        }
       case 'mastery':
         if (!a || !PUUID.test(a)) break;
         return json(req, await mastery(r, a, clamp(query.get('count'), 5, 10), key));

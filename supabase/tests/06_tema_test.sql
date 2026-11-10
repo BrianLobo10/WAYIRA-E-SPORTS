@@ -8,7 +8,7 @@ begin perform set_config('request.jwt.claim.sub', coalesce(u, ''), false); end $
 select pg_temp.as_user('00000000-0000-0000-0000-0000000000f0');
 set role authenticated;
 do $$ declare n int; begin
-  insert into public.site_config (key, value) values ('theme', '{"bg":"#101014","accent":"#7CB8FF"}');
+  update public.site_config set value = '{"bg":"#101014","accent":"#7CB8FF"}' where key = 'theme';
   update public.site_config set value = '{"bg":"#101014","accent":"#FF5A36","text":"#F0F0F0"}' where key = 'theme';
   get diagnostics n = row_count; assert n = 1, 'superadmin edita el tema';
   begin update public.site_config set value = '{"bg":"red; background:url(x)"}' where key = 'theme'; raise exception 'FALLO T1: aceptó CSS libre';

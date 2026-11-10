@@ -1,0 +1,25 @@
+HTTP/1.1 200 OK
+Date: Wed, 04 Nov 2026 02:46:50 GMT
+Content-Type: application/json; charset=utf-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+CF-Ray: a5504a6098ffb70c-BOG
+CF-Cache-Status: DYNAMIC
+Access-Control-Allow-Origin: https://wayiraesports.com
+set-cookie: __cf_bm=nsMwk4x9zMTOrPVUBavO_ksNvq6wU_38B4AV6_cIyeg-1793760409.6939278-1.0.1.1-cC9o9R8U9YS0wckGvhl5G9ISNOhOsAUZtf8W_Gu.qWVZ3PYmL9y.j1JErHPCwmS.5lZWKdHvxOpD0YSoNq9XmsA9wzoUR5BQSCP_sNqVem0KYdz8gwtlQLscdVwRhnaM; HttpOnly; SameSite=None; Secure; Path=/; Domain=supabase.co; Expires=Wed, 04 Nov 2026 03:16:50 GMT
+Server: cloudflare
+Vary: Accept-Encoding, Origin
+X-Content-Type-Options: nosniff
+access-control-allow-headers: authorization, apikey, content-type, x-client-info
+access-control-allow-methods: GET, POST, OPTIONS
+endpoint-load-metrics: application_utilization:4,named_metrics.queue_depth:4
+sb-gateway-version: 1
+sb-project-ref: vghcjtdfwtbznowlovxa
+sb-request-id: 01a1a473-b862-7d10-8382-47e95e6b75e5
+x-deno-execution-id: 6ba4de69-4fdb-49da-9099-39ba0575b70f
+x-sb-edge-region: us-east-1
+x-served-by: supabase-edge-runtime
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+alt-svc: h3=":443"; ma=86400
+
+[]

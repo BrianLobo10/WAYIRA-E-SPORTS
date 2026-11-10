@@ -152,8 +152,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
     const target = event.target as HTMLElement;
     const isMenuToggle = target.closest('.menu-toggle');
     const isNavElement = this.navElement && this.navElement.nativeElement.contains(target);
-    
-    if (!isMenuToggle && !isNavElement) {
+    const isProfileMenu = target.closest('.header-profile');
+
+    if (!isMenuToggle && !isNavElement && !isProfileMenu) {
       this.closeMenu();
       this.closeDropdown();
       this.closeMoreDropdown();
@@ -161,4 +162,3 @@ export class HeaderComponent implements OnInit, OnDestroy {
     }
   }
 }
-

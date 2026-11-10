@@ -1,9 +1,21 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, computed, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { RiotApiService, SummonerData, LeagueEntry, MatchData, ChampionMastery } from '../../services/riot-api.service';
 import { ChampionService } from '../../services/champion.service';
+
+/** Nombres de las colas de Riot (https://static.developer.riotgames.com/docs/lol/queues.json) */
+const QUEUE_NAMES: Record<number, string> = {
+  420: 'Ranked Solo/Duo', 440: 'Ranked Flex', 400: 'Normal (reclutamiento)', 430: 'Normal (a ciegas)',
+  480: 'Partida rápida', 490: 'Normal (juego rápido)', 450: 'ARAM', 2400: 'ARAM: Caos', 720: 'ARAM Clash',
+  700: 'Clash', 1700: 'Arena', 1710: 'Arena', 900: 'URF', 1900: 'URF', 1010: 'URF de nieve', 1020: 'Uno para todos',
+  1300: 'Nexus Blitz', 1400: 'Libro de hechizos', 2300: 'Brawl', 830: 'Coop vs IA', 840: 'Coop vs IA', 850: 'Coop vs IA',
+  870: 'Coop vs IA', 880: 'Coop vs IA', 890: 'Coop vs IA', 1810: 'Swarm', 1820: 'Swarm', 1830: 'Swarm', 1840: 'Swarm',
+  0: 'Personalizada',
+};
+
+export interface ModeSummary { name: string; games: number; wins: number; losses: number; winrate: number; kda: string }
 
 @Component({
   selector: 'app-summoner-search',
@@ -18,6 +30,7 @@ export class SummonerSearchComponent implements OnInit {
 
   gameName = '';
   tagLine = '';
+  riotId = '';
   selectedRegion = 'la1';
   
   loading = signal(false);
@@ -30,6 +43,38 @@ export class SummonerSearchComponent implements OnInit {
   selectedQueue = signal<'RANKED_SOLO_5x5' | 'RANKED_FLEX_SR'>('RANKED_SOLO_5x5');
   selectedMatch = signal<MatchData | null>(null);
 
+  /** Filtro del historial por modo ('Todos' = sin filtro) */
+  modeFilter = signal('Todos');
+  loadingMore = signal(false);
+  /** Riot devolvió menos de las pedidas: ya no hay más partidas */
+  noMoreMatches = signal(false);
+  private readonly pageSize = 20;
+
+  /** Victorias y derrotas por modo, calculadas con las partidas cargadas (todas las colas, no solo ranked) */
+  modeSummary = computed<ModeSummary[]>(() => {
+    const groups = new Map<string, { games: number; wins: number; k: number; d: number; a: number }>();
+    for (const m of this.matches()) {
+      const p = this.getParticipantData(m);
+      if (!p) continue;
+      const name = this.getQueueName(m.info.queueId, m.info.gameMode);
+      const g = groups.get(name) ?? { games: 0, wins: 0, k: 0, d: 0, a: 0 };
+      g.games++; if (p.win) g.wins++; g.k += p.kills; g.d += p.deaths; g.a += p.assists;
+      groups.set(name, g);
+    }
+    return [...groups.entries()]
+      .map(([name, g]) => ({
+        name, games: g.games, wins: g.wins, losses: g.games - g.wins,
+        winrate: Math.round((g.wins / g.games) * 100),
+        kda: ((g.k + g.a) / Math.max(1, g.d)).toFixed(2),
+      }))
+      .sort((a, b) => b.games - a.games);
+  });
+
+  filteredMatches = computed(() => {
+    const f = this.modeFilter();
+    return f === 'Todos' ? this.matches() : this.matches().filter((m) => this.getQueueName(m.info.queueId, m.info.gameMode) === f);
+  });
+
   /** Cache en sesión: misma búsqueda no vuelve a llamar a la API */
   private searchCache: { key: string; data: SummonerData; matches: MatchData[]; mastery: ChampionMastery[] } | null = null;
 
@@ -38,9 +83,19 @@ export class SummonerSearchComponent implements OnInit {
       const region = params['region'];
       const gameName = params['gameName'];
       const tagLine = params['tagLine'];
+      const riotId = params['riotId'];
       if (region) this.selectedRegion = region;
+      if (riotId) {
+        this.riotId = riotId;
+        const parts = riotId.split('#');
+        if (parts.length === 2) {
+          this.gameName = parts[0].trim();
+          this.tagLine = parts[1].trim();
+        }
+      }
       if (gameName) this.gameName = gameName;
       if (tagLine) this.tagLine = tagLine;
+      if (this.gameName && this.tagLine && !this.riotId) this.riotId = `${this.gameName}#${this.tagLine}`;
       if (this.gameName?.trim() && this.tagLine?.trim()) {
         setTimeout(() => this.searchSummoner(), 0);
       }
@@ -59,8 +114,13 @@ export class SummonerSearchComponent implements OnInit {
   ];
 
   searchSummoner() {
+    const riotIdMatch = this.riotId.trim().match(/^(.+?)#([^#]+)$/);
+    if (riotIdMatch) {
+      this.gameName = riotIdMatch[1].trim();
+      this.tagLine = riotIdMatch[2].trim();
+    }
     if (!this.gameName.trim() || !this.tagLine.trim()) {
-      this.error.set('Por favor ingresa el nombre del jugador y el tagline');
+      this.error.set('Ingresa el Riot ID con formato Nombre#TAG');
       return;
     }
 
@@ -129,11 +189,14 @@ export class SummonerSearchComponent implements OnInit {
       }
     };
 
-    // Obtener partidas recientes (20 para mostrar)
-    this.riotApiService.getMatches(this.selectedRegion, puuid, 20).subscribe({
-      next: (matches) => {
-        matchesResult = matches;
-        this.matches.set(matches);
+    // Una sola consulta con todos los modos (antes eran dos y se agotaba el límite de la clave de Riot)
+    this.modeFilter.set('Todos');
+    this.noMoreMatches.set(false);
+    this.riotApiService.getMatches(this.selectedRegion, puuid, this.pageSize, 0).subscribe({
+      next: (list) => {
+        matchesResult = [...list].sort((a, b) => b.info.gameCreation - a.info.gameCreation);
+        this.noMoreMatches.set(list.length < this.pageSize);
+        this.matches.set(matchesResult);
         matchesLoaded = true;
         checkComplete();
       },
@@ -159,17 +222,36 @@ export class SummonerSearchComponent implements OnInit {
     });
   }
 
+  /** Siguientes 20 partidas (más antiguas) */
+  loadMoreMatches() {
+    const data = this.summonerData();
+    if (!data || this.loadingMore() || this.noMoreMatches()) return;
+    this.loadingMore.set(true);
+    this.riotApiService.getMatches(this.selectedRegion, data.puuid, this.pageSize, this.matches().length).subscribe({
+      next: (list) => {
+        const seen = new Set(this.matches().map((m) => m.metadata.matchId));
+        const merged = [...this.matches(), ...list.filter((m) => !seen.has(m.metadata.matchId))]
+          .sort((a, b) => b.info.gameCreation - a.info.gameCreation);
+        this.matches.set(merged);
+        this.noMoreMatches.set(list.length < this.pageSize);
+        if (this.searchCache) this.searchCache.matches = merged;
+        this.loadingMore.set(false);
+      },
+      error: () => this.loadingMore.set(false),
+    });
+  }
+
   getProfileIconUrl(iconId: number): string {
     return `https://ddragon.leagueoflegends.com/cdn/14.24.1/img/profileicon/${iconId}.png`;
   }
 
-  getRankedQueue(league: LeagueEntry): string {
+  getRankedQueue(queueType: string): string {
     const queueMap: { [key: string]: string } = {
       'RANKED_SOLO_5x5': 'Ranked Solo/Duo',
       'RANKED_FLEX_SR': 'Ranked Flex 5v5',
       'RANKED_FLEX_TT': 'Ranked Flex 3v3'
     };
-    return queueMap[league.queueType] || league.queueType;
+    return queueMap[queueType] || queueType;
   }
 
   getRankImageUrl(tier: string): string {
@@ -246,22 +328,20 @@ export class SummonerSearchComponent implements OnInit {
     return date.toLocaleDateString();
   }
 
-  getQueueName(queueId: number): string {
-    // Modos principales que tienen nombres específicos
-    if (queueId === 420) {
-      return 'Ranked Solo/Duo';
-    }
-    if (queueId === 440) {
-      return 'Ranked Flex';
-    }
-    // ARAM y variantes (450, 4500-4599, etc.)
-    if (queueId === 450 || (queueId >= 4500 && queueId < 4600)) {
-      return 'ARAM';
-    }
-    
-    // Todos los demás modos se muestran como "Destacado"
-    // Esto incluye ARAM Caos y otros modos temporales
-    return 'Destacado';
+  getQueueName(queueId: number, gameMode?: string): string {
+    if (QUEUE_NAMES[queueId]) return QUEUE_NAMES[queueId];
+    // Colas nuevas o de evento: se nombran por el modo de juego
+    const mode = (gameMode ?? '').toUpperCase();
+    if (mode === 'ARAM') return 'ARAM';
+    if (mode === 'CHERRY') return 'Arena';
+    if (mode === 'URF' || mode === 'ARURF') return 'URF';
+    if (mode === 'ONEFORALL') return 'Uno para todos';
+    if (mode === 'CLASSIC') return 'Normal';
+    return mode ? mode.charAt(0) + mode.slice(1).toLowerCase() : 'Otro modo';
+  }
+
+  getLeague(queueType: 'RANKED_SOLO_5x5' | 'RANKED_FLEX_SR'): LeagueEntry | null {
+    return this.summonerData()?.leagues.find((league) => league.queueType === queueType) ?? null;
   }
 
   getCurrentLeague(): LeagueEntry | null {
@@ -411,4 +491,3 @@ export class SummonerSearchComponent implements OnInit {
     this.searchSummoner();
   }
 }
-

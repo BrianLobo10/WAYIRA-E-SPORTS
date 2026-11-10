@@ -143,6 +143,11 @@ export const routes: Routes = [
     ]
   },
   {
+    path: 'privacidad',
+    title: 'Privacidad y condiciones · WAYIRA E-SPORTS',
+    loadComponent: () => import('./pages/legal/legal.component').then(m => m.LegalComponent)
+  },
+  {
     path: '403',
     data: { code: 403 },
     title: 'Sin permiso · WAYIRA E-SPORTS',

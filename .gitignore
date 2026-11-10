@@ -44,7 +44,7 @@ server/.env
 !.env.example
 
 # Claves sueltas (nunca subir)
-riot.txt
+/riot.txt
 *.key
 
 

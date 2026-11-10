@@ -168,3 +168,16 @@
 @media (max-width: 480px) {
   .footer__grid { grid-template-columns: 1fr; gap: var(--space-4); }
 }
+
+/* Enlace legal y aviso de Riot Games (exigido por sus políticas para usar la API) */
+.footer__legal-link { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.footer__legal-link:hover { color: var(--white); }
+.footer__bottom .footer__riot {
+  margin-top: 10px;
+  max-width: 90ch;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.5;
+}

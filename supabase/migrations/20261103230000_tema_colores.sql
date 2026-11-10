@@ -44,7 +44,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  allowed text[] := array['bg', 'surface', 'accent', 'alert', 'text', 'textSecondary'];
+  allowed text[] := array['bg', 'surface', 'accent', 'alert', 'text', 'textSecondary', 'headingFont', 'bodyFont'];
   k text;
 begin
   if new.key <> 'theme' then
@@ -56,6 +56,13 @@ begin
   for k in select jsonb_object_keys(new.value) loop
     if not (k = any (allowed)) then
       raise exception 'Color desconocido en el tema: %', k using errcode = '23514';
+    end if;
+    if k in ('headingFont', 'bodyFont') then
+      if jsonb_typeof(new.value -> k) <> 'string'
+         or new.value ->> k not in ('Newsreader', 'Lora', 'Playfair Display', 'Montserrat', 'Georgia', 'Bebas Neue', 'Bitter', 'Cormorant Garamond', 'DM Serif Display', 'Libre Baskerville', 'Merriweather', 'Oswald', 'Poppins', 'Roboto Slab', 'Space Grotesk', 'Anton', 'Archivo Black', 'Cinzel', 'Pacifico', 'Permanent Marker', 'Unbounded', 'Inter', 'Manrope', 'Lato', 'Source Sans 3', 'DM Sans', 'Nunito Sans', 'Open Sans', 'PT Sans', 'Raleway', 'Roboto', 'Rubik', 'Ubuntu', 'Work Sans', 'Atkinson Hyperlegible', 'Fira Sans', 'IBM Plex Sans', 'Inconsolata', 'Josefin Sans', 'Kalam', 'Libre Franklin', 'Space Mono') then
+        raise exception 'Fuente no permitida: %', k using errcode = '23514';
+      end if;
+      continue;
     end if;
     if jsonb_typeof(new.value -> k) <> 'string' or (new.value ->> k) !~ '^#[0-9A-Fa-f]{6}$' then
       raise exception 'El color % debe tener el formato #RRGGBB.', k using errcode = '23514';
