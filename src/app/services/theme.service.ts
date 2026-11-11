@@ -325,30 +325,31 @@ export function themeVariables(t: ThemeColors): Record<string, string> {
 export function applyTheme(t: ThemeColors): void {
   const root = document.documentElement;
   const isDefault = (Object.keys(DEFAULT_THEME) as (keyof ThemeColors)[]).every((k) => t[k].toUpperCase() === DEFAULT_THEME[k].toUpperCase());
-  for (const [name, value] of Object.entries(themeVariables(t))) {
-    if (isDefault) root.style.removeProperty(name);
-    else root.style.setProperty(name, value);
-  }
+  // Siempre en línea: así una vista previa gana tanto a styles.css como a theme.css
+  void isDefault;
+  for (const [name, value] of Object.entries(themeVariables(t))) root.style.setProperty(name, value);
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', t.bg);
   // Solo se descargan las fuentes del tema (antes index.html cargaba el catálogo entero para todos)
   loadFontCss('theme-fonts', googleFontsUrl([t.headingFont, t.bodyFont]));
 }
 
+/** Dirección pública del archivo de tema que enlaza index.html */
+export const THEME_CSS_PATH = 'theme.css';
+
 /**
- * Guarda en este navegador las variables ya calculadas del tema. El script en línea de index.html
- * las aplica antes de pintar nada, así la web abre directamente con los colores elegidos.
- * Para el tema original se guarda {} (no hay nada que aplicar, pero ya no hay que esperar).
+ * Hoja de estilo con el tema: la publica el Super Admin al guardar y index.html la enlaza.
+ * El navegador no pinta hasta tenerla, por eso la web abre ya con los colores elegidos (sin salto).
+ * `html:root` gana a los valores de fábrica de styles.css sin importar el orden de carga.
  */
-function cacheTheme(t: ThemeColors): void {
-  try {
-    const isDefault = (Object.keys(DEFAULT_THEME) as (keyof ThemeColors)[]).every((k) => t[k].toUpperCase() === DEFAULT_THEME[k].toUpperCase());
-    localStorage.setItem(CACHE_KEY, JSON.stringify(isDefault ? {} : themeVariables(t)));
-    const fontUrl = googleFontsUrl([t.headingFont, t.bodyFont]);
-    if (fontUrl) localStorage.setItem(FONT_CACHE_KEY, fontUrl);
-    else localStorage.removeItem(FONT_CACHE_KEY);
-  } catch {
-    /* sin almacenamiento (modo privado): la próxima visita esperará al tema guardado */
-  }
+export function themeCss(t: ThemeColors): string {
+  const fonts = googleFontsUrl([t.headingFont, t.bodyFont]).replace('&display=swap', '&display=fallback');
+  const vars = Object.entries(themeVariables(t)).map(([k, v]) => `  ${k}: ${v};`).join('\n');
+  return (fonts ? `@import url("${fonts}");\n` : '') + `/* WAYIRA E-SPORTS — tema publicado desde el Super Admin */\nhtml:root {\n${vars}\n}\n`;
+}
+
+/** Borra el tema que versiones anteriores guardaban en este navegador (ahora lo da theme.css) */
+function clearOldCache(): void {
+  try { localStorage.removeItem(CACHE_KEY); localStorage.removeItem(FONT_CACHE_KEY); } catch { /* sin almacenamiento */ }
 }
 
 /** Quita la espera de la primera visita (ver index.html) */
@@ -398,7 +399,7 @@ export class ThemeService {
       const t = completeTheme((data as { value?: Partial<ThemeColors> } | null)?.value);
       this.saved.set(t);
       applyTheme(t);
-      cacheTheme(t);
+      clearOldCache();
     } catch {
       /* sin conexión: se mantiene el tema en caché o el original */
     } finally {
@@ -432,6 +433,13 @@ export class ThemeService {
     }
     this.saved.set(t);
     applyTheme(t);
-    cacheTheme(t);
+    await this.publishCss(t);
+  }
+
+  /** Sube theme.css (caché de 60 s en el navegador y el CDN). Si falla, el tema igual quedó guardado. */
+  private async publishCss(t: ThemeColors): Promise<void> {
+    const css = new Blob([themeCss(t)], { type: 'text/css' });
+    const { error } = await this.sb.storage.from('site').upload(THEME_CSS_PATH, css, { upsert: true, contentType: 'text/css', cacheControl: '60' });
+    if (error) throw new Error('El estilo se guardó, pero no se pudo publicar el archivo de carga rápida (theme.css). Vuelve a intentarlo; mientras tanto la web puede mostrar un instante los colores anteriores al abrir.');
   }
 }

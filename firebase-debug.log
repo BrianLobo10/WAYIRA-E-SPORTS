@@ -1,0 +1,26 @@
+[debug] [2026-11-11T17:10:27.391Z] ----------------------------------------------------------------------
+[debug] [2026-11-11T17:10:27.394Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\BRLOBO\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy
+[debug] [2026-11-11T17:10:27.394Z] CLI Version:   15.22.1
+[debug] [2026-11-11T17:10:27.394Z] Platform:      win32
+[debug] [2026-11-11T17:10:27.394Z] Node Version:  v22.21.0
+[debug] [2026-11-11T17:10:27.395Z] Detected Agent: unknown
+[debug] [2026-11-11T17:10:27.395Z] Time:          Wed Nov 11 2026 12:10:27 GMT-0500 (hora estándar de Colombia)
+[debug] [2026-11-11T17:10:27.395Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-11-11T17:10:27.398Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-11-11T17:10:37.924Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-11-11T17:10:37.924Z] > authorizing via signed-in user (aseisob@gmail.com)
+[debug] [2026-11-11T17:10:37.924Z] [iam] checking project wayira-e-sports for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update","firebaserules.releases.create","firebaserules.releases.update","firebaserules.rulesets.create"]
+[debug] [2026-11-11T17:10:37.925Z] Checked if tokens are valid: true, expires at: 1794419409873
+[debug] [2026-11-11T17:10:37.925Z] Checked if tokens are valid: true, expires at: 1794419409873
+[debug] [2026-11-11T17:10:37.925Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/wayira-e-sports:testIamPermissions [none]
+[debug] [2026-11-11T17:10:37.926Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/wayira-e-sports:testIamPermissions  x-goog-user-project=wayira-e-sports
+[debug] [2026-11-11T17:10:37.926Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/wayira-e-sports:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update","firebaserules.releases.create","firebaserules.releases.update","firebaserules.rulesets.create"]}
+[debug] [2026-11-11T17:10:38.178Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2026-11-11T17:10:38.179Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[debug] [2026-11-11T17:10:38.433Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/wayira-e-sports:testIamPermissions 200
+[debug] [2026-11-11T17:10:38.433Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/wayira-e-sports:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update","firebaserules.releases.create","firebaserules.releases.update","firebaserules.rulesets.create"]}
+[debug] [2026-11-11T17:10:38.434Z] Checked if tokens are valid: true, expires at: 1794419409873
+[debug] [2026-11-11T17:10:38.434Z] Checked if tokens are valid: true, expires at: 1794419409873
+[debug] [2026-11-11T17:10:38.434Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/wayira-e-sports/serviceAccounts/wayira-e-sports@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2026-11-11T17:10:38.434Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/wayira-e-sports/serviceAccounts/wayira-e-sports@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}

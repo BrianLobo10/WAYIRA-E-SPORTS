@@ -276,7 +276,7 @@
             } @else {
               <p class="pe-hint">Vincúlala para mostrar tu rango, campeones y la ficha de temporada.</p>
               <div class="pe-riot-grid">
-                <div class="pe-field"><label for="pe-gn">Nombre en el juego</label><input id="pe-gn" type="text" class="pe-input" [ngModel]="editGameName()" (ngModelChange)="editGameName.set($event)" placeholder="BR LOBO"></div>
+                <div class="pe-field"><label for="pe-gn">Nombre en el juego</label><input id="pe-gn" type="text" class="pe-input" [ngModel]="editGameName()" (ngModelChange)="editGameName.set($event)" placeholder="Invocador"></div>
                 <div class="pe-field"><label for="pe-tag">Tag</label><input id="pe-tag" type="text" class="pe-input" [ngModel]="editTagLine()" (ngModelChange)="editTagLine.set($event.replace('#', ''))" placeholder="LAN"></div>
                 <div class="pe-field"><label for="pe-reg">Región</label>
                   <select id="pe-reg" class="pe-input" [ngModel]="editRegion()" (ngModelChange)="editRegion.set($event)">

@@ -15,7 +15,7 @@
             id="riotId"
             [(ngModel)]="riotId"
             name="riotId"
-            placeholder="Ej: BR LOBO#MADFK"
+            placeholder="Ej: Invocador#LAN"
             class="form-input"
           />
         </div>
@@ -176,6 +176,10 @@
           <h3 class="section-title">Partidas Recientes</h3>
           <div class="matches-count">{{ filteredMatches().length }} partidas</div>
         </div>
+        <p class="mayhem-note">
+          <span class="material-icons" aria-hidden="true">info</span>
+          Las partidas de <strong>ARAM: Caos</strong> no aparecen porque Riot no las comparte con webs externas. El ARAM normal sí sale.
+        </p>
         @if (modeSummary().length > 1) {
           <div class="mode-filter" role="group" aria-label="Filtrar por modo">
             <button type="button" class="mode-chip" [class.is-on]="modeFilter() === 'Todos'" [attr.aria-pressed]="modeFilter() === 'Todos'" (click)="modeFilter.set('Todos')">Todos <span>{{ matches().length }}</span></button>

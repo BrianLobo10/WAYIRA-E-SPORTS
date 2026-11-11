@@ -8,9 +8,10 @@
   <meta name="description" content="WAYIRA E-SPORTS — Torneos, comunidad y League of Legends en La Guajira, Colombia.">
   <meta name="theme-color" content="#121211">
   <meta name="color-scheme" content="dark">
-  <!-- Colores elegidos por el Superadmin: se aplican antes de pintar (el hash de este script está en la CSP de firebase.json) -->
-  <script>(function(){var r=document.documentElement;try{var f=localStorage.getItem('wayira-theme-fonts');if(f&&/^https:\/\/fonts\.googleapis\.com\/css2\?[A-Za-z0-9+:@;,.&=_-]{1,1500}$/.test(f)){var l=document.createElement('link');l.rel='stylesheet';l.id='theme-fonts';l.href=f;document.head.appendChild(l);}var v=JSON.parse(localStorage.getItem('wayira-theme-vars')||'null');if(v&&typeof v==='object'){for(var k in v){if(/^--[a-z0-9-]+$/.test(k)&&typeof v[k]==='string'&&/^[^{};<]{1,160}$/.test(v[k]))r.style.setProperty(k,v[k]);}if(v['--bg']){var m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',v['--bg']);}return;}}catch(e){}r.classList.add('theme-pending');setTimeout(function(){r.classList.remove('theme-pending');},1500);})();</script>
-  <style>html.theme-pending body{visibility:hidden}</style>
+  <link rel="preconnect" href="https://vghcjtdfwtbznowlovxa.supabase.co">
+  <!-- Tema elegido en el Super Admin: el navegador espera este archivo antes de pintar, así no hay salto de colores.
+       Lo publica el Super Admin al guardar el estilo (caché de 60 s). Si no existe, se usan los colores de fábrica. -->
+  <link rel="stylesheet" href="https://vghcjtdfwtbznowlovxa.supabase.co/storage/v1/object/public/site/theme.css">
   <link rel="icon" type="image/png" sizes="32x32" href="brand/favicon-32.png">
   <link rel="apple-touch-icon" href="brand/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
